@@ -39,6 +39,13 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
   }
 }
 
+case class Tuple(relation: Relation, fields: List[Constant]) {
+  override def toString: String = {
+    val field_str: String = fields.map(_.toString).mkString(",")
+    s"${relation.name}($field_str)"
+  }
+}
+
 /* Relations */
 
 case class Relation(name: String, signature: List[Type]) {
@@ -48,6 +55,11 @@ case class Relation(name: String, signature: List[Type]) {
       s.mkString(",")
     }
     s".decl $name($sig_str)"
+  }
+
+  override def toString: String = {
+    val sig_str = signature.map(_.toString).mkString(",")
+    s"${name}(${sig_str})"
   }
 }
 
