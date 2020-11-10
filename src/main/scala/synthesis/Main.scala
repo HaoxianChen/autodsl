@@ -1,63 +1,15 @@
 package synthesis
 
-import java.io.File
-import java.nio.file.{Path, Paths}
-
-import scala.io.Source
-
 object Main extends App {
-  def getListOfFiles(dir: String): List[String] = {
-    val d = new File(dir)
-    if (d.exists && d.isDirectory) {
-      d.listFiles.filter(_.isFile).map(_.getName).toList
-    } else {
-      List[String]()
-    }
-  }
-
-  def fileToString(filename: String): String = {
-    val src = Source.fromFile(filename)
-    val s = src.mkString
-    src.close()
-    s
-  }
-
-  def readCsv(filename: String): List[List[String]] = {
-    val src = Source.fromFile(filename)
-    def lineToList(l: String): List[String] = l.split("[ \t]").map(_.trim).toList
-    val allLines = src.getLines().filterNot(_.startsWith("//"))
-    val s: List[List[String]] = allLines.map(lineToList).toList
-    src.close()
-    println(filename)
-    println(s)
-    s
-  }
-
-  def readProblem(dir: String): Problem = {
-    val problemFile: String = {
-      val allFiles = getListOfFiles(dir)
-      val f: List[String] = allFiles.filter(_.endsWith("problem"))
-      require(f.size==1)
-      Paths.get(dir, f.head).toString
-    }
-    val inputString = fileToString(problemFile)
-    val parser = new Parser()
-    val problem = parser.parseAll(parser.problem, inputString).get
-
-    // Read Input Output examples
-    def relToProblem(problem: Problem, relation:Relation): Problem = {
-      val isInput: Boolean = problem.inputRels.contains(relation)
-      val suffix: String = if (isInput) "facts" else "csv"
-      val filename = Paths.get(dir, s"${relation.name}.$suffix").toString
-      val facts = readCsv(filename)
-      if (isInput) problem.addEdb(relation, facts) else problem.addIdb(relation, facts)
-    }
-    (problem.inputRels ++ problem.outputRels).foldLeft(problem)(relToProblem)
-  }
 
   if (args(0)== "parse") {
-    val problem = readProblem(args(1))
+    val problem = Misc.readProblem(args(1))
     println(problem)
+  }
+  else if (args(0)== "learn") {
+    val problem = Misc.readProblem(args(1))
+    val programs = BasicSynthesis(problem).go()
+    println(programs)
   }
 }
 

@@ -68,6 +68,10 @@ case class Rule(head: Literal, body: Set[Literal]) {
     val body_str: String = body.map(_.toString).mkString(",")
     s"${head} :- ${body_str}."
   }
+
+  def addLiteral(literal: Literal): Rule = {
+    this.copy(body=this.body+literal)
+  }
 }
 
 case class Program(rules: Set[Rule]) {

@@ -1,7 +1,28 @@
 package synthesis
 
+case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
+  def addTuples(relation: Relation, tuples: Set[List[Constant]]): Examples = {
+    val newMap = {
+      val oldValue = elems.get(relation)
+      val newValue: Set[List[Constant]] = if (oldValue.isDefined) oldValue.get ++ tuples else tuples
+      elems + (relation -> newValue)
+    }
+    Examples(newMap)
+  }
+
+  def toTuples(): Set[Tuple] = {
+    def toTuples(relation: Relation, tuples: Set[List[Constant]]): Set[Tuple] = tuples.map(fields => Tuple(relation, fields))
+    elems.flatMap {
+      case (rel, _tuples) => toTuples(rel, _tuples)
+    }.toSet
+  }
+}
+object Examples {
+  def apply(): Examples = new Examples(Map())
+}
+
 case class Problem(types: Set[Type], inputRels: Set[Relation], outputRels: Set[Relation],
-                   edb: Set[Tuple] , idb: Set[Tuple]) {
+                   edb: Examples , idb: Examples) {
 
   private val typeMap: Map[String,Type] = (for (t<-types) yield t.name -> t).toMap
 
@@ -27,34 +48,26 @@ case class Problem(types: Set[Type], inputRels: Set[Relation], outputRels: Set[R
     val relation: Relation = Relation(relName, types)
     addOutputRelation(relation)
   }
-  def addEdb(tuple: Tuple): Problem = {
-    val newEdb  = edb + tuple
-    this.copy(edb=newEdb)
-  }
-  def addIdb(tuple: Tuple): Problem = {
-    val newIdb  = idb + tuple
-    this.copy(idb=newIdb)
-  }
 
-  def strToTuple(rel: Relation, str: List[String]): Tuple = {
+  def strToTuple(rel: Relation, str: List[String]): List[Constant] = {
     require(rel.signature.size == str.size, s"${rel}, ${str}, szie: ${str.size}")
     val fields: List[Constant] = for ((_type, s) <- rel.signature zip str) yield Constant(s, _type)
-    Tuple(rel, fields)
+    fields
   }
   def addEdb(relation: Relation, facts: List[List[String]]): Problem = {
     require(inputRels.contains(relation))
-    val newTuples = facts.map(strToTuple(relation, _))
-    this.copy(edb=edb++newTuples)
+    val newTuples = facts.map(strToTuple(relation, _)).toSet
+    this.copy(edb=edb.addTuples(relation, newTuples))
   }
   def addIdb(relation: Relation, facts: List[List[String]]): Problem = {
     require(outputRels.contains(relation))
-    val newTuples = facts.map(strToTuple(relation,_))
-    this.copy(idb=idb++newTuples)
+    val newTuples = facts.map(strToTuple(relation, _)).toSet
+    this.copy(idb=idb.addTuples(relation, newTuples))
   }
 
   def getType(name: String): Option[Type] = typeMap.get(name)
 }
 
 object Problem {
-  def apply(): Problem = Problem(Set(), Set(), Set(), Set(), Set())
+  def apply(): Problem = Problem(Set(), Set(), Set(), Examples(), Examples())
 }
