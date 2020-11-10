@@ -35,15 +35,16 @@ object Misc {
   }
 
   def readProblem(dir: String): Problem = {
-    val problemFile: String = {
+    val problemFile: Path = {
       val allFiles = getListOfFiles(dir)
       val f: List[String] = allFiles.filter(_.endsWith("problem"))
       require(f.size==1)
-      Paths.get(dir, f.head).toString
+      Paths.get(dir, f.head)
     }
-    val inputString = fileToString(problemFile)
+    val problemName = problemFile.getFileName().toString.split('.').head
+    val inputString = fileToString(problemFile.toString)
     val parser = new Parser()
-    val problem = parser.parseAll(parser.problem, inputString).get
+    val problem = parser.parseAll(parser.problem, inputString).get.rename(problemName)
 
     // Read Input Output examples
     def relToProblem(problem: Problem, relation:Relation): Problem = {

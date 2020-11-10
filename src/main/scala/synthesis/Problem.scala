@@ -21,7 +21,7 @@ object Examples {
   def apply(): Examples = new Examples(Map())
 }
 
-case class Problem(types: Set[Type], inputRels: Set[Relation], outputRels: Set[Relation],
+case class Problem(name: String, types: Set[Type], inputRels: Set[Relation], outputRels: Set[Relation],
                    edb: Examples , idb: Examples) {
 
   private val typeMap: Map[String,Type] = (for (t<-types) yield t.name -> t).toMap
@@ -65,9 +65,11 @@ case class Problem(types: Set[Type], inputRels: Set[Relation], outputRels: Set[R
     this.copy(idb=idb.addTuples(relation, newTuples))
   }
 
+  def rename(newName: String): Problem = this.copy(name=newName)
+
   def getType(name: String): Option[Type] = typeMap.get(name)
 }
 
 object Problem {
-  def apply(): Problem = Problem(Set(), Set(), Set(), Examples(), Examples())
+  def apply(): Problem = Problem("new_problem",Set(), Set(), Set(), Examples(), Examples())
 }
