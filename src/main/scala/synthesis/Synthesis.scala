@@ -2,10 +2,6 @@ package synthesis
 
 import scala.collection.mutable
 
-sealed abstract class Synthesis(problem: Problem) {
-  def go(): Set[Program]
-}
-
 case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) {
   def paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
     val allParams = literals.flatMap(_.fields)
@@ -90,6 +86,10 @@ case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) 
   def refineRule(rule: Rule): Set[Rule] = ???
 }
 
+sealed abstract class Synthesis(problem: Problem) {
+  def go(): Set[Program]
+}
+
 case class BasicSynthesis(problem: Problem,
                           maxIters: Int = 200,
                          maxRefineIters: Int = 200,
@@ -97,7 +97,7 @@ case class BasicSynthesis(problem: Problem,
   def go(): Set[Program] = Set(learnAProgram())
 
   private val ruleConstructor = RuleConstructor(problem.inputRels, problem.outputRels)
-  private val evaluator = Evaluator(problem.edb)
+  private val evaluator = Evaluator(problem)
 
   case class ScoredRule(rule: Rule, score: Double)
   object ScoredRule {

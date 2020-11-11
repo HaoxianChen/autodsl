@@ -16,13 +16,25 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
       case (rel, _tuples) => toTuples(rel, _tuples)
     }.toSet
   }
+
+  def toFileStr(relation: Relation): String = {
+    val facts = elems(relation)
+    facts.map(l => l.mkString("\t")).mkString("\n")
+  }
 }
 object Examples {
   def apply(): Examples = new Examples(Map())
+
+
+  def strToTuple(rel: Relation, str: List[String]): List[Constant] = {
+    require(rel.signature.size == str.size, s"${rel}, ${str}, szie: ${str.size}")
+    val fields: List[Constant] = for ((_type, s) <- rel.signature zip str) yield Constant(s, _type)
+    fields
+  }
 }
 
 case class Problem(name: String, types: Set[Type], inputRels: Set[Relation], outputRels: Set[Relation],
-                   edb: Examples , idb: Examples) {
+                   edb: Examples , idb: Examples, specStr: String) {
 
   private val typeMap: Map[String,Type] = (for (t<-types) yield t.name -> t).toMap
 
@@ -49,27 +61,23 @@ case class Problem(name: String, types: Set[Type], inputRels: Set[Relation], out
     addOutputRelation(relation)
   }
 
-  def strToTuple(rel: Relation, str: List[String]): List[Constant] = {
-    require(rel.signature.size == str.size, s"${rel}, ${str}, szie: ${str.size}")
-    val fields: List[Constant] = for ((_type, s) <- rel.signature zip str) yield Constant(s, _type)
-    fields
-  }
   def addEdb(relation: Relation, facts: List[List[String]]): Problem = {
     require(inputRels.contains(relation))
-    val newTuples = facts.map(strToTuple(relation, _)).toSet
+    val newTuples = facts.map(Examples.strToTuple(relation, _)).toSet
     this.copy(edb=edb.addTuples(relation, newTuples))
   }
   def addIdb(relation: Relation, facts: List[List[String]]): Problem = {
     require(outputRels.contains(relation))
-    val newTuples = facts.map(strToTuple(relation, _)).toSet
+    val newTuples = facts.map(Examples.strToTuple(relation, _)).toSet
     this.copy(idb=idb.addTuples(relation, newTuples))
   }
 
   def rename(newName: String): Problem = this.copy(name=newName)
+  def addSpecStr(specStr: String): Problem = this.copy(specStr=specStr)
 
   def getType(name: String): Option[Type] = typeMap.get(name)
 }
 
 object Problem {
-  def apply(): Problem = Problem("new_problem",Set(), Set(), Set(), Examples(), Examples())
+  def apply(): Problem = Problem("new_problem",Set(), Set(), Set(), Examples(), Examples(), "")
 }

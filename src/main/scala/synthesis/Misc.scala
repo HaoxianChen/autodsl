@@ -44,7 +44,9 @@ object Misc {
     val problemName = problemFile.getFileName().toString.split('.').head
     val inputString = fileToString(problemFile.toString)
     val parser = new Parser()
-    val problem = parser.parseAll(parser.problem, inputString).get.rename(problemName)
+    val problem = parser.parseAll(parser.problem, inputString).get
+      .rename(problemName)
+      .addSpecStr(inputString)
 
     // Read Input Output examples
     def relToProblem(problem: Problem, relation:Relation): Problem = {
