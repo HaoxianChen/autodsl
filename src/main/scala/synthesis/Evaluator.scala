@@ -28,8 +28,11 @@ case class Evaluator(problem: Problem) {
       val programPath = dumpProgram(program, problemDir)
 
       // run
-      val output = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}".!!
-      require(!output.contains("Error"))
+      val stdout = new StringBuilder
+      val stderr = new StringBuilder
+      val cmd = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}"
+      val status = cmd ! ProcessLogger(stdout append _, stderr append _)
+      require(!stderr.contains("Error"))
 
       // load results from file
       val idb: Examples = loadOutput(problemDir)

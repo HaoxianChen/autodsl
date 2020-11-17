@@ -83,7 +83,44 @@ case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) 
         unboundedRules.flatMap(bindHead)
     }
   }
-  def refineRule(rule: Rule): Set[Rule] = ???
+
+  def refineRule(rule: Rule): Set[Rule] = {
+    def addBinding(rule: Rule): Set[Rule] = {
+      val paramMap = paramMapByType(rule.body)
+
+      val freeVars: Set[Variable] = {
+        val allVars = rule.body.flatMap(_.fields).flatMap {
+          case _: Constant => None
+          case v: Variable => Some(v)
+        }
+        val paramCounts = allVars.groupBy(identity) map {case (p, ps) => p ->  ps.size}
+        allVars.filter(v => paramCounts(v)==1)
+      }
+
+      def bindVar(variable: Variable) : Set[Map[Parameter, Parameter]] = {
+        val availableVars = paramMap.getOrElse(variable._type, Set()) - variable
+        availableVars.map(v => Map(variable -> v))
+      }
+      val bindings: Set[Map[Parameter, Parameter]] = freeVars.flatMap(bindVar)
+      bindings.map(b => rule.rename(b))
+    }
+
+    def addNegation(rule: Rule): Set[Rule] = {
+      val posLits = rule.getPositiveLiterals()
+      val negatedRules = posLits.map {
+        l => Rule(rule.head, rule.body, rule.negations+l)
+      }
+      negatedRules.filter(_.isValid())
+    }
+
+    var refinedRules: Set[Rule] = Set()
+    for (rel <- inputRels.diff(rule.body.map(_.relation))) {
+      refinedRules += addGeneralLiteral(rule, rel)
+    }
+    refinedRules ++= addBinding(rule)
+    refinedRules ++= addNegation(rule)
+    refinedRules
+  }
 }
 
 sealed abstract class Synthesis(problem: Problem) {
@@ -99,9 +136,31 @@ case class BasicSynthesis(problem: Problem,
   private val ruleConstructor = RuleConstructor(problem.inputRels, problem.outputRels)
   private val evaluator = Evaluator(problem)
 
-  case class ScoredRule(rule: Rule, score: Double)
+  case class ScoredRule(rule: Rule, score: Double) {
+    def isValid(): Boolean = score >= 1-1e-3
+    def isTooGeneral(): Boolean = score > 0 && !isValid()
+  }
   object ScoredRule {
     def apply(rule: Rule, idb: Set[Tuple]): ScoredRule = new ScoredRule(rule, scoreRule(rule, idb))
+
+    def scoreRule(rule: Rule, allIdb: Set[Tuple]): Double = {
+      val refIdb = allIdb.filter(_.relation == rule.head.relation)
+      require(refIdb.nonEmpty, s"${allIdb}\n ${rule}")
+
+      val idb = evalRule(rule)
+
+      if (idb.nonEmpty) {
+        val pos: Set[Tuple] = idb.intersect(refIdb)
+        val neg: Set[Tuple] = idb.diff(refIdb)
+
+        val npos = pos.size
+        val nneg = neg.size
+        require(npos + nneg == idb.size)
+
+        npos.toDouble / (npos + nneg).toDouble
+      }
+      else 0
+    }
   }
 
   def learnAProgram(): Program = {
@@ -109,22 +168,34 @@ case class BasicSynthesis(problem: Problem,
     var rules: Set[Rule] = Set()
     var iters: Int = 0
 
+    // Init the rule pool with the most general rules
+    var generalRules: Set[Rule] = ruleConstructor.mostGeneralRules()
+
     while (examples.nonEmpty && iters < maxIters ) {
-      val (coveredExamples, newRule) = learnARule(examples)
+      val (coveredExamples, newRule, remainingRules) = learnARule(examples, generalRules)
       examples = examples -- coveredExamples
       rules = rules + newRule
+      generalRules = remainingRules
       iters += 1
     }
     Program(rules)
   }
 
-  def learnARule(idb: Set[Tuple]): (Set[Tuple], Rule) = {
+  def learnARule(idb: Set[Tuple], generalSimpleRules: Set[Rule]): (Set[Tuple], Rule, Set[Rule]) = {
     var iters: Int = 0
-    var rulePool: mutable.PriorityQueue[ScoredRule] = mutable.PriorityQueue()(Ordering.by(_.score))
-    val rules = ruleConstructor.mostGeneralRules()
-    // rulePool ++= ruleConstructor.mostGeneralRules().map(r => ScoredRule(r))
-    rulePool ++= rules.map(r => ScoredRule(r, idb))
-    var validRules: Set[ScoredRule] = Set()
+
+    // score the rules based on current idb set
+    val generalRules = {
+      val curOutRels = idb.map(_.relation)
+      val relevantRules = generalSimpleRules.filter(r => curOutRels.contains(r.head.relation))
+      relevantRules.map(r => ScoredRule(r, idb))
+    }
+
+    // Set up the pool of rules to be refine
+    var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()(Ordering.by(_.score))
+    rulePool ++= generalRules
+
+    var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
 
     while (iters < maxRefineIters && validRules.isEmpty) {
 
@@ -132,41 +203,25 @@ case class BasicSynthesis(problem: Problem,
       val baseRule: Rule = rulePool.dequeue().rule
 
       // refine the rules
-      val candidateRules: Set[Rule] = ruleConstructor.refineRule(baseRule)
+      val candidateRules: Set[ScoredRule] = ruleConstructor.refineRule(baseRule).map(r => ScoredRule(r, idb))
 
       // keep the valid ones
-      validRules ++= candidateRules.filter(isRuleValid).map(r => ScoredRule(r, idb))
+      validRules ++= candidateRules.filter(_.isValid())
 
       // Put the too general ones into the pool
-      rulePool ++= candidateRules.filter(isRuleTooGeneral).map(r => ScoredRule(r, idb))
+      rulePool ++= candidateRules.filter(_.isTooGeneral())
 
       iters += 1
     }
 
     val bestRule = validRules.maxBy(_.score).rule
-    (evalRule(bestRule), bestRule)
+    val remainingRules: Set[Rule] = {
+      val rs = rulePool.toSet
+      rs.map(_.rule)
+    }
+    (evalRule(bestRule), bestRule, remainingRules)
   }
-
-  def isRuleValid(rule: Rule): Boolean = ???
-
-  def isRuleTooGeneral(rule: Rule): Boolean = ???
 
   def evalRule(rule: Rule): Set[Tuple] = evaluator.eval(Program(Set(rule)))
 
-  def scoreRule(rule: Rule, allIdb: Set[Tuple]): Double = {
-    val refIdb = allIdb.filter(_.relation == rule.head.relation)
-    require(refIdb.nonEmpty)
-
-    val idb = evalRule(rule)
-    require(idb.nonEmpty)
-
-    val pos: Set[Tuple] = idb.intersect(refIdb)
-    val neg: Set[Tuple] = idb.diff(refIdb)
-
-    val npos = pos.size
-    val nneg = neg.size
-    require(npos+nneg == idb.size)
-
-    npos.toDouble / (npos + nneg).toDouble
-  }
 }

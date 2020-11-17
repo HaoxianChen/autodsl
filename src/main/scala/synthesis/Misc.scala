@@ -29,8 +29,8 @@ object Misc {
     val allLines = src.getLines().filterNot(_.startsWith("//"))
     val s: List[List[String]] = allLines.map(lineToList).toList
     src.close()
-    println(filename)
-    println(s)
+    //println(filename)
+    // println(s)
     s
   }
 

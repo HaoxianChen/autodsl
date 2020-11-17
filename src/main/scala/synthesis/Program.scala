@@ -37,6 +37,11 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
     val field_str: String = fields.map(_.toString).mkString(",")
     s"${relation.name}($field_str)"
   }
+
+  def rename(binding: Map[Parameter, Parameter]): Literal = {
+    val newFields = fields.map(p => binding.getOrElse(p, p))
+    Literal(relation, newFields)
+  }
 }
 
 case class Tuple(relation: Relation, fields: List[Constant]) {
@@ -63,15 +68,35 @@ case class Relation(name: String, signature: List[Type]) {
   }
 }
 
-case class Rule(head: Literal, body: Set[Literal]) {
+case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()) {
+  require(negations.subsetOf(body), s"negations: ${negations},\n body: ${body}")
+
   override def toString: String = {
-    val body_str: String = body.map(_.toString).mkString(",")
+    val simpleLiterals = getPositiveLiterals()
+    val body_str: String = {
+      (simpleLiterals.map(_.toString) ++ negations.map("!"+_.toString)).mkString(",")
+    }
     s"${head} :- ${body_str}."
   }
+
+  def getPositiveLiterals(): Set[Literal] = body.diff(negations)
 
   def addLiteral(literal: Literal): Rule = {
     this.copy(body=this.body+literal)
   }
+
+  def rename(binding: Map[Parameter, Parameter]): Rule = {
+    val newHead = head.rename(binding)
+    val newBody = body.map(_.rename(binding))
+    Rule(newHead, newBody)
+  }
+
+  def isHeadBounded(): Boolean = {
+    val bodyParams = getPositiveLiterals().flatMap(_.fields)
+    head.fields.toSet.subsetOf(bodyParams)
+  }
+
+  def isValid(): Boolean = isHeadBounded()
 }
 
 case class Program(rules: Set[Rule]) {
