@@ -1,6 +1,74 @@
 package synthesis
 
+import com.typesafe.scalalogging.Logger
+
 import scala.collection.mutable
+
+case class PartialRuleEvaluator(problem: Problem) {
+  private val evaluator = Evaluator(problem)
+
+  def getRefIdb(rule: Rule, idb: Set[Tuple]): Set[Tuple] = {
+    if (rule.isHeadBounded()){
+      idb
+    }
+    else {
+      val newRel = _getStrippedRelation(rule)
+      val indices = _getBoundedIndices(rule)
+
+      def getStripedTuple(tuple: Tuple): Tuple = {
+        val newFields = indices map tuple.fields
+        Tuple(newRel, newFields)
+      }
+
+      val relevantIdb = idb.filter(_.relation == rule.head.relation)
+      relevantIdb.map(getStripedTuple)
+    }
+  }
+
+  def eval(rule: Rule): Set[Tuple] = {
+    val program = if (rule.isHeadBounded()) {
+      Program(Set(rule))
+    }
+    else {
+      val stripedRule = getStripedRule(rule)
+      Program(Set(stripedRule))
+    }
+    evaluator.eval(program)
+  }
+
+  def _getBoundedIndices(rule: Rule): List[Int] = {
+    val freeVars = rule.getFreeHeadVariables()
+    val indices = mutable.ListBuffer.empty[Int]
+    for ((f,i) <- rule.head.fields.zipWithIndex) {
+      f match {
+        case v: Variable => if (!freeVars.contains(v)) indices.append(i)
+        case _ => ()
+      }
+    }
+    require(indices.max < rule.head.fields.size, s"indices: $indices,\n rule: $rule")
+    indices.toList
+  }
+
+  def getStripedRule(unBoundRule: Rule): Rule = {
+    val indices = _getBoundedIndices(unBoundRule)
+    assert(indices.nonEmpty)
+    val newFields = indices map unBoundRule.head.fields
+
+    val newOutRel = _getStrippedRelation(unBoundRule)
+    assert(newOutRel.signature.size == newFields.size)
+    val newHead = Literal(newOutRel, newFields)
+    Rule(newHead, unBoundRule.body)
+  }
+
+  def _getStrippedRelName(unBoundRule: Rule): String = s"${unBoundRule.head.relation.name}_"
+
+  def _getStrippedRelation(unBoundRule: Rule): Relation = {
+    val indices = _getBoundedIndices(unBoundRule)
+    val newSig = indices map unBoundRule.head.relation.signature
+    val newRelName = _getStrippedRelName(unBoundRule)
+    Relation(newRelName, newSig)
+  }
+}
 
 case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) {
   def paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
@@ -8,9 +76,9 @@ case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) 
     allParams.groupBy(_._type)
   }
 
-  def addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
-    /** Add relation to rule, without binding the variables */
-    val params = paramMapByType(rule.body + rule.head)
+  def newUnboundedLiteral(literals: Set[Literal], relation: Relation): Literal = {
+    /** Create a new literal without binding any variables from existing literals. */
+    val params = paramMapByType(literals)
     var fields: mutable.ListBuffer[Variable] = mutable.ListBuffer()
     var paramCounts: Map[Type, Int] = params.map {case (t, ps) => t -> ps.size}
     for (_type <- relation.signature) {
@@ -20,97 +88,58 @@ case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) 
       fields += Variable(varName, _type)
     }
     require(fields.size == relation.signature.size)
-    val newLiteral = Literal(relation, fields.toList)
+    Literal(relation, fields.toList)
+  }
+
+  def addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
+    /** Add relation to rule, without binding the variables */
+    val allLiterals = rule.body + rule.head
+    val newLiteral = newUnboundedLiteral(allLiterals, relation)
     rule.addLiteral(newLiteral)
   }
 
   def mostGeneralRules(): Set[Rule] = {
-    def makeHead(rel: Relation): Literal = {
-      var typeCounts: Map[Type, Int] = Map()
-      var fields: mutable.ListBuffer[Variable] = mutable.ListBuffer()
-      for (_type <- rel.signature) {
-        val c = typeCounts.getOrElse(_type, 0)
-        typeCounts = typeCounts.updated(_type, c+1)
-        fields += Variable(s"${_type.name.toLowerCase()}${c}", _type)
+    outputRels.flatMap(rel => {
+      val head = newUnboundedLiteral(Set(), rel)
+
+      /** All possible bodies with one literal. */
+      val bodies: Set[Literal] = inputRels.map(inputRel => newUnboundedLiteral(Set(head), inputRel))
+      val unBoundRules = bodies.map(lit => Rule(head, Set(lit)))
+
+      /** At least add one binding to the head. */
+      def bindHead(rule: Rule): Set[Rule] = {
+        rule.getFreeHeadVariables().flatMap(v => bindVariableToBody(rule, v)).toSet
       }
-      require(fields.size == rel.signature.size)
-      Literal(rel, fields.toList)
-    }
+      val rules = unBoundRules.flatMap(bindHead)
+      rules.map(_.normalize())
+    })
+  }
 
-    def bindHead(rule: Rule): Set[Rule] = {
-      val VarsByType = paramMapByType(rule.body)
-
-      def bindHead(signature: List[Type]): Set[List[Parameter]] = {
-        signature match {
-          case Nil => Set(List())
-          case head::tail => {
-            // bind with any one of the variables of the same type in the body
-            val newVars: Set[Parameter] = VarsByType(head)
-            val allSubsequentFields = bindHead(tail)
-            newVars.flatMap(v => allSubsequentFields.map(fs => v::fs))
-          }
-        }
-      }
-      val newHeads: Set[Literal] = {
-        val allFields = bindHead(rule.head.relation.signature)
-        allFields.map(fs => Literal(rule.head.relation, fs))
-      }
-      newHeads.map(h => Rule(h, rule.body))
-    }
-
-    def isHeadBounded(head: Literal, body: Set[Literal]): Boolean = {
-      val allTypes = body.flatMap(_.relation.signature.toSet)
-      head.relation.signature.forall(t => allTypes.contains(t))
-    }
-
-    def extendBody(rule: Rule, rels: List[Relation]): Set[Rule] = {
-      rels match {
-        case Nil => Set()
-        case first :: rest => {
-          val newRule = addGeneralLiteral(rule, first)
-          if (isHeadBounded(rule.head, newRule.body)) extendBody(rule,rest) + newRule
-          else extendBody(newRule, rest) ++ extendBody(rule, rest)
-        }
-      }
-    }
-
-    // Generate most general rules for each output relation
-    outputRels.flatMap {
-      rel =>
-        val head = makeHead(rel)
-        val headOnlyRule = Rule(head, Set())
-        val unboundedRules = extendBody(headOnlyRule, inputRels.toList)
-        unboundedRules.flatMap(bindHead)
-    }
+  def bindVariableToBody(rule:Rule, variable: Variable): Set[Rule] = {
+    require(rule.getVarSet().contains(variable))
+    val paramMap = paramMapByType(rule.body)
+    val availableVars = paramMap.getOrElse(variable._type, Set()) - variable
+    val bindings: Set[Map[Parameter, Parameter]] = availableVars.map(v => Map(variable -> v))
+    bindings.map(b => rule.rename(b))
   }
 
   def refineRule(rule: Rule): Set[Rule] = {
     def addBinding(rule: Rule): Set[Rule] = {
-      val paramMap = paramMapByType(rule.body)
-
-      val freeVars: Set[Variable] = {
-        val allVars = rule.body.flatMap(_.fields).flatMap {
-          case _: Constant => None
-          case v: Variable => Some(v)
-        }
-        val paramCounts = allVars.groupBy(identity) map {case (p, ps) => p ->  ps.size}
-        allVars.filter(v => paramCounts(v)==1)
-      }
-
-      def bindVar(variable: Variable) : Set[Map[Parameter, Parameter]] = {
-        val availableVars = paramMap.getOrElse(variable._type, Set()) - variable
-        availableVars.map(v => Map(variable -> v))
-      }
-      val bindings: Set[Map[Parameter, Parameter]] = freeVars.flatMap(bindVar)
-      bindings.map(b => rule.rename(b))
+      val freeVars: Set[Variable] = rule.freeVariables()
+      freeVars.flatMap(v => bindVariableToBody(rule, v))
     }
 
     def addNegation(rule: Rule): Set[Rule] = {
       val posLits = rule.getPositiveLiterals()
-      val negatedRules = posLits.map {
-        l => Rule(rule.head, rule.body, rule.negations+l)
+
+      if (posLits.size >= 2) {
+        // Only negate when body relation has more than 1 positive literals.
+        val negatedRules = posLits.map {
+          l => Rule(rule.head, rule.body, rule.negations + l)
+        }
+        negatedRules
       }
-      negatedRules.filter(_.isValid())
+      else Set()
     }
 
     var refinedRules: Set[Rule] = Set()
@@ -119,7 +148,7 @@ case class RuleConstructor(inputRels: Set[Relation], outputRels: Set[Relation]) 
     }
     refinedRules ++= addBinding(rule)
     refinedRules ++= addNegation(rule)
-    refinedRules
+    refinedRules.map(_.normalize())
   }
 }
 
@@ -133,20 +162,25 @@ case class BasicSynthesis(problem: Problem,
                          ) extends Synthesis(problem) {
   def go(): Set[Program] = Set(learnAProgram())
 
+  private val logger = Logger("Synthesis")
+
   private val ruleConstructor = RuleConstructor(problem.inputRels, problem.outputRels)
-  private val evaluator = Evaluator(problem)
+  private val evaluator = PartialRuleEvaluator(problem)
+
 
   case class ScoredRule(rule: Rule, score: Double) {
     def isValid(): Boolean = score >= 1-1e-3
+
     def isTooGeneral(): Boolean = score > 0 && !isValid()
+
   }
   object ScoredRule {
     def apply(rule: Rule, idb: Set[Tuple]): ScoredRule = new ScoredRule(rule, scoreRule(rule, idb))
 
-    def scoreRule(rule: Rule, allIdb: Set[Tuple]): Double = {
-      val refIdb = allIdb.filter(_.relation == rule.head.relation)
-      require(refIdb.nonEmpty, s"${allIdb}\n ${rule}")
+    def scoreRule(rule: Rule, allIdb: Set[Tuple]): Double = _ioScore(rule, allIdb) * _completenessScore(rule)
 
+    def _ioScore(rule: Rule, allIdb: Set[Tuple]): Double = {
+      val refIdb = getRefIdb(rule, allIdb)
       val idb = evalRule(rule)
 
       if (idb.nonEmpty) {
@@ -161,6 +195,15 @@ case class BasicSynthesis(problem: Problem,
       }
       else 0
     }
+
+    def _completenessScore(rule: Rule): Double = {
+      /** The fraction of fields in the head being bound to body variables. */
+      val m = rule.getFreeHeadVariables().size
+      val n = rule.getHeadVars().size
+      assert(n>=m)
+      1.0 * (n-m) / n
+    }
+
   }
 
   def learnAProgram(): Program = {
@@ -193,7 +236,7 @@ case class BasicSynthesis(problem: Problem,
 
     // Set up the pool of rules to be refine
     var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()(Ordering.by(_.score))
-    rulePool ++= generalRules
+    rulePool ++= generalRules.filter(r => r.isValid() || r.isTooGeneral())
 
     var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
 
@@ -203,25 +246,29 @@ case class BasicSynthesis(problem: Problem,
       val baseRule: Rule = rulePool.dequeue().rule
 
       // refine the rules
-      val candidateRules: Set[ScoredRule] = ruleConstructor.refineRule(baseRule).map(r => ScoredRule(r, idb))
+      val refinedRules = ruleConstructor.refineRule(baseRule)
+      val candidateRules: Set[ScoredRule] = refinedRules.map(r => ScoredRule(r, idb))
 
       // keep the valid ones
       validRules ++= candidateRules.filter(_.isValid())
 
       // Put the too general ones into the pool
-      rulePool ++= candidateRules.filter(_.isTooGeneral())
+      val tooGeneral = candidateRules.filter(_.isTooGeneral())
+      rulePool ++= tooGeneral
 
       iters += 1
     }
-
+    require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
     val bestRule = validRules.maxBy(_.score).rule
     val remainingRules: Set[Rule] = {
       val rs = rulePool.toSet
       rs.map(_.rule)
     }
+    logger.info(s"Found a rule after $iters iterations.\n$bestRule")
     (evalRule(bestRule), bestRule, remainingRules)
   }
 
-  def evalRule(rule: Rule): Set[Tuple] = evaluator.eval(Program(Set(rule)))
+  def evalRule(rule: Rule): Set[Tuple] = evaluator.eval(rule)
+  def getRefIdb(rule: Rule, allIdb: Set[Tuple]): Set[Tuple] = evaluator.getRefIdb(rule, allIdb)
 
 }
