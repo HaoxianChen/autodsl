@@ -1,5 +1,7 @@
 package synthesis
 
+import java.nio.file.Paths
+
 object Main extends App {
 
   if (args(0)== "parse") {
@@ -10,6 +12,18 @@ object Main extends App {
     val problem = Misc.readProblem(args(1))
     val programs = BasicSynthesis(problem).go()
     println(programs)
+  }
+  else if (args(0)== "regression-test") {
+    val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
+    val allProblems = List("forwarding/learning-switch",
+      "nib/reachable"
+    ).map(s => Paths.get(benchmarkDir, s))
+    for (problemFile <- allProblems) {
+      val problem = Misc.readProblem(problemFile.toString)
+      val programs = BasicSynthesis(problem).go()
+      assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
+      println(programs)
+    }
   }
 }
 

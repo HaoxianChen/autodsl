@@ -3,7 +3,7 @@ import synthesis._
 
 import scala.collection.mutable
 
-case class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) extends RuleBuilder {
+class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) extends RuleBuilder {
   def paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
     val allParams = literals.flatMap(_.fields)
     allParams.groupBy(_._type)
@@ -24,7 +24,7 @@ case class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]
     Literal(relation, fields.toList)
   }
 
-  def addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
+  def _addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
     /** Add relation to rule, without binding the variables */
     val allLiterals = rule.body + rule.head
     val newLiteral = newUnboundedLiteral(allLiterals, relation)
@@ -56,31 +56,34 @@ case class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]
     bindings.map(b => rule.rename(b))
   }
 
-  def refineRule(rule: Rule): Set[Rule] = {
-    def addBinding(rule: Rule): Set[Rule] = {
-      val freeVars: Set[Variable] = rule.freeVariables()
-      freeVars.flatMap(v => bindVariableToBody(rule, v))
-    }
-
-    def addNegation(rule: Rule): Set[Rule] = {
-      val posLits = rule.getPositiveLiterals()
-
-      if (posLits.size >= 2) {
-        // Only negate when body relation has more than 1 positive literals.
-        val negatedRules = posLits.map {
-          l => Rule(rule.head, rule.body, rule.negations + l)
-        }
-        negatedRules
-      }
-      else Set()
-    }
-
-    var refinedRules: Set[Rule] = Set()
+  def addGeneralLiteral(rule: Rule) : Set[Rule] = {
+    var newRules: Set[Rule] = Set()
     for (rel <- inputRels.diff(rule.body.map(_.relation))) {
-      refinedRules += addGeneralLiteral(rule, rel)
+      newRules += _addGeneralLiteral(rule, rel)
     }
-    refinedRules ++= addBinding(rule)
-    refinedRules ++= addNegation(rule)
+    newRules
+  }
+
+  def addBinding(rule: Rule): Set[Rule] = {
+    val freeVars: Set[Variable] = rule.freeVariables()
+    freeVars.flatMap(v => bindVariableToBody(rule, v))
+  }
+
+  def addNegation(rule: Rule): Set[Rule] = {
+    val posLits = rule.getPositiveLiterals()
+
+    if (posLits.size >= 2) {
+      // Only negate when body relation has more than 1 positive literals.
+      val negatedRules = posLits.map {
+        l => Rule(rule.head, rule.body, rule.negations + l)
+      }
+      negatedRules
+    }
+    else Set()
+  }
+
+  def refineRule(rule: Rule): Set[Rule] = {
+    val refinedRules: Set[Rule] = addGeneralLiteral(rule) ++ addBinding(rule) ++ addNegation(rule)
     refinedRules.map(_.normalize())
   }
 }

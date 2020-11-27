@@ -12,6 +12,7 @@ case class Evaluator(problem: Problem) {
   private val name = problem.name
   private val types = problem.types
   private val inputRels = problem.inputRels
+  private val originalOutRels = problem.outputRels
   private val edb = problem.edb
 
   // Prepare tmp directory
@@ -19,8 +20,9 @@ case class Evaluator(problem: Problem) {
   if (Files.notExists(tmpdir)) tmpdir.toFile.mkdir()
 
   def _eval(program: Program): Examples = {
+    if (program.rules.isEmpty) Examples.empty()
     // check if results are cached
-    if (cache.contains(program)) cache(program)
+    else if (cache.contains(program)) cache(program)
     else {
       // make temporary directory
       val dirName: String = s"${name}_${program.hashCode()}"
@@ -88,7 +90,11 @@ case class Evaluator(problem: Problem) {
   }
 
 
-  def getOutRels(program: Program): Set[Relation] = program.rules.map(_.head.relation)
+  def getOutRels(program: Program): Set[Relation] = {
+    val ruleBodyRels = program.getAllRelations.intersect(originalOutRels)
+    val ruleHeadRels = program.rules.map(_.head.relation)
+    ruleHeadRels ++ ruleBodyRels
+  }
 
   def loadOutput(dir: Path, outRels: Set[Relation]): Examples = {
     var idb = Examples()

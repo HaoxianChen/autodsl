@@ -3,7 +3,7 @@ package synthesis
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.mutable
-import rulebuilder.SimpleRuleBuilder
+import rulebuilder.{RecursionBuilder, SimpleRuleBuilder}
 
 
 case class PartialRuleEvaluator(problem: Problem) {
@@ -27,15 +27,11 @@ case class PartialRuleEvaluator(problem: Problem) {
     }
   }
 
-  def eval(rule: Rule): Set[Tuple] = {
-    val program = if (rule.isHeadBounded()) {
-      Program(Set(rule))
-    }
-    else {
-      val stripedRule = getStripedRule(rule)
-      Program(Set(stripedRule))
-    }
-    evaluator.eval(program)
+  def eval(rule: Rule, learnedRules: Set[Rule]): Set[Tuple] = {
+    val newRule = if (rule.isHeadBounded()) rule else getStripedRule(rule)
+    val oldIdb = evaluator.eval(Program(learnedRules))
+    val newIdb = evaluator.eval(Program(learnedRules+newRule))
+    newIdb.diff(oldIdb)
   }
 
   def _getBoundedIndices(rule: Rule): List[Int] = {
@@ -84,7 +80,8 @@ case class BasicSynthesis(problem: Problem,
 
   private val logger = Logger("Synthesis")
 
-  private val ruleConstructor = SimpleRuleBuilder(problem.inputRels, problem.outputRels)
+  // private val ruleConstructor = new SimpleRuleBuilder(problem.inputRels, problem.outputRels)
+  private val ruleConstructor = new RecursionBuilder(problem.inputRels, problem.outputRels)
   private val evaluator = PartialRuleEvaluator(problem)
 
 
@@ -95,13 +92,16 @@ case class BasicSynthesis(problem: Problem,
 
   }
   object ScoredRule {
-    def apply(rule: Rule, idb: Set[Tuple]): ScoredRule = new ScoredRule(rule, scoreRule(rule, idb))
+    def apply(rule: Rule, idb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): ScoredRule = {
+      new ScoredRule(rule, scoreRule(rule, idb, ruleEvaluator))
+    }
 
-    def scoreRule(rule: Rule, allIdb: Set[Tuple]): Double = _ioScore(rule, allIdb) * _completenessScore(rule)
+    def scoreRule(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): Double = {
+      _ioScore(rule, refIdb, ruleEvaluator) * _completenessScore(rule)
+    }
 
-    def _ioScore(rule: Rule, allIdb: Set[Tuple]): Double = {
-      val refIdb = getRefIdb(rule, allIdb)
-      val idb = evalRule(rule)
+    def _ioScore(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): Double = {
+      val idb = ruleEvaluator(rule)
 
       if (idb.nonEmpty) {
         val pos: Set[Tuple] = idb.intersect(refIdb)
@@ -135,7 +135,7 @@ case class BasicSynthesis(problem: Problem,
     var generalRules: Set[Rule] = ruleConstructor.mostGeneralRules()
 
     while (examples.nonEmpty && iters < maxIters ) {
-      val (coveredExamples, newRule, remainingRules) = learnARule(examples, generalRules)
+      val (coveredExamples, newRule, remainingRules) = learnARule(examples, generalRules, rules)
       examples = examples -- coveredExamples
       rules = rules + newRule
       generalRules = remainingRules
@@ -144,14 +144,14 @@ case class BasicSynthesis(problem: Problem,
     Program(rules)
   }
 
-  def learnARule(idb: Set[Tuple], generalSimpleRules: Set[Rule]): (Set[Tuple], Rule, Set[Rule]) = {
+  def learnARule(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule]): (Set[Tuple], Rule, Set[Rule]) = {
     var iters: Int = 0
 
     // score the rules based on current idb set
     val generalRules = {
       val curOutRels = idb.map(_.relation)
       val relevantRules = generalSimpleRules.filter(r => curOutRels.contains(r.head.relation))
-      relevantRules.map(r => ScoredRule(r, idb))
+      relevantRules.map(r => scoreRule(r, idb, learnedRules))
     }
 
     // Set up the pool of rules to be refine
@@ -167,7 +167,7 @@ case class BasicSynthesis(problem: Problem,
 
       // refine the rules
       val refinedRules = ruleConstructor.refineRule(baseRule)
-      val candidateRules: Set[ScoredRule] = refinedRules.map(r => ScoredRule(r, idb))
+      val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules))
 
       // keep the valid ones
       validRules ++= candidateRules.filter(_.isValid())
@@ -185,10 +185,14 @@ case class BasicSynthesis(problem: Problem,
       rs.map(_.rule)
     }
     logger.info(s"Found a rule after $iters iterations.\n$bestRule")
-    (evalRule(bestRule), bestRule, remainingRules)
+    val newIdb = evaluator.eval(bestRule, learnedRules)
+    (newIdb, bestRule, remainingRules)
   }
 
-  def evalRule(rule: Rule): Set[Tuple] = evaluator.eval(rule)
-  def getRefIdb(rule: Rule, allIdb: Set[Tuple]): Set[Tuple] = evaluator.getRefIdb(rule, allIdb)
+  def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule]): ScoredRule = {
+    val refIdb = evaluator.getRefIdb(rule, allIdb)
+    def f_eval: Rule => Set[Tuple] = r => evaluator.eval(r, learnedRules)
+    ScoredRule(rule, refIdb, f_eval)
+  }
 
 }

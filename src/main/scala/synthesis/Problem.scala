@@ -24,6 +24,7 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
 }
 object Examples {
   def apply(): Examples = new Examples(Map())
+  def empty(): Examples = new Examples(Map())
 
 
   def strToTuple(rel: Relation, str: List[String]): List[Constant] = {

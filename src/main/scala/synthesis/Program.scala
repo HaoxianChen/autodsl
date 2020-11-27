@@ -23,16 +23,7 @@ sealed abstract class Parameter {
   override def toString: String = s"$name"
 }
 case class Variable(name: String, _type: Type) extends Parameter
-case class Constant(name: String, _type: Type) extends Parameter {
-  override def toString: String = {
-    _type match {
-      case _: NumberType => s"$name"
-
-      // Wrap symbol constants within double quotes.
-      case _: SymbolType => s"${'"'}${name}${'"'}"
-    }
-  }
-}
+case class Constant(name: String, _type: Type) extends Parameter
 
 case class Literal(relation: Relation, fields: List[Parameter]) {
   override def toString: String = {
@@ -119,6 +110,8 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
       case v: Variable => Some(v)
     }
 
+  def getAllRelations(): Set[Relation] = (body+head).map(_.relation)
+
   def isHeadBounded(): Boolean = {
     val bodyParams = getPositiveLiterals().flatMap(_.fields)
     head.fields.toSet.subsetOf(bodyParams)
@@ -153,4 +146,5 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 
 case class Program(rules: Set[Rule]) {
   override def toString: String = rules.map(_.maskUngroundVars().toString).mkString("\n")
+  def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
 }
