@@ -21,6 +21,16 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
     val facts = elems(relation)
     facts.map(l => l.mkString("\t")).mkString("\n")
   }
+
+  def getConstantSet: Set[Constant] = {
+    def _getConstants(constantListSet: Set[List[Constant]]): Set[Constant] = constantListSet.flatMap(_.toSet)
+
+    var constants: Set[Constant] = Set()
+    for ((_, v) <- elems) {
+      constants ++= _getConstants(v)
+    }
+    constants
+  }
 }
 object Examples {
   def apply(): Examples = new Examples(Map())

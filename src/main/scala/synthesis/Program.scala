@@ -27,7 +27,13 @@ case class Constant(name: String, _type: Type) extends Parameter
 
 case class Literal(relation: Relation, fields: List[Parameter]) {
   override def toString: String = {
-    val field_str: String = fields.map(_.toString).mkString(",")
+    val field_str: String = fields.map {
+      case v: Variable => v.toString
+      case c: Constant => c._type match {
+        case _:SymbolType => "\""+c.toString+"\""
+        case _: NumberType => c.toString
+      }
+    }.mkString(",")
     s"${relation.name}($field_str)"
   }
 
@@ -103,18 +109,29 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 
   def getVarSet(): Set[Variable] = _getVarList(body+head).toSet
   def getHeadVars(): List[Variable] = _getVarList(Set(head))
-  def getFreeHeadVariables(): List[Variable] = getHeadVars().filter(v => freeVariables().contains(v))
+  def _getGroundedVars(): List[Variable] = {
+    getPositiveLiterals().toList.flatMap(_.fields).flatMap {
+      case _: Constant => None
+      case v: Variable => Some(v)
+    }
+  }
+  def getUngroundHeadVariables(): List[Variable] = {
+    getHeadVars().filterNot(v => _getGroundedVars().contains(v))
+  }
 
   def _getVarList(literals: Set[Literal]): List[Variable] = literals.toList.flatMap(_.fields).flatMap {
       case _: Constant => None
       case v: Variable => Some(v)
     }
+  def getConstantList: List[Constant] = (body+head).toList.flatMap(_.fields).flatMap {
+    case _: Variable => None
+    case c: Constant => Some(c)
+  }
 
   def getAllRelations(): Set[Relation] = (body+head).map(_.relation)
 
   def isHeadBounded(): Boolean = {
-    val bodyParams = getPositiveLiterals().flatMap(_.fields)
-    head.fields.toSet.subsetOf(bodyParams)
+    getHeadVars().toSet.subsetOf(_getGroundedVars().toSet)
   }
 
   def freeVariables(): Set[Variable] = {

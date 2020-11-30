@@ -4,14 +4,14 @@ import synthesis._
 import scala.collection.mutable
 
 class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) extends RuleBuilder {
-  def paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
+  def _paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
     val allParams = literals.flatMap(_.fields)
     allParams.groupBy(_._type)
   }
 
-  def newUnboundedLiteral(literals: Set[Literal], relation: Relation): Literal = {
+  def _newUnboundedLiteral(literals: Set[Literal], relation: Relation): Literal = {
     /** Create a new literal without binding any variables from existing literals. */
-    val params = paramMapByType(literals)
+    val params = _paramMapByType(literals)
     var fields: mutable.ListBuffer[Variable] = mutable.ListBuffer()
     var paramCounts: Map[Type, Int] = params.map {case (t, ps) => t -> ps.size}
     for (_type <- relation.signature) {
@@ -27,31 +27,38 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
   def _addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
     /** Add relation to rule, without binding the variables */
     val allLiterals = rule.body + rule.head
-    val newLiteral = newUnboundedLiteral(allLiterals, relation)
+    val newLiteral = _newUnboundedLiteral(allLiterals, relation)
     rule.addLiteral(newLiteral)
   }
 
   def mostGeneralRules(): Set[Rule] = {
     outputRels.flatMap(rel => {
-      val head = newUnboundedLiteral(Set(), rel)
+      val head = _newUnboundedLiteral(Set(), rel)
 
       /** All possible bodies with one literal. */
-      val bodies: Set[Literal] = inputRels.map(inputRel => newUnboundedLiteral(Set(head), inputRel))
+      val bodies: Set[Literal] = inputRels.map(inputRel => _newUnboundedLiteral(Set(head), inputRel))
       val unBoundRules = bodies.map(lit => Rule(head, Set(lit)))
 
       /** At least add one binding to the head. */
       def bindHead(rule: Rule): Set[Rule] = {
-        rule.getFreeHeadVariables().flatMap(v => bindVariableToBody(rule, v)).toSet
+        rule.getUngroundHeadVariables().flatMap(v => _bindVariableToBody(rule, v)).toSet
       }
       val rules = unBoundRules.flatMap(bindHead)
       rules.map(_.normalize())
     })
   }
 
-  def bindVariableToBody(rule:Rule, variable: Variable): Set[Rule] = {
+  def _bindVariableToBody(rule:Rule, variable: Variable): Set[Rule] = {
+    /** Only bind to variables in the rule body */
     require(rule.getVarSet().contains(variable))
-    val paramMap = paramMapByType(rule.body)
-    val availableVars = paramMap.getOrElse(variable._type, Set()) - variable
+    val paramMap = _paramMapByType(rule.body)
+    val availableVars: Set[Variable] = {
+      val params = paramMap.getOrElse(variable._type, Set()) - variable
+      params.flatMap {
+        case _: Constant => None
+        case v: Variable => Some(v)
+      }
+    }
     val bindings: Set[Map[Parameter, Parameter]] = availableVars.map(v => Map(variable -> v))
     bindings.map(b => rule.rename(b))
   }
@@ -66,18 +73,21 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
 
   def addBinding(rule: Rule): Set[Rule] = {
     val freeVars: Set[Variable] = rule.freeVariables()
-    freeVars.flatMap(v => bindVariableToBody(rule, v))
+    freeVars.flatMap(v => _bindVariableToBody(rule, v))
   }
 
   def addNegation(rule: Rule): Set[Rule] = {
-    val posLits = rule.getPositiveLiterals()
+    /** Only negate on input relations */
+    val posLits = rule.getPositiveLiterals().filter(l => inputRels.contains(l.relation))
 
     if (posLits.size >= 2) {
       // Only negate when body relation has more than 1 positive literals.
       val negatedRules = posLits.map {
         l => Rule(rule.head, rule.body, rule.negations + l)
       }
-      negatedRules
+      val headVarLen = rule.head.fields.size
+      // filter rules whose head is completely ungrounded.
+      negatedRules.filter(_.getUngroundHeadVariables().size < headVarLen)
     }
     else Set()
   }
