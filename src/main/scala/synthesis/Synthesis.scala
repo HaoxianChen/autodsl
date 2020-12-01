@@ -218,8 +218,8 @@ case class BasicSynthesis(problem: Problem,
 }
 
 case class SynthesisNPrograms(problem: Problem,
-                           maxIters: Int = 200,
-                           maxRefineIters: Int = 200,
+                           maxIters: Int = 20,
+                           maxRefineIters: Int = 25,
                           ) extends Synthesis(problem) {
 
   def go(): Set[Program] = Set(learnAProgram())
@@ -256,13 +256,39 @@ case class SynthesisNPrograms(problem: Problem,
     relevantRules.map(r => scoreRule(r, idb, learnedRules))
   }
 
-  def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
-                 maxExtraIters: Int = 1): (Set[Tuple], Set[Rule], Set[Rule]) = {
+  def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule]): (Set[Tuple], Set[Rule], Set[Rule]) = {
+
+    /** Iteratively increase the number of constants */
+
+    var newRules: Set[Rule] = Set()
+    var coveredExamples: Set[Tuple] = Set()
+    var remainingRules: Set[Rule] = Set()
+
+    var maxConstants = 0
+    while (newRules.isEmpty && maxConstants <= 2) {
+      logger.info(s"searching rules with at most $maxConstants constants.")
+      val ruleBuilder = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb, maxConstants)
+      val (_coveredExamples, _newRules, _remainingRules) = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule)
+
+      newRules = _newRules
+      coveredExamples = _coveredExamples
+      remainingRules = _remainingRules
+
+      maxConstants += 1
+    }
+    (coveredExamples, newRules, remainingRules)
+  }
+
+  def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
+                   refineRule: Rule => Set[Rule],
+                   maxExtraIters: Int = 1): (Set[Tuple], Set[Rule], Set[Rule]) = {
     var iters: Int = 0
     var extraIters: Int = 0
 
     // score the rules based on current idb set
     val generalRules = _getRelevantScoredRules(idb, generalSimpleRules, learnedRules)
+
+    var forbiddenRules: Set[ScoredRule] = Set()
 
     // Set up the pool of rules to be refine
     var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
@@ -270,26 +296,27 @@ case class SynthesisNPrograms(problem: Problem,
 
     var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
 
-    while (iters < maxRefineIters && extraIters < maxExtraIters) {
+    while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty) {
 
       // pop highest scored rule from pool
       val baseRule: Rule = rulePool.dequeue().rule
 
       // refine the rules
-      val refinedRules = ruleConstructor.refineRule(baseRule)
+      val refinedRules = refineRule(baseRule)
       val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules))
 
       // keep the valid ones
       validRules ++= candidateRules.filter(_.isValid())
 
-      // Put the too general ones into the pool
+      // Put the too general ones into the pool, and forbid anything else from exploring again
       val tooGeneral = candidateRules.filter(_.isTooGeneral())
-      rulePool ++= tooGeneral
+      forbiddenRules ++= candidateRules.diff(validRules++tooGeneral)
+      rulePool ++= tooGeneral.diff(forbiddenRules)
 
       iters += 1
       if (validRules.nonEmpty) extraIters += 1
     }
-    require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
+    // require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
     logger.info(s"Found ${validRules.size} rules after $iters iterations.\n")
 
     val remainingRules: Set[Rule] = {
@@ -297,8 +324,11 @@ case class SynthesisNPrograms(problem: Problem,
       rs.map(_.rule)
     }
     val newLearnedRules: Set[Rule] = validRules.map(_.rule)
-    val newIdb = evaluator.evalRules(newLearnedRules, learnedRules)
-    assert(newIdb.nonEmpty)
+    val newIdb = if(newLearnedRules.nonEmpty) {
+      evaluator.evalRules(newLearnedRules, learnedRules)
+    }
+    else {Set[Tuple]()}
+    // assert(newIdb.nonEmpty)
     (newIdb, newLearnedRules, remainingRules)
   }
 
