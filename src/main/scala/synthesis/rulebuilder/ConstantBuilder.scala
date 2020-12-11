@@ -4,8 +4,9 @@ import synthesis._
 
 class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
                       constantPool: Map[Type, Set[Constant]],
+                     recursion: Boolean = true,
                       maxConstant: Int = 2)
-  extends RecursionBuilder(inputRels, outputRels) {
+  extends RecursionBuilder(inputRels, outputRels, recursion) {
 
   def _bindToConstant(rule: Rule, variable: Variable): Set[Rule] = {
     require(rule.getVarSet().contains(variable))
@@ -38,9 +39,10 @@ class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
 
 object ConstantBuilder {
   def apply(inputRels: Set[Relation], outputRels: Set[Relation], edb: Examples, idb: Examples,
+            recursion: Boolean = true,
            maxConstant: Int = 2, maxConstantPoolSize: Int=5): ConstantBuilder = {
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
-    new ConstantBuilder(inputRels, outputRels, constantPool, maxConstant)
+    new ConstantBuilder(inputRels, outputRels, constantPool, recursion, maxConstant)
   }
 
   def getConstantPool(edb: Examples, idb: Examples, maxConstantPoolSize: Int): Map[Type, Set[Constant]] = {

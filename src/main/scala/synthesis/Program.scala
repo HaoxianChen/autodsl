@@ -29,10 +29,11 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
   override def toString: String = {
     val field_str: String = fields.map {
       case v: Variable => v.toString
-      case c: Constant => c._type match {
-        case _:SymbolType => "\""+c.toString+"\""
-        case _: NumberType => c.toString
-      }
+      case c: Constant => c.toString
+      // case c: Constant => c._type match {
+      //   case _:SymbolType => "\""+c.toString+"\""
+      //   case _: NumberType => c.toString
+      // }
     }.mkString(",")
     s"${relation.name}($field_str)"
   }

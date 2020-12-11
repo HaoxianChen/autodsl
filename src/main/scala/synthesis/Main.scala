@@ -17,7 +17,8 @@ object Main extends App {
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
     val allProblems = List("forwarding/learning-switch",
-      "nib/reachable"
+      "nib/reachable",
+      "firewall/stateless-firewall"
     ).map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- allProblems) {
       println(problemFile)

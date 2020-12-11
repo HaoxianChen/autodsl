@@ -46,7 +46,6 @@ object Misc {
     val parser = new Parser()
     val problem = parser.parseAll(parser.problem, inputString).get
       .rename(problemName)
-      .addSpecStr(inputString)
 
     // Read Input Output examples
     def relToProblem(problem: Problem, relation:Relation): Problem = {

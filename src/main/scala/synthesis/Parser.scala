@@ -16,15 +16,19 @@ class Parser extends JavaTokenParsers{
     case _ => ???
   }
 
+  def domainDecl: Parser[String] = ".domain" ~> ident
 
   def fieldDecl: Parser[String] = ident ~> ":" ~> ident
   def fieldDeclList: Parser[List[String]] = repsep(fieldDecl, ",")
 
   private val emptyProblem: Problem = Problem()
-  def problem: Parser[Problem] = (typeDeclLine | inputRelationDeclLine | outputRelationDeclLine).* ^^ {
+  def problem: Parser[Problem] = (domainDeclLine | typeDeclLine | inputRelationDeclLine
+    | outputRelationDeclLine).* ^^ {
     f => f.foldLeft(emptyProblem) {case (problem, transformer) => transformer(problem)}
   }
 
+  def domainDeclLine: Parser[Problem => Problem] = domainDecl ^^ {domain =>
+    problem => problem.addDomain(domain)}
   def typeDeclLine: Parser[Problem => Problem] = typeDecl ^^ {_type =>
     problem => problem.addType(_type)}
   def inputRelationDeclLine: Parser[Problem => Problem] =

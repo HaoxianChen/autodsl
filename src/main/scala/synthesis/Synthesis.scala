@@ -10,8 +10,9 @@ case class PartialRuleEvaluator(problem: Problem) {
   private val evaluator = Evaluator(problem)
 
   def getRefIdb(rule: Rule, idb: Set[Tuple]): Set[Tuple] = {
+    val relevantIdb = idb.filter(_.relation == rule.head.relation)
     if (rule.isHeadBounded()){
-      idb
+      relevantIdb
     }
     else {
       val newRel = _getStrippedRelation(rule)
@@ -22,7 +23,6 @@ case class PartialRuleEvaluator(problem: Problem) {
         Tuple(newRel, newFields)
       }
 
-      val relevantIdb = idb.filter(_.relation == rule.head.relation)
       relevantIdb.map(getStripedTuple)
     }
   }
@@ -217,7 +217,22 @@ case class BasicSynthesis(problem: Problem,
 
 }
 
+case class SynthesisConfigs(recursion: Boolean, maxConstants: Int)
+object SynthesisConfigs {
+  def getConfig(problem: Problem): SynthesisConfigs = {
+    problem.domain match {
+      case "SDN" => SynthesisConfigs(recursion = false, maxConstants = 2)
+      case "NIB" => SynthesisConfigs(recursion = true, maxConstants = 0)
+      case "routing" => SynthesisConfigs(recursion = true, maxConstants = 0)
+      case "consensus" => SynthesisConfigs(recursion = false, maxConstants = 0)
+      // case _ => SynthesisConfigs(recursion = true, maxConstants = 2)
+      case _ => ???
+    }
+  }
+}
+
 case class SynthesisNPrograms(problem: Problem,
+                             recursion: Boolean = true,
                            maxIters: Int = 20,
                            maxRefineIters: Int = 25,
                           ) extends Synthesis(problem) {
@@ -228,6 +243,7 @@ case class SynthesisNPrograms(problem: Problem,
 
   private val ruleConstructor = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb)
   private val evaluator = PartialRuleEvaluator(problem)
+  private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
 
 
   def learnAProgram(): Program = {
@@ -258,25 +274,30 @@ case class SynthesisNPrograms(problem: Problem,
 
   def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule]): (Set[Tuple], Set[Rule], Set[Rule]) = {
 
-    /** Iteratively increase the number of constants */
+    /** Lookup the configuration for the synthesizer*/
+    val ruleBuilder = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb, config.recursion,
+      config.maxConstants)
+    _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule)
 
-    var newRules: Set[Rule] = Set()
-    var coveredExamples: Set[Tuple] = Set()
-    var remainingRules: Set[Rule] = Set()
+    // /** Iteratively increase the number of constants */
+    // var newRules: Set[Rule] = Set()
+    // var coveredExamples: Set[Tuple] = Set()
+    // var remainingRules: Set[Rule] = Set()
 
-    var maxConstants = 0
-    while (newRules.isEmpty && maxConstants <= 2) {
-      logger.info(s"searching rules with at most $maxConstants constants.")
-      val ruleBuilder = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb, maxConstants)
-      val (_coveredExamples, _newRules, _remainingRules) = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule)
+    // var nConstants = 0
+    // while (newRules.isEmpty && nConstants <= config.maxConstants) {
+    //   logger.info(s"searching rules with at most $nConstants constants.")
+    //   val ruleBuilder = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb,
+    //     config.recursion, nConstants)
+    //   val (_coveredExamples, _newRules, _remainingRules) = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule)
 
-      newRules = _newRules
-      coveredExamples = _coveredExamples
-      remainingRules = _remainingRules
+    //   newRules = _newRules
+    //   coveredExamples = _coveredExamples
+    //   remainingRules = _remainingRules
 
-      maxConstants += 1
-    }
-    (coveredExamples, newRules, remainingRules)
+    //   nConstants += 1
+    // }
+    // (coveredExamples, newRules, remainingRules)
   }
 
   def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
@@ -299,10 +320,10 @@ case class SynthesisNPrograms(problem: Problem,
     while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty) {
 
       // pop highest scored rule from pool
-      val baseRule: Rule = rulePool.dequeue().rule
+      val baseRule = rulePool.dequeue()
 
       // refine the rules
-      val refinedRules = refineRule(baseRule)
+      val refinedRules = refineRule(baseRule.rule)
       val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules))
 
       // keep the valid ones
