@@ -4,6 +4,15 @@ import java.nio.file.Paths
 
 object Main extends App {
 
+  def displayResults(programs: Map[Relation, Set[Program]]) = {
+    for ((rel,ps)<-programs) {
+      println(s"$rel: ${ps.size} programs:")
+      for (p <- ps) {
+        println(p)
+      }
+    }
+  }
+
   if (args(0)== "parse") {
     val problem = Misc.readProblem(args(1))
     println(problem)
@@ -13,10 +22,7 @@ object Main extends App {
     // val programs = BasicSynthesis(problem).go()
     // val programs = SynthesisNPrograms(problem).go()
     val programs = SynthesisAllPrograms(problem).go()
-    println(s"${programs.size} programs:")
-    for (p<-programs) {
-      println(p)
-    }
+    displayResults(programs)
   }
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
@@ -30,8 +36,8 @@ object Main extends App {
       // val programs = BasicSynthesis(problem).go()
       // val programs = SynthesisNPrograms(problem).go()
       val programs = SynthesisAllPrograms(problem).go()
+      displayResults(programs)
       assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
-      println(programs)
     }
   }
 }

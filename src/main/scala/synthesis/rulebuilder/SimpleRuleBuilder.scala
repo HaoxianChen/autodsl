@@ -44,7 +44,9 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
         rule.getUngroundHeadVariables().flatMap(v => _bindVariableToBody(rule, v)).toSet
       }
       val rules = unBoundRules.flatMap(bindHead)
-      rules.map(_.normalize())
+
+      val rules2 = rules.map(bindInstanceIds)
+      rules2.map(_.normalize())
     })
   }
 
@@ -92,8 +94,17 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     else Set()
   }
 
+  def bindInstanceIds(rule: Rule): Rule = {
+    val instanceType = NumberType("InstanceId")
+    val allInstanceIds = (rule.body + rule.head).flatMap(_.fields).filter(_._type == instanceType)
+    val instanceIdVar = Variable("instanceid0", instanceType)
+    val newBindings: Map[Parameter, Parameter] = allInstanceIds.map(p=>(p->instanceIdVar)).toMap
+    rule.rename(newBindings)
+  }
+
   def refineRule(rule: Rule): Set[Rule] = {
     val refinedRules: Set[Rule] = addGeneralLiteral(rule) ++ addBinding(rule) ++ addNegation(rule)
-    refinedRules.map(_.normalize())
+    val refined2 = refinedRules.map(bindInstanceIds)
+    refined2.map(_.normalize())
   }
 }

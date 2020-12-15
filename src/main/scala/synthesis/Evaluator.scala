@@ -25,6 +25,7 @@ case class Evaluator(problem: Problem) {
     else if (cache.contains(program)) cache(program)
     else {
       // make temporary directory
+      // val dirName: String = s"${name}_${program.hashCode()}_${edb.hashCode()}"
       val dirName: String = s"${name}_${program.hashCode()}"
       val problemDir = Paths.get(tmpdir.toString, dirName)
 

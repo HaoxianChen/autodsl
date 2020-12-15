@@ -126,14 +126,24 @@ object ScoredRule {
 }
 
 abstract class Synthesis(problem: Problem) {
-  def go(): Set[Program]
+  def learnNPrograms(idb: Set[Tuple]): Set[Program]
+  def go(): Map[Relation, Set[Program]] = {
+    /** Strip the problem into learning different output */
+    val examples: Set[Tuple] = problem.idb.toTuples()
+    val exampleGroup: Map[Relation, Set[Tuple]] = examples.groupBy(_.relation)
+
+    val programsByOutRels: Map[Relation, Set[Program]] = exampleGroup.map {
+      case (rel, idb) => rel -> learnNPrograms(idb)
+    }
+    programsByOutRels
+  }
 }
 
 case class BasicSynthesis(problem: Problem,
                           maxIters: Int = 200,
                          maxRefineIters: Int = 200,
                          ) extends Synthesis(problem) {
-  def go(): Set[Program] = Set(learnAProgram())
+  def learnNPrograms(idb: Set[Tuple]) = Set(learnAProgram(idb))
 
   private val logger = Logger("Synthesis")
 
@@ -143,8 +153,8 @@ case class BasicSynthesis(problem: Problem,
   private val evaluator = PartialRuleEvaluator(problem)
 
 
-  def learnAProgram(): Program = {
-    var examples: Set[Tuple] = problem.idb.toTuples()
+  def learnAProgram(idb: Set[Tuple]): Program = {
+    var examples: Set[Tuple] = idb
     var rules: Set[Rule] = Set()
     var iters: Int = 0
 
@@ -237,31 +247,13 @@ case class SynthesisAllPrograms(problem: Problem,
                               maxRefineIters: Int = 100,
                              ) extends Synthesis(problem) {
 
-  def go(): Set[Program] = learnNPrograms()
-
   private val logger = Logger("Synthesis")
 
   private val ruleConstructor = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb)
   private val evaluator = PartialRuleEvaluator(problem)
   private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
 
-  def learnNPrograms(): Set[Program] = {
-    /** Strip the problem into learning different output */
-    val examples: Set[Tuple] = problem.idb.toTuples()
-    val exampleGroup: Map[Relation, Set[Tuple]] = examples.groupBy(_.relation)
-
-
-    /** cross join the programs learnt for each relation */
-    val programsByOutRels: List[Set[Program]] = exampleGroup.map {
-      case (_, idb) => _learnNPrograms(idb)
-    }.toList
-
-    Misc.crossJoin(programsByOutRels).map {
-      ps => ps.fold(Program(Set()))((p1,p2)=> Program(p1.rules++p2.rules))
-    }.toSet
-  }
-
-  def _learnNPrograms(idb: Set[Tuple]): Set[Program] = {
+  def learnNPrograms(idb: Set[Tuple]): Set[Program] = {
     /** Learn all possible rules, then combine them. */
     var examples: Set[Tuple] = idb
     var rules: Set[Rule] = Set()
@@ -316,13 +308,24 @@ case class SynthesisAllPrograms(problem: Problem,
         }
       }
     }
+    val maxRules = 3
 
     // sort: non-recursive first, recursion later
     val ruleList: List[Rule] = {
       val recursiveRules = rules.filter(_.isRecursive())
       val nonRecursiveRules = rules.diff(recursiveRules)
-      recursiveRules.toList ::: nonRecursiveRules.toList
+
+      // sort nonrecursive rules by the output sizes
+      val nonRecursiveSorted: List[Rule] = {
+        def outputCounts(rule: Rule): Int = {
+          val idb = evaluator.evalRule(rule, Set())
+          idb.size
+        }
+        nonRecursiveRules.toList.sortBy(outputCounts)(Ordering[Int].reverse)
+      }
+      nonRecursiveSorted.take(maxRules) ::: recursiveRules.toList.take(maxRules)
     }
+    logger.debug(s"Combine ${ruleList.size} rules into programs")
     _combineRules(List(),ruleList, idb).map(
       rs=>Program(rs.toSet)
     )
@@ -417,7 +420,7 @@ case class SynthesisNPrograms(problem: Problem,
                            maxRefineIters: Int = 25,
                           ) extends Synthesis(problem) {
 
-  def go(): Set[Program] = Set(learnAProgram())
+  override def learnNPrograms(idb: Set[Tuple]): Set[Program] = Set(learnAProgram(idb))
 
   private val logger = Logger("Synthesis")
 
@@ -426,8 +429,8 @@ case class SynthesisNPrograms(problem: Problem,
   private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
 
 
-  def learnAProgram(): Program = {
-    var examples: Set[Tuple] = problem.idb.toTuples()
+  def learnAProgram(idb: Set[Tuple]): Program = {
+    var examples: Set[Tuple] = idb
     var rules: Set[Rule] = Set()
     var iters: Int = 0
 
