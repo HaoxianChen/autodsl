@@ -11,8 +11,12 @@ object Main extends App {
   else if (args(0)== "learn") {
     val problem = Misc.readProblem(args(1))
     // val programs = BasicSynthesis(problem).go()
-    val programs = SynthesisNPrograms(problem).go()
-    println(programs)
+    // val programs = SynthesisNPrograms(problem).go()
+    val programs = SynthesisAllPrograms(problem).go()
+    println(s"${programs.size} programs:")
+    for (p<-programs) {
+      println(p)
+    }
   }
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
@@ -24,7 +28,8 @@ object Main extends App {
       println(problemFile)
       val problem = Misc.readProblem(problemFile.toString)
       // val programs = BasicSynthesis(problem).go()
-      val programs = SynthesisNPrograms(problem).go()
+      // val programs = SynthesisNPrograms(problem).go()
+      val programs = SynthesisAllPrograms(problem).go()
       assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
       println(programs)
     }

@@ -159,6 +159,8 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     rename(binding)
   }
 
+  def isRecursive(): Boolean = getAllRelations().contains(head.relation)
+
   def isValid(): Boolean = isHeadBounded()
 }
 
