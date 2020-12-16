@@ -268,16 +268,20 @@ case class SynthesisAllPrograms(problem: Problem,
       require(nextExamples.size < examples.size)
       examples = nextExamples
       rules = rules ++ newRules
-      generalRules = remainingRules
+      if (!config.recursion) generalRules = remainingRules
       iters += 1
     }
     assert(examples.isEmpty)
-    combineRules(rules, idb)
+    val programs = combineRules(rules, idb)
+    logger.debug(s"Found ${programs.size} programs.")
+    programs
   }
 
   def combineRules(rules: Set[Rule], idb: Set[Tuple]): Set[Program] = {
     /** Return all combinations of rules that cover all idb
      * how to handle recursion? */
+
+    val maxPrograms = 20
 
     def _combineRules(learnedRules: List[Rule], remainingRules: List[Rule], remainingIdb: Set[Tuple]): Set[List[Rule]] = {
       if (remainingIdb.isEmpty) {
@@ -302,13 +306,18 @@ case class SynthesisAllPrograms(problem: Problem,
               }
             }
 
-            // not keeping this rule
-            ruleSet1 ++ _combineRules(learnedRules, tail, remainingIdb)
+            if (ruleSet1.size > maxPrograms) {
+              // If already reaches maximum programs, discard the other branch
+              ruleSet1
+            }
+            else{
+              // explore the other branch: not keeping this rule
+              ruleSet1 ++ _combineRules(learnedRules, tail, remainingIdb)
+            }
           }
         }
       }
     }
-    val maxRules = 3
 
     // sort: non-recursive first, recursion later
     val ruleList: List[Rule] = {
@@ -323,7 +332,7 @@ case class SynthesisAllPrograms(problem: Problem,
         }
         nonRecursiveRules.toList.sortBy(outputCounts)(Ordering[Int].reverse)
       }
-      nonRecursiveSorted.take(maxRules) ::: recursiveRules.toList.take(maxRules)
+      nonRecursiveSorted ::: recursiveRules.toList
     }
     logger.debug(s"Combine ${ruleList.size} rules into programs")
     _combineRules(List(),ruleList, idb).map(
@@ -391,137 +400,6 @@ case class SynthesisAllPrograms(problem: Problem,
     if (rulePool.isEmpty) logger.info(s"Exhausted all rules")
     if (iters == maxRefineIters) logger.info(s"Hit maximum iterations ${maxExtraIters}")
     if (extraIters == maxExtraIters) logger.info(s"Hit maximum extra iterations ${maxExtraIters}")
-    // require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
-    logger.info(s"Found ${validRules.size} rules after $iters iterations.\n")
-
-    val remainingRules: Set[Rule] = {
-      val rs = rulePool.toSet
-      rs.map(_.rule)
-    }
-    val newLearnedRules: Set[Rule] = validRules.map(_.rule)
-    val newIdb = if(newLearnedRules.nonEmpty) {
-      evaluator.evalRules(newLearnedRules, learnedRules)
-    }
-    else {Set[Tuple]()}
-    // assert(newIdb.nonEmpty)
-    (newIdb, newLearnedRules, remainingRules)
-  }
-
-  def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule]): ScoredRule = {
-    val refIdb = evaluator.getRefIdb(rule, allIdb)
-    def f_eval: Rule => Set[Tuple] = r => evaluator.evalRule(r, learnedRules)
-    ScoredRule(rule, refIdb, f_eval)
-  }
-
-}
-case class SynthesisNPrograms(problem: Problem,
-                             recursion: Boolean = true,
-                           maxIters: Int = 20,
-                           maxRefineIters: Int = 25,
-                          ) extends Synthesis(problem) {
-
-  override def learnNPrograms(idb: Set[Tuple]): Set[Program] = Set(learnAProgram(idb))
-
-  private val logger = Logger("Synthesis")
-
-  private val ruleConstructor = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb)
-  private val evaluator = PartialRuleEvaluator(problem)
-  private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
-
-
-  def learnAProgram(idb: Set[Tuple]): Program = {
-    var examples: Set[Tuple] = idb
-    var rules: Set[Rule] = Set()
-    var iters: Int = 0
-
-    // Init the rule pool with the most general rules
-    var generalRules: Set[Rule] = ruleConstructor.mostGeneralRules()
-
-    while (examples.nonEmpty && iters < maxIters ) {
-      val (coveredExamples, newRules, remainingRules) = learnNRules(examples, generalRules, rules)
-      val nextExamples = examples -- coveredExamples
-      require(nextExamples.size < examples.size)
-      examples = nextExamples
-      rules = rules ++ newRules
-      generalRules = remainingRules
-      iters += 1
-    }
-    Program(rules)
-  }
-
-  def _getRelevantScoredRules(idb: Set[Tuple], rules: Set[Rule], learnedRules: Set[Rule]): Set[ScoredRule] = {
-    val curOutRels = idb.map(_.relation)
-    val relevantRules = rules.filter(r => curOutRels.contains(r.head.relation))
-    relevantRules.map(r => scoreRule(r, idb, learnedRules))
-  }
-
-  def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule]): (Set[Tuple], Set[Rule], Set[Rule]) = {
-
-    /** Lookup the configuration for the synthesizer*/
-    val relevantOutRel: Set[Relation] = idb.map(_.relation)
-    require(relevantOutRel.subsetOf(problem.outputRels))
-    val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
-      config.maxConstants)
-    _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule)
-
-    // /** Iteratively increase the number of constants */
-    // var newRules: Set[Rule] = Set()
-    // var coveredExamples: Set[Tuple] = Set()
-    // var remainingRules: Set[Rule] = Set()
-
-    // var nConstants = 0
-    // while (newRules.isEmpty && nConstants <= config.maxConstants) {
-    //   logger.info(s"searching rules with at most $nConstants constants.")
-    //   val ruleBuilder = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb,
-    //     config.recursion, nConstants)
-    //   val (_coveredExamples, _newRules, _remainingRules) = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule)
-
-    //   newRules = _newRules
-    //   coveredExamples = _coveredExamples
-    //   remainingRules = _remainingRules
-
-    //   nConstants += 1
-    // }
-    // (coveredExamples, newRules, remainingRules)
-  }
-
-  def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
-                   refineRule: Rule => Set[Rule],
-                   maxExtraIters: Int = 1): (Set[Tuple], Set[Rule], Set[Rule]) = {
-    var iters: Int = 0
-    var extraIters: Int = 0
-
-    // score the rules based on current idb set
-    val generalRules = _getRelevantScoredRules(idb, generalSimpleRules, learnedRules)
-
-    var forbiddenRules: Set[ScoredRule] = Set()
-
-    // Set up the pool of rules to be refine
-    var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
-    rulePool ++= generalRules.filter(r => r.isValid() || r.isTooGeneral())
-
-    var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
-
-    while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty) {
-
-      // pop highest scored rule from pool
-      val baseRule = rulePool.dequeue()
-
-      // refine the rules
-      val refinedRules = refineRule(baseRule.rule)
-      val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules))
-
-      // keep the valid ones
-      validRules ++= candidateRules.filter(_.isValid())
-
-      // Put the too general ones into the pool, and forbid anything else from exploring again
-      val tooGeneral = candidateRules.filter(_.isTooGeneral())
-      forbiddenRules ++= candidateRules.diff(validRules++tooGeneral)
-      rulePool ++= tooGeneral.diff(forbiddenRules)
-
-      iters += 1
-      if (validRules.nonEmpty) extraIters += 1
-    }
     // require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
     logger.info(s"Found ${validRules.size} rules after $iters iterations.\n")
 

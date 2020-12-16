@@ -8,7 +8,7 @@ object Main extends App {
     for ((rel,ps)<-programs) {
       println(s"$rel: ${ps.size} programs:")
       for (p <- ps) {
-        println(p)
+        println(p+"\n")
       }
     }
   }
