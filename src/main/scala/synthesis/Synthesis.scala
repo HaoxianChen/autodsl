@@ -254,6 +254,8 @@ case class SynthesisAllPrograms(problem: Problem,
   private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
 
   def learnNPrograms(idb: Set[Tuple]): Set[Program] = {
+    require(idb.map(_.relation).size == 1, s"Only idb of one relation at a time.")
+
     /** Learn all possible rules, then combine them. */
     var examples: Set[Tuple] = idb
     var rules: Set[Rule] = Set()

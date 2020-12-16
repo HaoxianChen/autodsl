@@ -10,6 +10,16 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
     Examples(newMap)
   }
 
+  def addTuples(tuples: Set[Tuple]) : Examples= {
+    val tuplesByRel = tuples.groupBy(_.relation)
+
+    var newExamples = this
+    for ((rel, tuples) <- tuplesByRel) {
+      newExamples = newExamples.addTuples(rel, tuples.map(_.fields))
+    }
+    newExamples
+  }
+
   def toTuples(): Set[Tuple] = {
     def toTuples(relation: Relation, tuples: Set[List[Constant]]): Set[Tuple] = tuples.map(fields => Tuple(relation, fields))
     elems.flatMap {
@@ -31,6 +41,8 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
     }
     constants
   }
+
+  def filterByRelation(rel: Relation): Examples = new Examples(Map(rel->elems(rel)))
 }
 object Examples {
   def apply(): Examples = new Examples(Map())
@@ -81,6 +93,15 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
     require(outputRels.contains(relation))
     val newTuples = facts.map(Examples.strToTuple(relation, _)).toSet
     this.copy(idb=idb.addTuples(relation, newTuples))
+  }
+
+  def addEdb(tuples: Set[Tuple]): Problem = {
+    val newEdb = edb.addTuples(tuples)
+    this.copy(edb=newEdb)
+  }
+  def addIdb(tuples: Set[Tuple]): Problem = {
+    val newIdb = idb.addTuples(tuples)
+    this.copy(idb=newIdb)
   }
 
   def rename(newName: String): Problem = this.copy(name=newName)

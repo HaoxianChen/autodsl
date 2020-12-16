@@ -168,3 +168,6 @@ case class Program(rules: Set[Rule]) {
   override def toString: String = rules.map(_.maskUngroundVars().toString).mkString("\n")
   def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
 }
+object Program {
+  def apply(): Program = Program(Set())
+}
