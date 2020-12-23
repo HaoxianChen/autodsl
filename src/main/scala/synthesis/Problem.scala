@@ -27,6 +27,11 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
     }.toSet
   }
 
+  def toInstances(): Set[TupleInstance] = ???
+
+  def addInstance(tupleInstance: TupleInstance): Examples = ???
+  def addInstances(tupleInstanceSet: Set[TupleInstance]): Examples = tupleInstanceSet.foldLeft(this)((e,t) => e.addInstance(t))
+
   def toFileStr(relation: Relation): String = {
     val facts = elems(relation)
     facts.map(l => l.mkString("\t")).mkString("\n")

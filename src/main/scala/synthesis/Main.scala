@@ -19,10 +19,15 @@ object Main extends App {
   }
   else if (args(0)== "learn") {
     val problem = Misc.readProblem(args(1))
-    // val programs = BasicSynthesis(problem).go()
-    // val programs = SynthesisNPrograms(problem).go()
     val programs = SynthesisAllPrograms(problem).go()
     displayResults(programs)
+  }
+  else if (args(0) == "active") {
+    val problem = Misc.readProblem(args(1))
+    val maxExamples: Int = args(2).toInt
+    val learner = new ActiveLearning(problem, maxExamples)
+    val program = learner.go()
+    println(program)
   }
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"

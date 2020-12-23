@@ -47,7 +47,15 @@ object ConstantBuilder {
 
   def getConstantPool(edb: Examples, idb: Examples, maxConstantPoolSize: Int): Map[Type, Set[Constant]] = {
     val allConstants = edb.getConstantSet ++ idb.getConstantSet
+    _getConstantPool(allConstants, maxConstantPoolSize)
+  }
 
+  def getConstantPool(examples: Examples, maxConstantPoolSize: Int ): Map[Type, Set[Constant]] = {
+    val allConstants = examples.getConstantSet
+    _getConstantPool(allConstants, maxConstantPoolSize)
+  }
+
+  def _getConstantPool(allConstants: Set[Constant], maxConstantPoolSize: Int ): Map[Type, Set[Constant]] = {
     // Remove Instance Id from constant map
     val instanceType = NumberType("InstanceId")
     val constantMap: Map[Type, Set[Constant]] = allConstants.groupBy(_._type).removed(instanceType)
