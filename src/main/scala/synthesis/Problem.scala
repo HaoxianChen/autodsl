@@ -62,9 +62,10 @@ object Examples {
 }
 
 case class Problem(name: String, domain: String, types: Set[Type], inputRels: Set[Relation], outputRels: Set[Relation],
-                   edb: Examples , idb: Examples) {
+                   edb: Examples , idb: Examples, oracleSpec: Option[String]) {
 
   private val typeMap: Map[String,Type] = (for (t<-types) yield t.name -> t).toMap
+  // private val relationMap: Map[String, Relation] = (for (rel <- inputRels++outputRels) yield rel.name -> rel).toMap
 
   def addType(_type: Type): Problem = {
     val newTypes = types + _type
@@ -109,12 +110,16 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
     this.copy(idb=newIdb)
   }
 
+  def addOracleSpec(oracleSpec: String): Problem = this.copy(oracleSpec=Some(oracleSpec))
+
+
   def rename(newName: String): Problem = this.copy(name=newName)
   def addDomain(domain: String): Problem = this.copy(domain=domain)
 
   def getType(name: String): Option[Type] = typeMap.get(name)
+  // def getRelation(relName: String): Option[Relation] = relationMap.get(name)
 }
 
 object Problem {
-  def apply(): Problem = Problem("new_problem", "new_domain",Set(), Set(), Set(), Examples(), Examples())
+  def apply(): Problem = Problem("new_problem", "new_domain",Set(), Set(), Set(), Examples(), Examples(), None)
 }

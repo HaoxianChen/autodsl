@@ -24,29 +24,23 @@ case class Evaluator(problem: Problem) {
     // check if results are cached
     else if (cache.contains(program)) cache(program)
     else {
+      // val specStr = getSpecString(program)
+      val outRels: Set[Relation] = getOutRels(program)
+      // val idb = _eval(specStr, outRels)
+
       // make temporary directory
       // val dirName: String = s"${name}_${program.hashCode()}_${edb.hashCode()}"
       val dirName: String = s"${name}_${program.hashCode()}"
       val problemDir = Paths.get(tmpdir.toString, dirName)
+      makeDir(problemDir)
 
-      if (Files.notExists(problemDir)) {
-        if (!problemDir.toFile.mkdir()) {
-          throw new RuntimeException(s"Failed to create problem tmp directory ${problemDir.toString}.")
-        }
-      }
       // dump problem to file
       val programPath = dumpProgram(program, problemDir)
 
       // run souffle to derive output
-      val stdout = new StringBuilder
-      val stderr = new StringBuilder
-      val cmd = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}"
-      val exitcode = cmd ! ProcessLogger(stdout append _, stderr append _)
-      require(exitcode == 0, s"Non-zero exit value: ${problemDir}\n$exitcode,\n$stdout,\n$stderr")
-      require(!stderr.contains("Error"))
+      runSouffle(problemDir, programPath)
 
       // load results from file
-      val outRels: Set[Relation] = getOutRels(program)
       val idb: Examples = loadOutput(problemDir, outRels)
 
       // update cache
@@ -56,11 +50,47 @@ case class Evaluator(problem: Problem) {
     }
   }
 
+  def _eval(programSpec: String, outRels: Set[Relation]): Examples = {
+    // make temporary directory
+    val dirName: String = s"${name}_${programSpec.hashCode()}"
+    val problemDir = Paths.get(tmpdir.toString, dirName)
+    makeDir(problemDir)
+
+    // dump program and edb to files
+    val programPath: Path  = dumpProgram(programSpec, problemDir)
+
+    runSouffle(problemDir, programPath)
+    val idb: Examples = loadOutput(problemDir, outRels)
+    idb
+  }
+
+  def makeDir(problemDir: Path): Unit = {
+    if (Files.notExists(problemDir)) {
+      if (!problemDir.toFile.mkdir()) {
+        throw new RuntimeException(s"Failed to create problem tmp directory ${problemDir.toString}.")
+      }
+    }
+  }
+
+  def runSouffle(problemDir: Path, programPath: Path): Unit = {
+    val stdout = new StringBuilder
+    val stderr = new StringBuilder
+    val cmd = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}"
+    val exitcode = cmd ! ProcessLogger(stdout append _, stderr append _)
+    require(exitcode == 0, s"Non-zero exit value: ${problemDir}\n$exitcode,\n$stdout,\n$stderr")
+    require(!stderr.contains("Error"))
+  }
+
+
   def eval(program: Program): Set[Tuple] = _eval(program).toTuples()
+  def eval(programSpec: String, outRels: Set[Relation]): Set[Tuple] = _eval(programSpec, outRels).toTuples()
 
   def dumpProgram(program: Program, dir: Path): Path = {
     val specStr = getSpecString(program)
+    dumpProgram(specStr,dir)
+  }
 
+  def dumpProgram(specStr: String, dir: Path) : Path = {
     val programPath = Paths.get(dir.toString, s"$name.dl")
     _writeFile(specStr, programPath)
 

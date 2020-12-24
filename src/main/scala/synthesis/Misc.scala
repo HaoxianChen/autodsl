@@ -1,7 +1,7 @@
 package synthesis
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 
 import scala.io.Source
 
@@ -47,6 +47,10 @@ object Misc {
     val problem = parser.parseAll(parser.problem, inputString).get
       .rename(problemName)
 
+    // Read oracle program
+    val oracleSpec = readOracle(dir, problemName)
+    val p1 = if(oracleSpec.isDefined) problem.addOracleSpec(oracleSpec.get) else problem
+
     // Read Input Output examples
     def relToProblem(problem: Problem, relation:Relation): Problem = {
       val isInput: Boolean = problem.inputRels.contains(relation)
@@ -55,7 +59,17 @@ object Misc {
       val facts = readCsv(filename)
       if (isInput) problem.addEdb(relation, facts) else problem.addIdb(relation, facts)
     }
-    (problem.inputRels ++ problem.outputRels).foldLeft(problem)(relToProblem)
+    (problem.inputRels ++ problem.outputRels).foldLeft(p1)(relToProblem)
+  }
+
+  def readOracle(dir: String, problemName: String): Option[String] = {
+    val solutionFile: Path = Paths.get(dir, s"$problemName-sol.dl")
+    if (Files.exists(solutionFile)) {
+      Some(fileToString(solutionFile.toString))
+    }
+    else {
+      None
+    }
   }
 
   def crossJoin[T](list: Iterable[Iterable[T]]): Iterable[Iterable[T]] =

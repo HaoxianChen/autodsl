@@ -10,7 +10,9 @@ case class TupleInstance(tuples: Set[Tuple], instanceId: Int)
 object TupleInstance {
   def apply(instanceId: Int): TupleInstance = new TupleInstance(Set(), instanceId)
 }
-case class ExampleInstance(input: Set[Tuple], output: Set[Tuple], instanceId: Int)
+case class ExampleInstance(input: Set[Tuple], output: Set[Tuple], instanceId: Int) {
+  def nonEmpty: Boolean = input.nonEmpty
+}
 object ExampleInstance{
   def apply(): ExampleInstance = new ExampleInstance(Set(), Set(), -1)
 }
@@ -48,8 +50,18 @@ class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
 
   def assignInstanceId(tupleInstance: TupleInstance, id: Int) :TupleInstance = {
     val tuples = tupleInstance.tuples
+    assignInstanceId(tuples, id)
+  }
+
+  def assignInstanceId(tuples: Set[Tuple], id: Int): TupleInstance = {
     val newTuples: Set[Tuple] = tuples.map(t => assignTupleId(t, id))
-    tupleInstance.copy(tuples=newTuples, instanceId=id)
+    TupleInstance(newTuples, id)
+  }
+
+  def assignInstanceId(example: ExampleInstance, id: Int) :ExampleInstance = {
+    val newEdb = assignInstanceId(example.input, id)
+    val newIdb = assignInstanceId(example.output, id)
+    new ExampleInstance(newEdb.tuples, newIdb.tuples, id)
   }
 
   def assignTupleId(tuple: Tuple, id: Int): Tuple = {
@@ -141,6 +153,8 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
   private val exampleGenerator = new ExampleGenerator(p0.inputRels, p0.edb)
   private val edbPool: ExamplePool = exampleGenerator.generateRandomInputs(numNewExamples)
 
+  private val oracle = p0.oracleSpec.get
+
   def go(): Program = {
     /** Handle one output relation at a time */
     val solutions: Set[Program] = p0.outputRels map {
@@ -156,11 +170,13 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     var problem = p0.copy(outputRels=Set(outRel), idb=relevantIdb)
 
     var candidates: Set[Program] = Set()
-    var newExamples: Option[ExampleInstance] = Some(ExampleInstance())
+    var newExamples: Option[ExampleInstance] = None
 
     do {
       // add new examples
-      problem = updateProgram(problem, newExamples.get)
+      if (newExamples.isDefined) {
+        problem = updateProgram(problem, newExamples.get)
+      }
 
       candidates = synthesize(problem, outRel, candidates)
       logger.debug(s"${candidates.size} candidate programs")
@@ -168,6 +184,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       if (candidates.size > 1) {
         newExamples = disambiguate(candidates)
         if (newExamples.isEmpty) logger.debug(s"Failed to differentiate candidate programs.")
+        else logger.debug(s"new example: ${newExamples.get}")
       }
     }
     while (candidates.size > 1 && newExamples.isDefined)
@@ -176,18 +193,27 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
   }
 
   def updateProgram(problem: Problem, newExamples: ExampleInstance): Problem = {
-    problem.addEdb(newExamples.input).addIdb(newExamples.output)
+    require(newExamples.nonEmpty)
+    val nextId: Int = problem.edb.toTuples().map(t => exampleTranslator.getInstanceId(t)).max + 1
+    val nextExample = exampleTranslator.assignInstanceId(newExamples, nextId)
+    problem.addEdb(nextExample.input).addIdb(nextExample.output)
   }
 
-  def synthesize(problem: Problem, outRel: Relation, candidates: Set[Program], minPrograms: Int = 3): Set[Program] = {
+  def synthesize(problem: Problem, outRel: Relation, candidates: Set[Program], minPrograms: Int = 20): Set[Program] = {
     val evaluator = Evaluator(problem)
 
     def isProgramValid(program: Program, problem: Problem): Boolean = {
       val idb = evaluator.eval(program)
-      idb.subsetOf(problem.idb.toTuples())
+      val refIdb = problem.idb.toTuples()
+
+      val allOutRels = program.rules.map(_.head.relation)
+      val relevantIdb = refIdb.filter(t => allOutRels.contains(t.relation))
+
+      idb == relevantIdb
     }
 
     val validCandidates: Set[Program] = candidates.filter(p=>isProgramValid(p, problem))
+    require(validCandidates.size < candidates.size || candidates.isEmpty)
 
     if (validCandidates.size < minPrograms) {
       val newCandidates = SynthesisAllPrograms(problem).go()(outRel)
@@ -246,11 +272,19 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     require(candidates.size > 1)
     val nextEdb = differentiate(candidates)
     if (nextEdb.isDefined) {
-      /** todo: need to pass the oracle program here. */
-      val nextIdb: Examples = ???
-      Some(())
+      val edb = nextEdb.get
+      val edbPool = ExamplePool(Set(edb))
+      val problem = p0.copy(edb=edbPool.toExampleMap)
+
+      val outRels = p0.outputRels
+      val evaluator = Evaluator(problem)
+      val nextIdb = evaluator.eval(oracle, outRels)
+
+      Some(new ExampleInstance(edb.tuples, nextIdb, edb.instanceId))
     }
-    None
+    else {
+      None
+    }
   }
 
   def scoreProgram(program: Program): Int = {

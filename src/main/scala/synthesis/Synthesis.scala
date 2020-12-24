@@ -283,7 +283,7 @@ case class SynthesisAllPrograms(problem: Problem,
     /** Return all combinations of rules that cover all idb
      * how to handle recursion? */
 
-    val maxPrograms = 20
+    val maxPrograms = 10
 
     def _combineRules(learnedRules: List[Rule], remainingRules: List[Rule], remainingIdb: Set[Tuple]): Set[List[Rule]] = {
       if (remainingIdb.isEmpty) {
