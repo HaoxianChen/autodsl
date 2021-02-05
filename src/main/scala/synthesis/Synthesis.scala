@@ -76,7 +76,7 @@ case class PartialRuleEvaluator(problem: Problem) {
   }
 }
 
-case class ScoredRule(rule: Rule, score: Double) extends Ordered[ScoredRule]{
+case class ScoredRule(rule: Rule, idb: Set[Tuple], score: Double) extends Ordered[ScoredRule]{
   def isValid(): Boolean = score >= 1-1e-3
 
   def isTooGeneral(): Boolean = score > 0 && !isValid()
@@ -84,24 +84,35 @@ case class ScoredRule(rule: Rule, score: Double) extends Ordered[ScoredRule]{
   override def compare(that: ScoredRule): Int = {
     if (this.score < that.score) -1
     else if (this.score > that.score) 1
+    /*** Prioritize rules with more outputs */
+    else if (this.idb.size > that.idb.size) 1
+    else if (this.idb.size < that.idb.size) -1
+    /*** Prioritize rules with more free variables */
+    else if (this.rule.freeVariables().size > that.rule.freeVariables().size) 1
+    else if (this.rule.freeVariables().size < that.rule.freeVariables().size) -1
+    /*** Prioritize rules with fewer literals */
+    else if (this.rule.body.size < that.rule.body.size) 1
+    else if (this.rule.body.size > that.rule.body.size) -1
+    /*** Prioritize rules with fewer constants */
     else if (this.rule.getConstantList.size < that.rule.getConstantList.size) 1
     else if (this.rule.getConstantList.size > that.rule.getConstantList.size) -1
     else 0
   }
 
+  override def toString(): String = s"${this.rule.toString} ${this.score}"
+
 }
 object ScoredRule {
-  def apply(rule: Rule, idb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): ScoredRule = {
-    new ScoredRule(rule, scoreRule(rule, idb, ruleEvaluator))
-  }
-
-  def scoreRule(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): Double = {
-    _ioScore(rule, refIdb, ruleEvaluator) * _completenessScore(rule)
-  }
-
-  def _ioScore(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): Double = {
+  def apply(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): ScoredRule = {
     val idb = ruleEvaluator(rule)
+    new ScoredRule(rule, idb, scoreRule(rule, refIdb, idb))
+  }
 
+  def scoreRule(rule: Rule, refIdb: Set[Tuple], idb: Set[Tuple]): Double = {
+    _ioScore(rule, refIdb, idb) * _completenessScore(rule)
+  }
+
+  def _ioScore(rule: Rule, refIdb: Set[Tuple], idb: Set[Tuple]): Double = {
     if (idb.nonEmpty) {
       val pos: Set[Tuple] = idb.intersect(refIdb)
       val neg: Set[Tuple] = idb.diff(refIdb)
@@ -126,13 +137,13 @@ object ScoredRule {
 }
 
 abstract class Synthesis(problem: Problem) {
-  def learnNPrograms(idb: Set[Tuple]): Set[Program]
-  def go(): Map[Relation, Set[Program]] = {
+  def learnNPrograms(idb: Set[Tuple]): List[Program]
+  def go(): Map[Relation, List[Program]] = {
     /** Strip the problem into learning different output */
     val examples: Set[Tuple] = problem.idb.toTuples()
     val exampleGroup: Map[Relation, Set[Tuple]] = examples.groupBy(_.relation)
 
-    val programsByOutRels: Map[Relation, Set[Program]] = exampleGroup.map {
+    val programsByOutRels: Map[Relation, List[Program]] = exampleGroup.map {
       case (rel, idb) => rel -> learnNPrograms(idb)
     }
     programsByOutRels
@@ -143,7 +154,7 @@ case class BasicSynthesis(problem: Problem,
                           maxIters: Int = 200,
                          maxRefineIters: Int = 200,
                          ) extends Synthesis(problem) {
-  def learnNPrograms(idb: Set[Tuple]) = Set(learnAProgram(idb))
+  def learnNPrograms(idb: Set[Tuple]) = List(learnAProgram(idb))
 
   private val logger = Logger("Synthesis")
 
@@ -253,7 +264,7 @@ case class SynthesisAllPrograms(problem: Problem,
   private val evaluator = PartialRuleEvaluator(problem)
   private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
 
-  def learnNPrograms(idb: Set[Tuple]): Set[Program] = {
+  def learnNPrograms(idb: Set[Tuple]): List[Program] = {
     require(idb.map(_.relation).size == 1, s"Only idb of one relation at a time.")
 
     /** Learn all possible rules, then combine them. */
@@ -279,7 +290,7 @@ case class SynthesisAllPrograms(problem: Problem,
     programs
   }
 
-  def combineRules(rules: Set[Rule], idb: Set[Tuple]): Set[Program] = {
+  def combineRules(rules: Set[Rule], idb: Set[Tuple]): List[Program] = {
     /** Return all combinations of rules that cover all idb
      * how to handle recursion? */
 
@@ -337,9 +348,10 @@ case class SynthesisAllPrograms(problem: Problem,
       nonRecursiveSorted ::: recursiveRules.toList
     }
     logger.debug(s"Combine ${ruleList.size} rules into programs")
-    _combineRules(List(),ruleList, idb).map(
+    val programs = _combineRules(List(),ruleList, idb).map(
       rs=>Program(rs.toSet)
     )
+    programs.toList.sortBy(_.rules.size)(Ordering[Int])
   }
 
   def _getRelevantScoredRules(idb: Set[Tuple], rules: Set[Rule], learnedRules: Set[Rule]): Set[ScoredRule] = {
@@ -355,7 +367,7 @@ case class SynthesisAllPrograms(problem: Problem,
     require(relevantOutRel.subsetOf(problem.outputRels))
     val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
       config.maxConstants)
-    _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 100)
+    _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10)
   }
 
   def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],

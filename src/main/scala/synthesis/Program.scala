@@ -72,10 +72,11 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   require(negations.subsetOf(body), s"negations: ${negations},\n body: ${body}")
 
   override def toString: String = {
-    if (body.nonEmpty) {
-      val simpleLiterals = getPositiveLiterals()
+    val mr = this.maskUngroundVars()
+    if (mr.body.nonEmpty) {
+      val simpleLiterals = mr.getPositiveLiterals()
       val body_str: String = {
-        (simpleLiterals.map(_.toString) ++ negations.map("!" + _.toString)).mkString(",")
+        (simpleLiterals.map(_.toString) ++ mr.negations.map("!" + _.toString)).mkString(",")
       }
       s"${head} :- ${body_str}."
     }
@@ -159,7 +160,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     rename(binding)
   }
 
-  def isRecursive(): Boolean = getAllRelations().contains(head.relation)
+  def isRecursive(): Boolean = this.body.map(_.relation).contains(head.relation)
 
   def isValid(): Boolean = isHeadBounded()
 }

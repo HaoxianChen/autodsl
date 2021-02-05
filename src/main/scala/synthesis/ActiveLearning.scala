@@ -14,7 +14,20 @@ case class ExampleInstance(input: Set[Tuple], output: Set[Tuple], instanceId: In
   def nonEmpty: Boolean = input.nonEmpty
 }
 object ExampleInstance{
+  def apply(instanceId: Int): ExampleInstance = new ExampleInstance(Set(), Set(), instanceId)
   def apply(): ExampleInstance = new ExampleInstance(Set(), Set(), -1)
+  def fromEdbIdb(edb: Examples, idb: Examples): Set[ExampleInstance] = {
+    val translator = new ExampleTranslator(edb.elems.keySet, idb.elems.keySet)
+
+    val edbMap = edb.toTuples().groupBy(translator.getInstanceId)
+    val idbMap = idb.toTuples().groupBy(translator.getInstanceId)
+
+    edbMap.keySet.map(i => {
+      val edb: Set[Tuple] = edbMap(i)
+      val idb: Set[Tuple] = idbMap.getOrElse(i, Set())
+      ExampleInstance(edb, idb, i)
+    })
+  }
 }
 
 case class ExamplePool(instances: Set[TupleInstance]) {
@@ -169,7 +182,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     val relevantIdb: Examples = p0.idb.filterByRelation(outRel)
     var problem = p0.copy(outputRels=Set(outRel), idb=relevantIdb)
 
-    var candidates: Set[Program] = Set()
+    var candidates: List[Program] = List()
     var newExamples: Option[ExampleInstance] = None
 
     do {
@@ -182,7 +195,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       logger.debug(s"${candidates.size} candidate programs")
 
       if (candidates.size > 1) {
-        newExamples = disambiguate(candidates)
+        newExamples = disambiguate(candidates, outRel)
         if (newExamples.isEmpty) logger.debug(s"Failed to differentiate candidate programs.")
         else logger.debug(s"new example: ${newExamples.get}")
       }
@@ -199,7 +212,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     problem.addEdb(nextExample.input).addIdb(nextExample.output)
   }
 
-  def synthesize(problem: Problem, outRel: Relation, candidates: Set[Program], minPrograms: Int = 20): Set[Program] = {
+  def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 20): List[Program] = {
     val evaluator = Evaluator(problem)
 
     def isProgramValid(program: Program, problem: Problem): Boolean = {
@@ -212,7 +225,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       idb == relevantIdb
     }
 
-    val validCandidates: Set[Program] = candidates.filter(p=>isProgramValid(p, problem))
+    val validCandidates: List[Program] = candidates.filter(p=>isProgramValid(p, problem))
     require(validCandidates.size < candidates.size || candidates.isEmpty)
 
     if (validCandidates.size < minPrograms) {
@@ -225,7 +238,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     }
   }
 
-  def differentiate(candidates: Set[Program]): Option[TupleInstance] = {
+  def differentiate(candidates: List[Program]): Option[TupleInstance] = {
     require(candidates.size > 1)
     def entropy(tuples: List[TupleInstance]): Double = {
       val counts: List[Int] = tuples.groupBy(identity).map{
@@ -249,7 +262,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     else None
   }
 
-  def evalCandidatePrograms(edbPool: ExamplePool, candidates: Set[Program]): Set[(TupleInstance, List[TupleInstance])] = {
+  def evalCandidatePrograms(edbPool: ExamplePool, candidates: List[Program]): Set[(TupleInstance, List[TupleInstance])] = {
     val newProblem = p0.copy(edb = edbPool.toExampleMap, idb=Examples())
     def evalProgram(program: Program): Map[Int, TupleInstance] = {
       val evaluator = Evaluator(newProblem)
@@ -259,7 +272,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       }
     }
 
-    val evalResults: List[Map[Int, TupleInstance]] = candidates.toList.map(evalProgram)
+    val evalResults: List[Map[Int, TupleInstance]] = candidates.map(evalProgram)
 
     def getResults(instance: TupleInstance): List[TupleInstance] = {
       val tid = instance.instanceId
@@ -268,7 +281,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     edbPool.instances.map(t => (t, getResults(t)))
   }
 
-  def disambiguate(candidates: Set[Program]): Option[ExampleInstance] = {
+  def disambiguate(candidates: List[Program], outRel: Relation): Option[ExampleInstance] = {
     require(candidates.size > 1)
     val nextEdb = differentiate(candidates)
     if (nextEdb.isDefined) {
@@ -276,9 +289,8 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       val edbPool = ExamplePool(Set(edb))
       val problem = p0.copy(edb=edbPool.toExampleMap)
 
-      val outRels = p0.outputRels
       val evaluator = Evaluator(problem)
-      val nextIdb = evaluator.eval(oracle, outRels)
+      val nextIdb = evaluator.eval(oracle, Set(outRel))
 
       Some(new ExampleInstance(edb.tuples, nextIdb, edb.instanceId))
     }
