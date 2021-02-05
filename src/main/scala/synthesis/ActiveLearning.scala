@@ -202,7 +202,9 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     }
     while (candidates.size > 1 && newExamples.isDefined)
 
-    candidates.maxBy(scoreProgram)
+    val bestProgram = candidates.maxBy(scoreProgram)
+    logger.info(s"Solution: $bestProgram")
+    bestProgram
   }
 
   def updateProgram(problem: Problem, newExamples: ExampleInstance): Problem = {

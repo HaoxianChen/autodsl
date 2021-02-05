@@ -23,6 +23,13 @@ sealed abstract class Parameter {
   override def toString: String = s"$name"
 }
 case class Variable(name: String, _type: Type) extends Parameter
+object Variable {
+  def apply(_type: Type, id: Int): Variable = {
+    val varName = s"${_type.name.toLowerCase()}${id}"
+    Variable(varName, _type)
+  }
+
+}
 case class Constant(name: String, _type: Type) extends Parameter
 
 case class Literal(relation: Relation, fields: List[Parameter]) {
@@ -98,8 +105,16 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 
   def getPositiveLiterals(): Set[Literal] = body.diff(negations)
 
-  def addLiteral(literal: Literal): Rule = {
-    this.copy(body=this.body+literal)
+  def addLiteral(literal: Literal): Rule = this.copy(body=this.body+literal)
+  def addNegatedLiteral(literal: Literal): Rule = this.copy(negations=this.negations + literal, body = this.body+literal)
+  def updateNegatedLiteral(oldLit: Literal, newLit: Literal): Rule = {
+    val otherLits = this.body - oldLit
+    val otherNegatedLits = this.negations - oldLit
+    assert(otherLits.size == this.body.size - 1)
+    assert(otherNegatedLits.size == this.negations.size - 1)
+    val newBody = otherLits + newLit
+    val newNegation = otherNegatedLits + newLit
+    this.copy(body = newBody, negations=newNegation)
   }
 
   def rename(binding: Map[Parameter, Parameter]): Rule = {
@@ -119,6 +134,11 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   }
   def getUngroundHeadVariables(): List[Variable] = {
     getHeadVars().filterNot(v => _getGroundedVars().contains(v))
+  }
+  def getBoundParams(): Set[Parameter] = {
+    val allParams = body.flatMap(_.fields)
+    val freeParams: Set[Parameter] = freeVariables().map(_.asInstanceOf[Parameter])
+    allParams.diff(freeParams)
   }
 
   def _getVarList(literals: Set[Literal]): List[Variable] = literals.toList.flatMap(_.fields).flatMap {
