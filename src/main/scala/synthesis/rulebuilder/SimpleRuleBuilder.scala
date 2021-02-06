@@ -112,17 +112,24 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
 
   def addNegation(rule: Rule): Set[Rule] = {
     /** The same as add literal, but have all of them binded instead */
-    // The relations that add negated literal to
-    val posRels: Set[Relation] = rule.getPositiveLiterals().map(_.relation)
-    val negRels: Set[Relation] = inputRels.diff(posRels)
-    val posParams: Map[Type, Set[Parameter]] = _paramMapByType(rule.getPositiveLiterals())
 
-    def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {
-      /** All possible bindings to the literal from posLit */
-      val negatedLits: Set[Literal] = allBindings(rel, posParams)
-      negatedLits.map(l => rule.addNegatedLiteral(l))
+    /** Only add negation after head is bound */
+    if (!rule.isHeadBounded())  {
+      Set()
     }
-    negRels.flatMap(r => addNegationByRel(rule, r))
+    else {
+      // The relations that add negated literal to
+      val posRels: Set[Relation] = rule.getPositiveLiterals().map(_.relation)
+      val negRels: Set[Relation] = inputRels.diff(posRels)
+      val posParams: Map[Type, Set[Parameter]] = _paramMapByType(rule.getPositiveLiterals())
+
+      def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {
+        /** All possible bindings to the literal from posLit */
+        val negatedLits: Set[Literal] = allBindings(rel, posParams)
+        negatedLits.map(l => rule.addNegatedLiteral(l))
+      }
+      negRels.flatMap(r => addNegationByRel(rule, r))
+    }
   }
 
   def relaxOneBindingFromNegation(rule: Rule, lit: Literal): Set[Rule] = {

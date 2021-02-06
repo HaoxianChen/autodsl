@@ -85,16 +85,18 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
       val body_str: String = {
         (simpleLiterals.map(_.toString) ++ mr.negations.map("!" + _.toString)).mkString(",")
       }
-      s"${head} :- ${body_str}."
+      s"${mr.head} :- ${body_str}."
     }
     else {
-      s"${head}."
+      s"${mr.head}."
     }
   }
 
   def maskUngroundVars(): Rule = {
     // replace unground variables in the body with "_"
-    val ungroundVars: Set[Variable] = freeVariables().diff(getHeadVars().toSet)
+    // val ungroundVars: Set[Variable] = freeVariables().diff(getHeadVars().toSet)
+    // replace unground variables with "_"
+    val ungroundVars: Set[Variable] = freeVariables()
     val bindings = mutable.Map.empty[Parameter, Parameter]
     for (uv <- ungroundVars) {
       val maskedVar = Variable("_", uv._type)
@@ -124,8 +126,8 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     Rule(newHead, newBody, newNeg)
   }
 
-  def getVarSet(): Set[Variable] = _getVarList(body+head).toSet
-  def getHeadVars(): List[Variable] = _getVarList(Set(head))
+  def getVarSet(): Set[Variable] = _getVarList(body.toList :+ head).toSet
+  def getHeadVars(): List[Variable] = _getVarList(List(head))
   def _getGroundedVars(): List[Variable] = {
     getPositiveLiterals().toList.flatMap(_.fields).flatMap {
       case _: Constant => None
@@ -141,7 +143,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     allParams.diff(freeParams)
   }
 
-  def _getVarList(literals: Set[Literal]): List[Variable] = literals.toList.flatMap(_.fields).flatMap {
+  def _getVarList(literals: List[Literal]): List[Variable] = literals.toList.flatMap(_.fields).flatMap {
       case _: Constant => None
       case v: Variable => Some(v)
     }
@@ -157,7 +159,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   }
 
   def freeVariables(): Set[Variable] = {
-    val allVars = _getVarList(body+head)
+    val allVars = _getVarList(body.toList :+ head)
     val paramCounts = allVars.groupBy(identity) map {case (p, ps) => p ->  ps.size}
     allVars.filter(v => paramCounts(v)==1).toSet
   }
@@ -173,7 +175,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
         val c = varCounts.getOrElse(_type, 0)
         varCounts = varCounts.updated(_type,c+1)
 
-        val newVar = Variable(s"${_type.name.toLowerCase()}$c", _type)
+        val newVar = Variable(_type, c)
         binding = binding.updated(v,newVar)
       }
     }
