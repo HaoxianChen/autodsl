@@ -59,8 +59,9 @@ object Main extends App {
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
     val allProblems = List("forwarding/learning-switch",
+      "firewall/stateless-firewall",
+      "firewall/stateful-firewall",
       "nib/reachable",
-      "firewall/stateless-firewall"
     ).map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- allProblems) {
       println(problemFile)
@@ -68,8 +69,8 @@ object Main extends App {
       // val programs = SynthesisNPrograms(problem).go()
       val t1 = System.nanoTime
 
-      // val programs = SynthesisAllPrograms(problem).go()
-      val programs = BasicSynthesis(problem).go()
+      val programs = SynthesisAllPrograms(problem).go()
+      // val programs = BasicSynthesis(problem).go()
 
       val duration = (System.nanoTime - t1) / 1e9d
       println(s"Finished in ${duration}s")

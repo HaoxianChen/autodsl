@@ -167,7 +167,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   def normalize(): Rule = {
     var binding: Map[Parameter, Parameter] = Map()
     var varCounts: Map[Type, Int] = Map()
-    val allVars = getVarSet()
+    val allVars: List[Variable] = _getVarList(body.toList :+ head)
     for (v <- allVars) {
       if (!binding.contains(v)) {
         // Count variables
