@@ -55,6 +55,13 @@ object Main extends App {
     val program = learner.go()
     println(program)
   }
+  else if (args(0) == "drop") {
+    /** Random drop some example from the complete example pool. */
+    val problem = Misc.readProblem(args(1))
+    val maxExamples: Int = args(2).toInt
+    val experiment = new ActiveLearningExperiment(maxExamples=maxExamples)
+    experiment.go(problem)
+  }
 
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"

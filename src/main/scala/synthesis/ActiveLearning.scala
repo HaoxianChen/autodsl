@@ -28,6 +28,20 @@ object ExampleInstance{
       ExampleInstance(edb, idb, i)
     })
   }
+
+
+  def toEdbIdb(instances: Set[ExampleInstance]): (Examples, Examples) = {
+    val inputTuples: Set[Tuple] = instances.flatMap(_.input)
+    val outputTuples: Set[Tuple] = instances.flatMap(_.output)
+
+    def tupleToMap(tuples: Set[Tuple]): Map[Relation, Set[List[Constant]]]= tuples.groupBy(t => t.relation) map {
+        case (rel, tuples) => (rel, tuples.map(_.fields))
+      }
+
+    val edb = Examples(tupleToMap(inputTuples))
+    val idb = Examples(tupleToMap(outputTuples))
+    (edb, idb)
+  }
 }
 
 case class ExamplePool(instances: Set[TupleInstance]) {
@@ -95,9 +109,9 @@ class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
   }
 }
 
-class ExampleGenerator(inputRels: Set[Relation], edb: Examples) {
+class ExampleGenerator(inputRels: Set[Relation], edb: Examples, minConstantSize: Int = 3) {
   private val exampleTranslator = new ExampleTranslator(inputRels, Set())
-  private val constantMap: Map[Type, Set[Constant]] = ConstantBuilder.getConstantPool(edb, maxConstantPoolSize = 10)
+  private val constantMap = buildConstantMap()
   private val tupleSizes: Map[Relation, (Int, Int)] = edb.elems map {
     /** Count the number of tuples per relation per instance */
     case (rel, tuples) =>
@@ -110,6 +124,37 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples) {
 
   private val random: Random = new Random()
   val instanceIdType: Type = NumberType(s"InstanceId")
+
+  def buildConstantMap(): Map[Type, Set[Constant]] = {
+    def makeNewConstants(constantSet: Set[Constant], n: Int): Set[Constant] = {
+      val _type: Type = constantSet.head._type
+      _type match {
+        case _: NumberType => {
+          val m = constantSet.map(_.name.toInt).max
+          (m+1 to m+n).map(i => Constant(i.toString, _type)).toSet
+        }
+        case _: SymbolType => {
+          (1 to n).map(i => Constant(s"${'"'}_${_type.name.toLowerCase()}${i}${'"'}", _type)).toSet
+        }
+      }
+    }
+
+    def expandConstantSet(constantSet: Set[Constant]): Set[Constant] = {
+      if (constantSet.size < minConstantSize) {
+        /** Create new elements */
+        val n = minConstantSize - constantSet.size
+        val newConstants: Set[Constant] =constantSet ++ makeNewConstants(constantSet, n)
+        assert(newConstants.size == minConstantSize, s"${newConstants}")
+        newConstants
+      }
+      else constantSet
+    }
+
+    val edbMap = ConstantBuilder.getConstantPool(edb, maxConstantPoolSize = 10)
+    edbMap map {
+      case (_type, constantSet) => {_type -> expandConstantSet(constantSet)}
+    }
+  }
 
   def sampleFromMap(_type: Type, seed: Int): Constant  = {
     // random.setSeed(seed)
@@ -178,6 +223,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
   }
 
   def interactiveLearning(outRel: Relation): Program = {
+    logger.info(s"Solve ${outRel}")
     /** Only do synthesis on one output relation. */
     val relevantIdb: Examples = p0.idb.filterByRelation(outRel)
     var problem = p0.copy(outputRels=Set(outRel), idb=relevantIdb)
@@ -228,7 +274,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     }
 
     val validCandidates: List[Program] = candidates.filter(p=>isProgramValid(p, problem))
-    require(validCandidates.size < candidates.size || candidates.isEmpty)
+    require(validCandidates.size < candidates.size || candidates.isEmpty, s"${validCandidates.size}")
 
     if (validCandidates.size < minPrograms) {
       val newCandidates = SynthesisAllPrograms(problem).go()(outRel)
