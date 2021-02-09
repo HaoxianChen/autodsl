@@ -143,7 +143,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     allParams.diff(freeParams)
   }
 
-  def _getVarList(literals: List[Literal]): List[Variable] = literals.toList.flatMap(_.fields).flatMap {
+  def _getVarList(literals: List[Literal]): List[Variable] = literals.flatMap(_.fields).flatMap {
       case _: Constant => None
       case v: Variable => Some(v)
     }
@@ -160,8 +160,10 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 
   def freeVariables(): Set[Variable] = {
     val allVars = _getVarList(body.toList :+ head)
+    val posVars = _getVarList(getPositiveLiterals().toList :+ head)
     val paramCounts = allVars.groupBy(identity) map {case (p, ps) => p ->  ps.size}
-    allVars.filter(v => paramCounts(v)==1).toSet
+    val boundVars = allVars.filter(v => paramCounts(v) > 1).toSet.intersect(posVars.toSet)
+    allVars.toSet.diff(boundVars)
   }
 
   def normalize(): Rule = {

@@ -52,7 +52,8 @@ object Main extends App {
     val problem = Misc.readProblem(args(1))
     val maxExamples: Int = args(2).toInt
     val learner = new ActiveLearning(problem, maxExamples)
-    val program = learner.go()
+    val (program, nQueries) = learner.go()
+    println(s"${nQueries} queries.")
     println(program)
   }
   else if (args(0) == "drop") {

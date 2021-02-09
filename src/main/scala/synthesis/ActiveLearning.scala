@@ -213,51 +213,63 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
 
   private val oracle = p0.oracleSpec.get
 
-  def go(): Program = {
+  def go(): (Program, Int) = {
     /** Handle one output relation at a time */
-    val solutions: Set[Program] = p0.outputRels map {
-      rel => interactiveLearning(rel)
+    var solutions: Set[Program] = Set()
+    var problem: Problem = p0
+    var nQueries: Int = 0
+    for (rel <- p0.outputRels) {
+      val (sol, newExamples) = interactiveLearning(rel, problem)
+      solutions += sol
+      problem = newExamples.foldLeft(problem)(updateProblem)
+      nQueries += newExamples.size
     }
     /** Merge solutions altogether */
-    solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
+    val finalSolution = solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
+    (finalSolution, nQueries)
   }
 
-  def interactiveLearning(outRel: Relation): Program = {
+  def updateProblem(problem: Problem, newExamples: ExampleInstance): Problem = {
+    require(newExamples.nonEmpty)
+    val nextId: Int = problem.edb.toTuples().map(t => exampleTranslator.getInstanceId(t)).max + 1
+    val nextExample = exampleTranslator.assignInstanceId(newExamples, nextId)
+    val relevantIdb = nextExample.output.filter(t => problem.outputRels.contains(t.relation))
+    problem.addEdb(nextExample.input).addIdb(relevantIdb)
+  }
+
+
+  def interactiveLearning(outRel: Relation, initProblem: Problem): (Program, Set[ExampleInstance]) = {
+    require(initProblem.outputRels.contains(outRel))
     logger.info(s"Solve ${outRel}")
     /** Only do synthesis on one output relation. */
-    val relevantIdb: Examples = p0.idb.filterByRelation(outRel)
-    var problem = p0.copy(outputRels=Set(outRel), idb=relevantIdb)
+    val relevantIdb: Examples = initProblem.idb.filterByRelation(outRel)
+    var problem = initProblem.copy(outputRels=Set(outRel), idb=relevantIdb)
 
     var candidates: List[Program] = List()
-    var newExamples: Option[ExampleInstance] = None
+    var nextExample: Option[ExampleInstance] = None
+    var newExamples: Set[ExampleInstance] = Set()
 
     do {
       // add new examples
-      if (newExamples.isDefined) {
-        problem = updateProgram(problem, newExamples.get)
+      if (nextExample.isDefined) {
+        problem = updateProblem(problem, nextExample.get)
+        newExamples += nextExample.get
       }
 
       candidates = synthesize(problem, outRel, candidates)
       logger.debug(s"${candidates.size} candidate programs")
 
       if (candidates.size > 1) {
-        newExamples = disambiguate(candidates, outRel)
-        if (newExamples.isEmpty) logger.debug(s"Failed to differentiate candidate programs.")
-        else logger.debug(s"new example: ${newExamples.get}")
+        nextExample = disambiguate(candidates, outRel)
+        if (nextExample.isEmpty) logger.debug(s"Failed to differentiate candidate programs.")
+        else logger.debug(s"new example: ${nextExample.get}")
       }
     }
-    while (candidates.size > 1 && newExamples.isDefined)
+    while (candidates.size > 1 && nextExample.isDefined)
 
     val bestProgram = candidates.maxBy(scoreProgram)
     logger.info(s"Solution: $bestProgram")
-    bestProgram
-  }
-
-  def updateProgram(problem: Problem, newExamples: ExampleInstance): Problem = {
-    require(newExamples.nonEmpty)
-    val nextId: Int = problem.edb.toTuples().map(t => exampleTranslator.getInstanceId(t)).max + 1
-    val nextExample = exampleTranslator.assignInstanceId(newExamples, nextId)
-    problem.addEdb(nextExample.input).addIdb(nextExample.output)
+    (bestProgram, newExamples)
   }
 
   def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 20): List[Program] = {
@@ -270,7 +282,8 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       val allOutRels = program.rules.map(_.head.relation)
       val relevantIdb = refIdb.filter(t => allOutRels.contains(t.relation))
 
-      idb == relevantIdb
+      val isValid = idb == relevantIdb
+      isValid
     }
 
     val validCandidates: List[Program] = candidates.filter(p=>isProgramValid(p, problem))
@@ -338,7 +351,8 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
       val problem = p0.copy(edb=edbPool.toExampleMap)
 
       val evaluator = Evaluator(problem)
-      val nextIdb = evaluator.eval(oracle, Set(outRel))
+      // val nextIdb = evaluator.eval(oracle, Set(outRel))
+      val nextIdb = evaluator.eval(oracle, p0.outputRels)
 
       Some(new ExampleInstance(edb.tuples, nextIdb, edb.instanceId))
     }

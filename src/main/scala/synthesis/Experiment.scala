@@ -27,10 +27,10 @@ class ActiveLearningExperiment(maxExamples: Int =100) extends Experiment {
 
     val t1 = System.nanoTime
     val learner = new ActiveLearning(newProblem, maxExamples)
-    val program = learner.go()
+    val (program, nQueries) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
-    println(s"Finished in ${duration}s")
+    println(s"Finished in ${duration}s, ${nQueries} queries.")
     println(program)
   }
 

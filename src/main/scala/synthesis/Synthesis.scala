@@ -290,7 +290,7 @@ case class SynthesisAllPrograms(problem: Problem,
     programs
   }
 
-  def combineRules(rules: Set[Rule], idb: Set[Tuple]): List[Program] = {
+  def combineRules(rules: Set[Rule], idb: Set[Tuple], maxRules: Int=10): List[Program] = {
     /** Return all combinations of rules that cover all idb
      * how to handle recursion? */
 
@@ -339,13 +339,16 @@ case class SynthesisAllPrograms(problem: Problem,
 
       // sort nonrecursive rules by the output sizes
       val nonRecursiveSorted: List[Rule] = {
-        def outputCounts(rule: Rule): Int = {
-          val idb = evaluator.evalRule(rule, Set())
-          idb.size
-        }
-        nonRecursiveRules.toList.sortBy(outputCounts)(Ordering[Int].reverse)
+        // def outputCounts(rule: Rule): Int = {
+        //   val idb = evaluator.evalRule(rule, Set())
+        //   idb.size
+        // }
+        // nonRecursiveRules.toList.sortBy(outputCounts)(Ordering[Int].reverse)
+        val scoredRules: List[ScoredRule] = nonRecursiveRules.map(r => scoreRule(r, idb, Set())).toList
+        val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
+        ans
       }
-      nonRecursiveSorted ::: recursiveRules.toList
+      nonRecursiveSorted.take(maxRules) ::: recursiveRules.toList
     }
     logger.debug(s"Combine ${ruleList.size} rules into programs")
     val programs = _combineRules(List(),ruleList, idb).map(
@@ -364,7 +367,7 @@ case class SynthesisAllPrograms(problem: Problem,
 
     /** Lookup the configuration for the synthesizer*/
     val relevantOutRel: Set[Relation] = idb.map(_.relation)
-    require(relevantOutRel.subsetOf(problem.outputRels))
+    require(relevantOutRel.subsetOf(problem.outputRels), s"${relevantOutRel}, ${problem.outputRels}")
     val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
       config.maxConstants)
     _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10)
