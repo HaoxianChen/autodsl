@@ -1,7 +1,9 @@
 package synthesis
 
-import java.io.File
+import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 import scala.io.Source
 
@@ -81,5 +83,19 @@ object Misc {
       } yield Iterable(i) ++ j
     }
 
+  def makeDir(dir: Path): Unit = {
+    if (Files.notExists(dir)) {
+      if (!dir.toFile.mkdir()) {
+        throw new RuntimeException(s"Failed to create directory ${dir.toString}.")
+      }
+    }
+  }
 
+  def getTimeStamp: String = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss").format(LocalDateTime.now)
+
+  def writeFile(string: String, path: Path): Any = {
+    val bw = new BufferedWriter(new FileWriter(path.toFile))
+    bw.write(string)
+    bw.close()
+  }
 }

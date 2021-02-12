@@ -59,9 +59,17 @@ object Main extends App {
   else if (args(0) == "drop") {
     /** Random drop some example from the complete example pool. */
     val problem = Misc.readProblem(args(1))
-    val maxExamples: Int = args(2).toInt
-    val experiment = new ActiveLearningExperiment(maxExamples=maxExamples)
-    experiment.go(problem)
+    val repeats: Int = args(2).toInt
+    require(repeats <= 10)
+    val experiment = new ActiveLearningExperiment()
+    experiment.go(problem, repeats=repeats)
+  }
+  else if (args(0) == "debloat") {
+    val problem = Misc.readProblem(args(1))
+    val repeats: Int = args(2).toInt
+    require(repeats <= 10)
+    val experiment = new DebloatingExperiment()
+    experiment.go(problem, repeats=repeats)
   }
 
   else if (args(0)== "regression-test") {

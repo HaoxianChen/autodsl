@@ -47,7 +47,7 @@ case class PartialRuleEvaluator(problem: Problem) {
     for ((f,i) <- rule.head.fields.zipWithIndex) {
       f match {
         case v: Variable => if (!freeVars.contains(v)) indices.append(i)
-        case _ => ()
+        case _: Constant => indices.append(i)
       }
     }
     require(indices.nonEmpty, s"$rule")
@@ -238,11 +238,42 @@ case class BasicSynthesis(problem: Problem,
 
 }
 
+case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
+  private var current_config_id: Int = 0
+
+  def get_config(): SynthesisConfigs = allConfigs(current_config_id)
+
+  def next_config(): SynthesisConfigs = {
+    current_config_id += 1
+    assert(current_config_id < allConfigs.size, s"Run out of config space")
+    get_config()
+  }
+
+  def isEmpty: Boolean = allConfigs.isEmpty
+}
+object SynthesisConfigSpace {
+  def emptySpace(): SynthesisConfigSpace = SynthesisConfigSpace(List())
+  def getConfigSpace(problem: Problem): SynthesisConfigSpace = {
+    problem.domain match {
+      case "SDN" => _getConfigSpace(recursion = false, maxConstants = List(0,5))
+      case "NIB" => _getConfigSpace(recursion = true, maxConstants = List(0))
+      case "routing" => _getConfigSpace(recursion = true, maxConstants = List(0))
+      case "consensus" => _getConfigSpace(recursion = false, maxConstants = List(0))
+      case _ => ???
+    }
+  }
+  def _getConfigSpace(recursion: Boolean, maxConstants: List[Int]): SynthesisConfigSpace = {
+    val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(recursion, maxConstants = c))
+    SynthesisConfigSpace(allConfigs)
+  }
+}
+
 case class SynthesisConfigs(recursion: Boolean, maxConstants: Int)
 object SynthesisConfigs {
   def getConfig(problem: Problem): SynthesisConfigs = {
     problem.domain match {
-      case "SDN" => SynthesisConfigs(recursion = false, maxConstants = 2)
+      // case "SDN" => SynthesisConfigs(recursion = false, maxConstants = 0)
+      case "SDN" => SynthesisConfigs(recursion = false, maxConstants = 0)
       case "NIB" => SynthesisConfigs(recursion = true, maxConstants = 0)
       case "routing" => SynthesisConfigs(recursion = true, maxConstants = 0)
       case "consensus" => SynthesisConfigs(recursion = false, maxConstants = 0)
@@ -256,13 +287,18 @@ case class SynthesisAllPrograms(problem: Problem,
                               recursion: Boolean = true,
                               maxIters: Int = 20,
                               maxRefineIters: Int = 100,
+                              initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
                              ) extends Synthesis(problem) {
 
   private val logger = Logger("Synthesis")
 
   private val ruleConstructor = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb)
   private val evaluator = PartialRuleEvaluator(problem)
-  private val config: SynthesisConfigs = SynthesisConfigs.getConfig(problem)
+  private val configSpace: SynthesisConfigSpace = {
+    if (initConfigSpace.isEmpty) SynthesisConfigSpace.getConfigSpace(problem) else initConfigSpace
+  }
+
+  def getConfigSpace: SynthesisConfigSpace = configSpace
 
   def learnNPrograms(idb: Set[Tuple]): List[Program] = {
     require(idb.map(_.relation).size == 1, s"Only idb of one relation at a time.")
@@ -281,7 +317,7 @@ case class SynthesisAllPrograms(problem: Problem,
       require(nextExamples.size < examples.size)
       examples = nextExamples
       rules = rules ++ newRules
-      if (!config.recursion) generalRules = remainingRules
+      if (!configSpace.get_config().recursion) generalRules = remainingRules
       iters += 1
     }
     assert(examples.isEmpty)
@@ -290,7 +326,7 @@ case class SynthesisAllPrograms(problem: Problem,
     programs
   }
 
-  def combineRules(rules: Set[Rule], idb: Set[Tuple], maxRules: Int=10): List[Program] = {
+  def combineRules(rules: Set[Rule], idb: Set[Tuple]): List[Program] = {
     /** Return all combinations of rules that cover all idb
      * how to handle recursion? */
 
@@ -348,7 +384,7 @@ case class SynthesisAllPrograms(problem: Problem,
         val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
         ans
       }
-      nonRecursiveSorted.take(maxRules) ::: recursiveRules.toList
+      nonRecursiveSorted ::: recursiveRules.toList
     }
     logger.debug(s"Combine ${ruleList.size} rules into programs")
     val programs = _combineRules(List(),ruleList, idb).map(
@@ -368,14 +404,28 @@ case class SynthesisAllPrograms(problem: Problem,
     /** Lookup the configuration for the synthesizer*/
     val relevantOutRel: Set[Relation] = idb.map(_.relation)
     require(relevantOutRel.subsetOf(problem.outputRels), s"${relevantOutRel}, ${problem.outputRels}")
-    val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
-      config.maxConstants)
-    _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10)
+
+    /** This while loop incrementally increase the program space */
+    var config = configSpace.get_config()
+    var ans: (Set[Tuple], Set[Rule], Set[Rule]) = (Set(), Set(), Set())
+
+    do {
+      val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
+        config.maxConstants)
+      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10)
+
+      if (ans._2.isEmpty) {
+        config = configSpace.next_config()
+        logger.info(s"Increase config space ${config}")
+      }
+    } while (ans._2.isEmpty)
+    ans
   }
 
   def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
                    refineRule: Rule => Set[Rule],
-                   maxExtraIters: Int = 1): (Set[Tuple], Set[Rule], Set[Rule]) = {
+                   maxExtraIters: Int = 1,
+                  maxRules: Int = 5): (Set[Tuple], Set[Rule], Set[Rule]) = {
     var iters: Int = 0
     var extraIters: Int = 0
 
@@ -391,7 +441,7 @@ case class SynthesisAllPrograms(problem: Problem,
 
     var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
 
-    while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty) {
+    while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty && validRules.size < maxRules) {
 
       // pop highest scored rule from pool
       val baseRule = rulePool.dequeue()
@@ -417,6 +467,7 @@ case class SynthesisAllPrograms(problem: Problem,
     if (rulePool.isEmpty) logger.info(s"Exhausted all rules")
     if (iters == maxRefineIters) logger.info(s"Hit maximum iterations ${maxExtraIters}")
     if (extraIters == maxExtraIters) logger.info(s"Hit maximum extra iterations ${maxExtraIters}")
+    if (validRules.size == maxRules) logger.info(s"Hit maximum rules ${maxRules}")
     // require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
     logger.info(s"Found ${validRules.size} rules after $iters iterations.\n")
 

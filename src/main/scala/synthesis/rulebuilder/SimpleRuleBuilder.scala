@@ -52,7 +52,8 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
   def _bindVariableToBody(rule:Rule, variable: Variable): Set[Rule] = {
     /** Only bind to variables in the rule body */
     require(rule.getVarSet().contains(variable))
-    val paramMap = _paramMapByType(rule.body)
+    // val paramMap = _paramMapByType(rule.body)
+    val paramMap = _paramMapByType(rule.getPositiveLiterals())
     val availableVars: Set[Variable] = {
       val params = paramMap.getOrElse(variable._type, Set()) - variable
       params.flatMap {
@@ -61,7 +62,9 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
       }
     }
     val bindings: Set[Map[Parameter, Parameter]] = availableVars.map(v => Map(variable -> v))
-    bindings.map(b => rule.rename(b))
+    val boundRules = bindings.map(b => rule.rename(b))
+    /** Some binding will end up with two identical literals, filter out these cases */
+    boundRules.filter(r => r.body.size == rule.body.size)
   }
 
   def addGeneralLiteral(rule: Rule) : Set[Rule] = {
@@ -119,8 +122,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     }
     else {
       // The relations that add negated literal to
-      val posRels: Set[Relation] = rule.getPositiveLiterals().map(_.relation)
-      val negRels: Set[Relation] = inputRels.diff(posRels)
+      val negRels: Set[Relation] = inputRels.diff(rule.body.map(_.relation))
       val posParams: Map[Type, Set[Parameter]] = _paramMapByType(rule.getPositiveLiterals())
 
       def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {

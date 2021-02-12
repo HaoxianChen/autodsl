@@ -1,9 +1,7 @@
 package synthesis
 
-import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
 
-import scala.collection.mutable
 import sys.process._
 
 case class Evaluator(problem: Problem) {
@@ -32,7 +30,7 @@ case class Evaluator(problem: Problem) {
       // val dirName: String = s"${name}_${program.hashCode()}_${edb.hashCode()}"
       val dirName: String = s"${name}_${program.hashCode()}"
       val problemDir = Paths.get(tmpdir.toString, dirName)
-      makeDir(problemDir)
+      Misc.makeDir(problemDir)
 
       // dump problem to file
       val programPath = dumpProgram(program, problemDir)
@@ -54,7 +52,7 @@ case class Evaluator(problem: Problem) {
     // make temporary directory
     val dirName: String = s"${name}_${programSpec.hashCode()}"
     val problemDir = Paths.get(tmpdir.toString, dirName)
-    makeDir(problemDir)
+    Misc.makeDir(problemDir)
 
     // dump program and edb to files
     val programPath: Path  = dumpProgram(programSpec, problemDir)
@@ -62,14 +60,6 @@ case class Evaluator(problem: Problem) {
     runSouffle(problemDir, programPath)
     val idb: Examples = loadOutput(problemDir, outRels)
     idb
-  }
-
-  def makeDir(problemDir: Path): Unit = {
-    if (Files.notExists(problemDir)) {
-      if (!problemDir.toFile.mkdir()) {
-        throw new RuntimeException(s"Failed to create problem tmp directory ${problemDir.toString}.")
-      }
-    }
   }
 
   def runSouffle(problemDir: Path, programPath: Path): Unit = {
@@ -92,12 +82,12 @@ case class Evaluator(problem: Problem) {
 
   def dumpProgram(specStr: String, dir: Path) : Path = {
     val programPath = Paths.get(dir.toString, s"$name.dl")
-    _writeFile(specStr, programPath)
+    Misc.writeFile(specStr, programPath)
 
     // Write Input examples
     for (rel <- edb.elems.keys) {
       val str = edb.toFileStr(rel)
-      _writeFile(str, Paths.get(dir.toString, s"${rel.name}.facts"))
+      Misc.writeFile(str, Paths.get(dir.toString, s"${rel.name}.facts"))
     }
     programPath
   }
@@ -145,11 +135,5 @@ case class Evaluator(problem: Problem) {
       idb = idb.addTuples(rel, tuples)
     }
     idb
-  }
-
-  def _writeFile(string: String, path: Path): Any = {
-    val bw = new BufferedWriter(new FileWriter(path.toFile))
-    bw.write(string)
-    bw.close()
   }
 }

@@ -12,6 +12,7 @@ object TupleInstance {
 }
 case class ExampleInstance(input: Set[Tuple], output: Set[Tuple], instanceId: Int) {
   def nonEmpty: Boolean = input.nonEmpty
+  def getConstants: Set[Constant] = (input++output).flatMap(_.fields)
 }
 object ExampleInstance{
   def apply(instanceId: Int): ExampleInstance = new ExampleInstance(Set(), Set(), instanceId)
@@ -109,7 +110,7 @@ class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
   }
 }
 
-class ExampleGenerator(inputRels: Set[Relation], edb: Examples, minConstantSize: Int = 3) {
+class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, minConstantSize: Int = 3) {
   private val exampleTranslator = new ExampleTranslator(inputRels, Set())
   private val constantMap = buildConstantMap()
   private val tupleSizes: Map[Relation, (Int, Int)] = edb.elems map {
@@ -150,7 +151,11 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, minConstantSize:
       else constantSet
     }
 
-    val edbMap = ConstantBuilder.getConstantPool(edb, maxConstantPoolSize = 10)
+    val edbMap = ConstantBuilder.getConstantPool(edb, idb)
+
+    val allTypes: Set[Type] = inputRels.flatMap(_.signature).filterNot(_.name == s"InstanceId")
+    require(allTypes == edbMap.keySet)
+
     edbMap map {
       case (_type, constantSet) => {_type -> expandConstantSet(constantSet)}
     }
@@ -208,10 +213,11 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
 
   private val exampleTranslator = new ExampleTranslator(p0.inputRels, p0.outputRels)
 
-  private val exampleGenerator = new ExampleGenerator(p0.inputRels, p0.edb)
+  private val exampleGenerator = new ExampleGenerator(p0.inputRels, p0.edb, p0.idb)
   private val edbPool: ExamplePool = exampleGenerator.generateRandomInputs(numNewExamples)
 
   private val oracle = p0.oracleSpec.get
+  private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
   def go(): (Program, Int) = {
     /** Handle one output relation at a time */
@@ -290,7 +296,9 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     require(validCandidates.size < candidates.size || candidates.isEmpty, s"${validCandidates.size}")
 
     if (validCandidates.size < minPrograms) {
-      val newCandidates = SynthesisAllPrograms(problem).go()(outRel)
+      val synthesizer = SynthesisAllPrograms(problem, initConfigSpace = configSpace)
+      val newCandidates = synthesizer.go()(outRel)
+      configSpace = synthesizer.getConfigSpace
       require(newCandidates.forall(p=>isProgramValid(p, problem)))
       newCandidates
     }

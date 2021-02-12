@@ -181,7 +181,9 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
         binding = binding.updated(v,newVar)
       }
     }
-    rename(binding)
+    val normalized = rename(binding)
+    assert(normalized.getConstantList.size == this.getConstantList.size)
+    normalized
   }
 
   def isRecursive(): Boolean = this.body.map(_.relation).contains(head.relation)
