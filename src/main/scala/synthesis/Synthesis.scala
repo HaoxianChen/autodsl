@@ -3,7 +3,7 @@ package synthesis
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.mutable
-import rulebuilder.{ConstantBuilder, RecursionBuilder, SimpleRuleBuilder}
+import rulebuilder.{ConstantBuilder, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
 
 
 case class PartialRuleEvaluator(problem: Problem) {
@@ -268,7 +268,25 @@ object SynthesisConfigSpace {
   }
 }
 
-case class SynthesisConfigs(recursion: Boolean, maxConstants: Int)
+case class SynthesisConfigs(recursion: Boolean, maxConstants: Int) {
+  def get_rule_builder(problem: Problem, relevantOutRels: Set[Relation] = Set()): RuleBuilder = {
+    val inputRels = problem.inputRels
+    val outputRels = if (relevantOutRels.nonEmpty) relevantOutRels else problem.outputRels
+
+    val builder = if (recursion) {
+      require(maxConstants==0)
+      new RecursionBuilder(inputRels, outputRels)
+    }
+    else if (maxConstants > 0) {
+      ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb)
+    }
+    else {
+      new SimpleRuleBuilder(inputRels, outputRels)
+    }
+    builder
+  }
+}
+
 object SynthesisConfigs {
   def getConfig(problem: Problem): SynthesisConfigs = {
     problem.domain match {
@@ -309,7 +327,8 @@ case class SynthesisAllPrograms(problem: Problem,
     var iters: Int = 0
 
     // Init the rule pool with the most general rules
-    var generalRules: Set[Rule] = ruleConstructor.mostGeneralRules()
+    val ruleBuilder = configSpace.get_config().get_rule_builder(problem)
+    var generalRules: Set[Rule] = ruleBuilder.mostGeneralRules()
 
     while (examples.nonEmpty && iters < maxIters ) {
       val (coveredExamples, newRules, remainingRules) = learnNRules(examples, generalRules, rules)
@@ -410,8 +429,9 @@ case class SynthesisAllPrograms(problem: Problem,
     var ans: (Set[Tuple], Set[Rule], Set[Rule]) = (Set(), Set(), Set())
 
     do {
-      val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
-        config.maxConstants)
+      // val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
+      //   config.maxConstants)
+      val ruleBuilder = config.get_rule_builder(problem, relevantOutRels = relevantOutRel)
       ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10)
 
       if (ans._2.isEmpty) {

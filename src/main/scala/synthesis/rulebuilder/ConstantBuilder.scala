@@ -27,8 +27,8 @@ class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
      * and (2) the rule has just small enough free variables. This will bias the search to
      * more general rules first. */
     val freeVars = rule.freeVariables()
-    if (numConstants < maxConstant
-      && freeVars.size <= maxConstant
+    if (numConstants < maxConstants
+      && freeVars.size <= maxConstants
     ) {
       // val bindConstants: Set[Rule] = freeVars.flatMap(v => _bindToConstant(rule, v))
       val allVars: Set[Variable] = rule.getVarSet()
