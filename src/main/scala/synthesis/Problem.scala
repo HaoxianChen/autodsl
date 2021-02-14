@@ -117,6 +117,8 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
   def addDomain(domain: String): Problem = this.copy(domain=domain)
 
   def getType(name: String): Option[Type] = typeMap.get(name)
+  def inputTypes: Set[Type] = inputRels.flatMap(_.signature)
+  def outputTypes: Set[Type] = outputRels.flatMap(_.signature)
   // def getRelation(relName: String): Option[Relation] = relationMap.get(name)
 }
 

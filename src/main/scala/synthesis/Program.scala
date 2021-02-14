@@ -32,22 +32,30 @@ object Variable {
 }
 case class Constant(name: String, _type: Type) extends Parameter
 
-case class Literal(relation: Relation, fields: List[Parameter]) {
+abstract class Literal {
+  def relation: Relation
+  def fields: List[Parameter]
+
+  def toString: String
+  def rename(binding: Map[Parameter, Parameter]): Literal
+
+  def _rename(binding: Map[Parameter, Parameter]): List[Parameter] = fields.map(p => binding.getOrElse(p, p))
+}
+object Literal {
+  def apply(relation: Relation, fields: List[Parameter]): Literal = SimpleLiteral(relation, fields)
+}
+
+case class SimpleLiteral(relation: Relation, fields: List[Parameter]) extends Literal {
   override def toString: String = {
     val field_str: String = fields.map {
       case v: Variable => v.toString
       case c: Constant => c.toString
-      // case c: Constant => c._type match {
-      //   case _:SymbolType => "\""+c.toString+"\""
-      //   case _: NumberType => c.toString
-      // }
     }.mkString(",")
     s"${relation.name}($field_str)"
   }
-
   def rename(binding: Map[Parameter, Parameter]): Literal = {
-    val newFields = fields.map(p => binding.getOrElse(p, p))
-    Literal(relation, newFields)
+    val newFields = _rename(binding)
+    this.copy(fields=newFields)
   }
 }
 
@@ -59,7 +67,6 @@ case class Tuple(relation: Relation, fields: List[Constant]) {
 }
 
 /* Relations */
-
 case class Relation(name: String, signature: List[Type]) {
   def declString: String = {
     val sig_str: String = {
@@ -68,7 +75,6 @@ case class Relation(name: String, signature: List[Type]) {
     }
     s".decl $name($sig_str)"
   }
-
   override def toString: String = {
     val sig_str = signature.map(_.toString).mkString(",")
     s"${name}(${sig_str})"
@@ -81,7 +87,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   override def toString: String = {
     val mr = this.maskUngroundVars()
     if (mr.body.nonEmpty) {
-      val simpleLiterals = mr.getPositiveLiterals()
+      val simpleLiterals: Set[Literal] = mr.getPositiveLiterals()
       val body_str: String = {
         (simpleLiterals.map(_.toString) ++ mr.negations.map("!" + _.toString)).mkString(",")
       }
@@ -192,7 +198,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 }
 
 case class Program(rules: Set[Rule]) {
-  override def toString: String = rules.map(_.maskUngroundVars().toString).mkString("\n")
+  override def toString: String = rules.mkString("\n")
   def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
 }
 object Program {

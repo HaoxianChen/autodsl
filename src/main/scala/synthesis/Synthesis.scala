@@ -3,7 +3,7 @@ package synthesis
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.mutable
-import rulebuilder.{ConstantBuilder, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
+import rulebuilder.{ConstantBuilder, FunctorBuilder, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
 
 
 case class PartialRuleEvaluator(problem: Problem) {
@@ -158,8 +158,6 @@ case class BasicSynthesis(problem: Problem,
 
   private val logger = Logger("Synthesis")
 
-  // private val ruleConstructor = new SimpleRuleBuilder(problem.inputRels, problem.outputRels)
-  // private val ruleConstructor = new RecursionBuilder(problem.inputRels, problem.outputRels)
   private val ruleConstructor = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb)
   private val evaluator = PartialRuleEvaluator(problem)
 
@@ -256,7 +254,13 @@ object SynthesisConfigSpace {
   def getConfigSpace(problem: Problem): SynthesisConfigSpace = {
     problem.domain match {
       case "SDN" => _getConfigSpace(recursion = false, maxConstants = List(0,5))
-      case "NIB" => _getConfigSpace(recursion = true, maxConstants = List(0))
+      case "NIB" => {
+        val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
+          PrependList.allInstances, MakeList.allInstances
+        )
+        val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
+        _getConfigSpace(recursion = true, functors = functors)
+      }
       case "routing" => _getConfigSpace(recursion = true, maxConstants = List(0))
       case "consensus" => _getConfigSpace(recursion = false, maxConstants = List(0))
       case _ => ???
@@ -266,16 +270,26 @@ object SynthesisConfigSpace {
     val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(recursion, maxConstants = c))
     SynthesisConfigSpace(allConfigs)
   }
+  def _getConfigSpace(recursion: Boolean, functors: Set[AbstractFunctorSpec]): SynthesisConfigSpace = {
+    val synthesisConfigs = SynthesisConfigs(recursion, maxConstants = 0, functors=functors)
+    SynthesisConfigSpace(List(synthesisConfigs))
+  }
 }
 
-case class SynthesisConfigs(recursion: Boolean, maxConstants: Int) {
+case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
+                           functors: Set[AbstractFunctorSpec]) {
   def get_rule_builder(problem: Problem, relevantOutRels: Set[Relation] = Set()): RuleBuilder = {
     val inputRels = problem.inputRels
     val outputRels = if (relevantOutRels.nonEmpty) relevantOutRels else problem.outputRels
 
     val builder = if (recursion) {
       require(maxConstants==0)
-      new RecursionBuilder(inputRels, outputRels)
+      if (functors.nonEmpty) {
+        FunctorBuilder(inputRels, outputRels, recursion, functors)
+      }
+      else {
+        new RecursionBuilder(inputRels, outputRels)
+      }
     }
     else if (maxConstants > 0) {
       ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb)
@@ -286,19 +300,8 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int) {
     builder
   }
 }
-
 object SynthesisConfigs {
-  def getConfig(problem: Problem): SynthesisConfigs = {
-    problem.domain match {
-      // case "SDN" => SynthesisConfigs(recursion = false, maxConstants = 0)
-      case "SDN" => SynthesisConfigs(recursion = false, maxConstants = 0)
-      case "NIB" => SynthesisConfigs(recursion = true, maxConstants = 0)
-      case "routing" => SynthesisConfigs(recursion = true, maxConstants = 0)
-      case "consensus" => SynthesisConfigs(recursion = false, maxConstants = 0)
-      // case _ => SynthesisConfigs(recursion = true, maxConstants = 2)
-      case _ => ???
-    }
-  }
+  def apply(recursion: Boolean, maxConstants: Int): SynthesisConfigs = new SynthesisConfigs(recursion, maxConstants, Set())
 }
 
 case class SynthesisAllPrograms(problem: Problem,
@@ -310,7 +313,6 @@ case class SynthesisAllPrograms(problem: Problem,
 
   private val logger = Logger("Synthesis")
 
-  private val ruleConstructor = ConstantBuilder(problem.inputRels, problem.outputRels, problem.edb, problem.idb)
   private val evaluator = PartialRuleEvaluator(problem)
   private val configSpace: SynthesisConfigSpace = {
     if (initConfigSpace.isEmpty) SynthesisConfigSpace.getConfigSpace(problem) else initConfigSpace

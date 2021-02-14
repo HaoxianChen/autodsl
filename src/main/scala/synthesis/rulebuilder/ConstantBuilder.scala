@@ -4,9 +4,9 @@ import synthesis._
 
 class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
                       constantPool: Map[Type, Set[Constant]],
-                     recursion: Boolean = true,
-                      maxConstant: Int = 2)
-  extends RecursionBuilder(inputRels, outputRels, recursion) {
+                      recursion: Boolean = true,
+                      maxConstants: Int = 2)
+  extends SimpleRuleBuilder(inputRels, outputRels) {
 
   def _bindToConstant(rule: Rule, variable: Variable): Set[Rule] = {
     require(rule.getVarSet().contains(variable))
