@@ -137,4 +137,37 @@ object PrependList {
   }
 }
 
+case class Add(signature: List[Type]) extends FunctorSpec {
+  def name: String = "add"
+  def inputIndices: List[Int] = List(0,1)
+  def outputIndex: Int = 2
+
+  require(signature.size == 3)
+  require(signature.toSet.size == 1)
+  require(signature.forall(_.isInstanceOf[NumberType]))
+
+  def literalToString(literal: Literal): String = {
+    require(literal.relation == this.getRelation)
+    val output = getOutput(literal)
+    val inputs = getInputs(literal)
+    require(inputs.size==2)
+    s"${output}=${inputs(0)}+${inputs(1)}"
+  }
+}
+object Add {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+    val allTypes = inputTypes ++ outputTypes
+
+    val numberTypes: Set[Type] = outputTypes.filter(_.isInstanceOf[NumberType])
+    numberTypes.map { nt =>
+      require(inputTypes.contains(nt))
+      Add(List(nt, nt, nt))
+    }
+  }
+}
+
+
 

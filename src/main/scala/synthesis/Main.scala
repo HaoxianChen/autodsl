@@ -2,6 +2,8 @@ package synthesis
 
 import java.nio.file.Paths
 
+import synthesis.search.SynthesisAllPrograms
+
 object Main extends App {
 
   def displayResults(problem: Problem, programs: Map[Relation, List[Program]]) = {
@@ -18,11 +20,11 @@ object Main extends App {
     println(s"$nTotalTuples examples ($nInputTuples, $nOutputTuples).")
 
     /*** Display examples */
-    val exampleInstances = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
-    for (e <- exampleInstances) {
-      println(s"Input: ${e.input.mkString(",")}")
-      println(s"Output: ${e.output.mkString(",")}\n")
-    }
+    // val exampleInstances = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
+    // for (e <- exampleInstances) {
+    //   println(s"Input: ${e.input.mkString(",")}")
+    //   println(s"Output: ${e.output.mkString(",")}\n")
+    // }
 
     /*** Display results */
     for ((rel,ps)<-programs) {

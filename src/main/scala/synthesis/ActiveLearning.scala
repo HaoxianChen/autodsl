@@ -2,6 +2,7 @@ package synthesis
 
 import com.typesafe.scalalogging.Logger
 import synthesis.rulebuilder.ConstantBuilder
+import synthesis.search.{SynthesisAllPrograms, SynthesisConfigSpace}
 
 import scala.math.log
 import scala.util.Random
