@@ -1,7 +1,7 @@
 package synthesis.search
 
-import synthesis.{AbstractFunctorSpec, Add, MakeList, PrependList, Problem, Relation}
-import synthesis.rulebuilder.{ConstantBuilder, FunctorBuilder, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
+import synthesis.{Problem, Relation}
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, ConstantBuilder, FunctorBuilder, MakeList, PrependList, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
 
 case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
   private var current_config_id: Int = 0

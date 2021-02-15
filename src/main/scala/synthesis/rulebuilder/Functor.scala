@@ -1,4 +1,6 @@
-package synthesis
+package synthesis.rulebuilder
+
+import synthesis._
 
 /** Functors */
 sealed abstract class AbstractFunctorSpec {
@@ -57,7 +59,7 @@ abstract class FunctorSpec() extends AbstractFunctorSpec {
       p
       }
     }
-    FunctorLiteral(getRelation, fields, this)
+    rulebuilder.FunctorLiteral(getRelation, fields, this)
   }
 
 }
