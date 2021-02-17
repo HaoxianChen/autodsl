@@ -3,10 +3,6 @@ package synthesis.search
 import synthesis.{Rule, Tuple}
 
 case class ScoredRule(rule: Rule, idb: Set[Tuple], score: Double) extends Ordered[ScoredRule]{
-  def isValid(): Boolean = score >= 1-1e-3
-
-  def isTooGeneral(): Boolean = score > 0 && !isValid()
-
   override def compare(that: ScoredRule): Int = {
     if (this.score < that.score) -1
     else if (this.score > that.score) 1
@@ -33,6 +29,11 @@ object ScoredRule {
     val idb = ruleEvaluator(rule)
     new ScoredRule(rule, idb, scoreRule(rule, refIdb, idb))
   }
+
+  def isValid(scoredRule: ScoredRule): Boolean = scoredRule.score >= 1-1e-3
+
+  def isTooGeneral(scoredRule: ScoredRule): Boolean = scoredRule.score > 0 && !isValid(scoredRule)
+
 
   def scoreRule(rule: Rule, refIdb: Set[Tuple], idb: Set[Tuple]): Double = {
     _ioScore(rule, refIdb, idb) * _completenessScore(rule)

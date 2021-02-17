@@ -1,5 +1,7 @@
 package synthesis.search
 
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, MakeList, PrependList}
+import synthesis.search.SynthesisConfigSpace._getConfigSpace
 import synthesis.{Problem, Program, Relation, Tuple}
 
 abstract class Synthesis(problem: Problem) {
@@ -16,3 +18,12 @@ abstract class Synthesis(problem: Problem) {
   }
 }
 
+object Synthesis {
+  def apply(problem: Problem): Synthesis = problem.domain match {
+    case "SDN" => SynthesisAllPrograms(problem)
+    case "routing" => new ProgramSynthesizer(problem)
+    case "NIB" =>new ProgramSynthesizer(problem)
+    case "consensus" => SynthesisAllPrograms(problem)
+    case _ => ???
+  }
+}

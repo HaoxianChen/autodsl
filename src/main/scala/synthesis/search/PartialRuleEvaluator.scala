@@ -64,13 +64,17 @@ case class PartialRuleEvaluator(problem: Problem) {
     Rule(newHead, unBoundRule.body)
   }
 
-  def _getStrippedRelName(unBoundRule: Rule): String = s"${unBoundRule.head.relation.name}_"
+  def _getStrippedRelName(unBoundRule: Rule, indices: List[Int]): String = s"${unBoundRule.head.relation.name}_${indices.mkString("")}"
 
   def _getStrippedRelation(unBoundRule: Rule): Relation = {
+    require(!unBoundRule.isHeadBounded())
     val indices = _getBoundedIndices(unBoundRule)
     val newSig = indices map unBoundRule.head.relation.signature
-    val newRelName = _getStrippedRelName(unBoundRule)
+    val newRelName = _getStrippedRelName(unBoundRule, indices)
     Relation(newRelName, newSig)
   }
 }
 
+object PartialRuleEvaluator {
+
+}

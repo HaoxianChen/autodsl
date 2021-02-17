@@ -1,7 +1,7 @@
 package synthesis.search
 
 import synthesis.{Problem, Relation}
-import synthesis.rulebuilder.{AbstractFunctorSpec, Add, ConstantBuilder, FunctorBuilder, MakeList, PrependList, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AppendList, ConstantBuilder, FunctorBuilder, MakeList, Max, Min, PrependList, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
 
 case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
   private var current_config_id: Int = 0
@@ -23,17 +23,26 @@ object SynthesisConfigSpace {
       case "SDN" => _getConfigSpace(recursion = false, maxConstants = List(0,5))
       case "NIB" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
-          PrependList.allInstances, MakeList.allInstances, Add.allInstances
+          PrependList.allInstances, MakeList.allInstances,
+          AppendList.allInstances,
+          Add.allInstances, Min.allInstances, Max.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
         _getConfigSpace(recursion = true, functors = functors)
       }
-      case "routing" => _getConfigSpace(recursion = true, maxConstants = List(0))
+      case "routing" => {
+        val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
+          PrependList.allInstances, MakeList.allInstances,
+          AppendList.allInstances,
+          Add.allInstances, Min.allInstances, Max.allInstances
+        )
+        val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
+        _getConfigSpace(recursion = true, functors=functors)
+      }
       case "consensus" => _getConfigSpace(recursion = false, maxConstants = List(0))
       case _ => ???
     }
   }
-  def getSynthesizer(problem: Problem): Synthesis = ???
   def _getConfigSpace(recursion: Boolean, maxConstants: List[Int]): SynthesisConfigSpace = {
     val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(recursion, maxConstants = c))
     SynthesisConfigSpace(allConfigs)
@@ -60,7 +69,7 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
       }
     }
     else if (maxConstants > 0) {
-      ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb)
+      ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants)
     }
     else {
       new SimpleRuleBuilder(inputRels, outputRels)

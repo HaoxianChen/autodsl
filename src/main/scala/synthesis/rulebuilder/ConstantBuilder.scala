@@ -44,9 +44,9 @@ class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
 object ConstantBuilder {
   def apply(inputRels: Set[Relation], outputRels: Set[Relation], edb: Examples, idb: Examples,
             recursion: Boolean = true,
-           maxConstant: Int = 2, maxConstantPoolSize: Int=5): ConstantBuilder = {
+            maxConstants: Int = 2, maxConstantPoolSize: Int=5): ConstantBuilder = {
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
-    new ConstantBuilder(inputRels, outputRels, constantPool, recursion, maxConstant)
+    new ConstantBuilder(inputRels, outputRels, constantPool, recursion, maxConstants)
   }
 
   def getConstantPool(edb: Examples, idb: Examples, maxConstantPoolSize:Int = 0): Map[Type, Set[Constant]] = {

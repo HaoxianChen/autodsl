@@ -36,8 +36,11 @@ abstract class Literal {
   def relation: Relation
   def fields: List[Parameter]
 
+  require(relation.signature.size == fields.size)
+
   def toString: String
   def rename(binding: Map[Parameter, Parameter]): Literal
+  def renameRelation(newRels: Map[Relation, Relation]): Literal
 
   def _rename(binding: Map[Parameter, Parameter]): List[Parameter] = fields.map(p => binding.getOrElse(p, p))
 }
@@ -56,6 +59,10 @@ case class SimpleLiteral(relation: Relation, fields: List[Parameter]) extends Li
   def rename(binding: Map[Parameter, Parameter]): Literal = {
     val newFields = _rename(binding)
     this.copy(fields=newFields)
+  }
+  def renameRelation(newRels: Map[Relation, Relation]): Literal = {
+    val newRel = newRels.getOrElse(this.relation, this.relation)
+    this.copy(relation=newRel)
   }
 }
 
@@ -132,6 +139,13 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     Rule(newHead, newBody, newNeg)
   }
 
+  def renameRelation(newRels: Map[Relation,Relation]): Rule = {
+    val newHead = head.renameRelation(newRels)
+    val newBody = body.map(_.renameRelation(newRels))
+    val newNeg = negations.map(_.renameRelation(newRels))
+    Rule(newHead, newBody, newNeg)
+  }
+
   def getVarSet(): Set[Variable] = _getVarList(body.toList :+ head).toSet
   def getHeadVars(): List[Variable] = _getVarList(List(head))
   def _getGroundedVars(): List[Variable] = {
@@ -200,6 +214,8 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 case class Program(rules: Set[Rule]) {
   override def toString: String = rules.mkString("\n")
   def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
+
+  def renameRelation(newRels :Map[Relation, Relation]): Program = Program(rules.map(_.renameRelation(newRels)))
 }
 object Program {
   def apply(): Program = Program(Set())

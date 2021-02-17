@@ -21,6 +21,11 @@ case class SynthesisAllPrograms(problem: Problem,
 
   def getConfigSpace: SynthesisConfigSpace = configSpace
 
+  def getMostGenearlRules(): Set[Rule] = {
+    val ruleBuilder = configSpace.get_config().get_rule_builder(problem)
+    ruleBuilder.mostGeneralRules()
+  }
+
   def learnNPrograms(idb: Set[Tuple]): List[Program] = {
     require(idb.map(_.relation).size == 1, s"Only idb of one relation at a time.")
 
@@ -30,8 +35,7 @@ case class SynthesisAllPrograms(problem: Problem,
     var iters: Int = 0
 
     // Init the rule pool with the most general rules
-    val ruleBuilder = configSpace.get_config().get_rule_builder(problem)
-    var generalRules: Set[Rule] = ruleBuilder.mostGeneralRules()
+    var generalRules: Set[Rule] = getMostGenearlRules()
 
     while (examples.nonEmpty && iters < maxIters ) {
       val (coveredExamples, newRules, remainingRules) = learnNRules(examples, generalRules, rules)
@@ -121,7 +125,8 @@ case class SynthesisAllPrograms(problem: Problem,
     relevantRules.map(r => scoreRule(r, idb, learnedRules))
   }
 
-  def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule]): (Set[Tuple], Set[Rule], Set[Rule]) = {
+  def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
+                  validCondition: ScoredRule => Boolean = ScoredRule.isValid): (Set[Tuple], Set[Rule], Set[Rule]) = {
 
     /** Lookup the configuration for the synthesizer*/
     val relevantOutRel: Set[Relation] = idb.map(_.relation)
@@ -135,7 +140,8 @@ case class SynthesisAllPrograms(problem: Problem,
       // val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
       //   config.maxConstants)
       val ruleBuilder = config.get_rule_builder(problem, relevantOutRels = relevantOutRel)
-      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10)
+      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10,
+      validCondition = validCondition)
 
       if (ans._2.isEmpty) {
         config = configSpace.next_config()
@@ -147,6 +153,8 @@ case class SynthesisAllPrograms(problem: Problem,
 
   def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
                    refineRule: Rule => Set[Rule],
+                   validCondition: ScoredRule => Boolean = ScoredRule.isValid,
+                   refineCondition: ScoredRule => Boolean = ScoredRule.isTooGeneral,
                    maxExtraIters: Int = 1,
                    maxRules: Int = 5): (Set[Tuple], Set[Rule], Set[Rule]) = {
     var iters: Int = 0
@@ -160,9 +168,9 @@ case class SynthesisAllPrograms(problem: Problem,
 
     // Set up the pool of rules to be refine
     var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
-    rulePool ++= generalRules.filter(r => r.isValid() || r.isTooGeneral())
+    rulePool ++= generalRules.filter(r => validCondition(r) || refineCondition(r))
 
-    var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
+    var validRules: Set[ScoredRule] = generalRules.filter(validCondition)
 
     while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty && validRules.size < maxRules) {
 
@@ -178,10 +186,10 @@ case class SynthesisAllPrograms(problem: Problem,
       exploredRules ++= refinedRules
 
       // keep the valid ones
-      validRules ++= candidateRules.filter(_.isValid())
+      validRules ++= candidateRules.filter(validCondition)
 
       // Put the too general ones into the pool, and forbid anything else from exploring again
-      val tooGeneral = candidateRules.filter(_.isTooGeneral())
+      val tooGeneral = candidateRules.filter(refineCondition)
       rulePool ++= tooGeneral
 
       iters += 1

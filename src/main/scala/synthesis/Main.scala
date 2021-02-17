@@ -2,7 +2,7 @@ package synthesis
 
 import java.nio.file.Paths
 
-import synthesis.search.SynthesisAllPrograms
+import synthesis.search.{Synthesis, SynthesisAllPrograms}
 
 object Main extends App {
 
@@ -44,7 +44,8 @@ object Main extends App {
 
     val t1 = System.nanoTime
 
-    val programs = SynthesisAllPrograms(problem).go()
+    val synthesizer = Synthesis(problem)
+    val programs = synthesizer.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s")

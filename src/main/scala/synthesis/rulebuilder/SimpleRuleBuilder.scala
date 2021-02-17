@@ -1,41 +1,23 @@
 package synthesis.rulebuilder
 import synthesis._
+import synthesis.rulebuilder.SimpleRuleBuilder.{newUnboundedLiteral, paramMapByType}
 
 import scala.collection.mutable
 
 class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) extends RuleBuilder {
-  def _paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
-    val allParams = literals.flatMap(_.fields)
-    allParams.groupBy(_._type)
-  }
-
-  def _newUnboundedLiteral(literals: Set[Literal], relation: Relation): Literal = {
-    /** Create a new literal without binding any variables from existing literals. */
-    val params = _paramMapByType(literals)
-    var fields: mutable.ListBuffer[Variable] = mutable.ListBuffer()
-    var paramCounts: Map[Type, Int] = params.map {case (t, ps) => t -> ps.size}
-    for (_type <- relation.signature) {
-      val c = paramCounts.getOrElse(_type,0)
-      paramCounts = paramCounts.updated(_type, c+1)
-      fields += Variable(_type, c)
-    }
-    require(fields.size == relation.signature.size)
-    Literal(relation, fields.toList)
-  }
-
   def _addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
     /** Add relation to rule, without binding the variables */
     val allLiterals = rule.body + rule.head
-    val newLiteral = _newUnboundedLiteral(allLiterals, relation)
+    val newLiteral = newUnboundedLiteral(allLiterals, relation)
     rule.addLiteral(newLiteral)
   }
 
   def mostGeneralRules(): Set[Rule] = {
     outputRels.flatMap(rel => {
-      val head = _newUnboundedLiteral(Set(), rel)
+      val head = newUnboundedLiteral(Set(), rel)
 
       /** All possible bodies with one literal. */
-      val bodies: Set[Literal] = inputRels.map(inputRel => _newUnboundedLiteral(Set(head), inputRel))
+      val bodies: Set[Literal] = inputRels.map(inputRel => newUnboundedLiteral(Set(head), inputRel))
       val unBoundRules = bodies.map(lit => Rule(head, Set(lit)))
 
       /** At least add one binding to the head. */
@@ -53,7 +35,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     /** Only bind to variables in the rule body */
     require(rule.getVarSet().contains(variable))
     // val paramMap = _paramMapByType(rule.body)
-    val paramMap = _paramMapByType(rule.getPositiveLiterals())
+    val paramMap = paramMapByType(rule.getPositiveLiterals())
     val availableVars: Set[Variable] = {
       val params = paramMap.getOrElse(variable._type, Set()) - variable
       params.flatMap {
@@ -123,7 +105,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     else {
       // The relations that add negated literal to
       val negRels: Set[Relation] = inputRels.diff(rule.body.map(_.relation))
-      val posParams: Map[Type, Set[Parameter]] = _paramMapByType(rule.getPositiveLiterals())
+      val posParams: Map[Type, Set[Parameter]] = paramMapByType(rule.getPositiveLiterals())
 
       def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {
         /** All possible bindings to the literal from posLit */
@@ -135,7 +117,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
   }
 
   def relaxOneBindingFromNegation(rule: Rule, lit: Literal): Set[Rule] = {
-    val params = _paramMapByType(rule.body)
+    val params = paramMapByType(rule.body)
     val paramCounts: Map[Type, Int] = params.map {case (t, ps) => t -> ps.size}
 
     val boundParams: Set[Parameter] = rule.getBoundParams()
@@ -184,4 +166,39 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     val refined2 = refinedRules.map(bindInstanceIds)
     refined2.map(_.normalize())
   }
+}
+
+object SimpleRuleBuilder {
+  def newUnboundedLiteral(literals: Set[Literal], relation: Relation): Literal = {
+    /** Create a new literal without binding any variables from existing literals. */
+    var fields: mutable.ListBuffer[Variable] = mutable.ListBuffer()
+    var paramCounts: Map[Type, Int] = getParamCounts(literals)
+    for (_type <- relation.signature) {
+      val c = paramCounts.getOrElse(_type,0)
+      paramCounts = paramCounts.updated(_type, c+1)
+      fields += Variable(_type, c)
+    }
+    require(fields.size == relation.signature.size)
+    Literal(relation, fields.toList)
+  }
+
+  def paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {
+    val allParams = literals.flatMap(_.fields)
+    allParams.groupBy(_._type)
+  }
+
+  def getParamCounts(literals: Set[Literal]): Map[Type, Int] = {
+    val params = paramMapByType(literals)
+    params.map {case (t, ps) => t -> ps.size}
+  }
+
+  def newVar(literals: Set[Literal], _type: Type): Variable = {
+    /** return literal of _type whose name is unseen in the set of literals */
+    val paramCounts: Map[Type, Int] = getParamCounts(literals)
+    val c = paramCounts(_type)
+    val v = Variable(_type, c)
+    require(!literals.flatMap(_.fields).contains(v))
+    v
+  }
+
 }

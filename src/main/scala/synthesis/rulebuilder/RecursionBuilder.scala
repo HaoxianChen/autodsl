@@ -1,6 +1,7 @@
 package synthesis.rulebuilder
 
 import synthesis._
+import synthesis.rulebuilder.SimpleRuleBuilder.paramMapByType
 
 class RecursionBuilder(inputRels: Set[Relation], outputRels: Set[Relation], recursion: Boolean=true)
   extends SimpleRuleBuilder(inputRels, outputRels) {
@@ -44,7 +45,7 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
   def addOneFunctor(rule: Rule, functorSpec: FunctorSpec): Set[Rule] = {
     /** Bind input variables */
     val posLits = rule.getPositiveLiterals()
-    val posParams: Map[Type, Set[Parameter]] = _paramMapByType(posLits)
+    val posParams: Map[Type, Set[Parameter]] = paramMapByType(posLits)
     val inputSig = functorSpec.inputSig
     val inputBindings: Set[List[Parameter]] = allGroundedBindings(inputSig, posParams)
 
@@ -66,7 +67,7 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
   def addOneFilter(rule: Rule, filterSpec: FilterSpec): Set[Rule] = {
     /** Bind input variables */
     val posLits = rule.getPositiveLiterals()
-    val posParams: Map[Type, Set[Parameter]] = _paramMapByType(posLits)
+    val posParams: Map[Type, Set[Parameter]] = paramMapByType(posLits)
     val inputBindings: Set[List[Parameter]] = allGroundedBindings(filterSpec.signature, posParams)
 
     /** All input parameters should have appeared in the body */

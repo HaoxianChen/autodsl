@@ -38,7 +38,10 @@ case class BasicSynthesis(problem: Problem,
     Program(rules)
   }
 
-  def learnARule(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule]): (Set[Tuple], Rule, Set[Rule]) = {
+  def learnARule(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
+                 validCondition: ScoredRule => Boolean = ScoredRule.isValid,
+                 refineCondition: ScoredRule => Boolean = ScoredRule.isTooGeneral,
+                ): (Set[Tuple], Rule, Set[Rule]) = {
     var iters: Int = 0
 
     // score the rules based on current idb set
@@ -50,9 +53,9 @@ case class BasicSynthesis(problem: Problem,
 
     // Set up the pool of rules to be refine
     var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
-    rulePool ++= generalRules.filter(r => r.isValid() || r.isTooGeneral())
+    rulePool ++= generalRules.filter(r => validCondition(r) || refineCondition(r))
 
-    var validRules: Set[ScoredRule] = generalRules.filter(_.isValid())
+    var validRules: Set[ScoredRule] = generalRules.filter(validCondition)
 
     while (iters < maxRefineIters && validRules.isEmpty) {
 
@@ -64,10 +67,10 @@ case class BasicSynthesis(problem: Problem,
       val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules))
 
       // keep the valid ones
-      validRules ++= candidateRules.filter(_.isValid())
+      validRules ++= candidateRules.filter(validCondition)
 
       // Put the too general ones into the pool
-      val tooGeneral = candidateRules.filter(_.isTooGeneral())
+      val tooGeneral = candidateRules.filter(refineCondition)
       rulePool ++= tooGeneral
 
       iters += 1

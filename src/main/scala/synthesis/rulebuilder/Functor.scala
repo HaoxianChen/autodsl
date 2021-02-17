@@ -28,6 +28,11 @@ case class FunctorLiteral(relation: Relation, fields: List[Parameter],
     val newFields = _rename(binding)
     this.copy(fields=newFields)
   }
+
+  def renameRelation(newRels: Map[Relation, Relation]): Literal = {
+    val newRel = newRels.getOrElse(this.relation, this.relation)
+    this.copy(relation=newRel)
+  }
 }
 
 abstract class FunctorSpec() extends AbstractFunctorSpec {
@@ -171,5 +176,105 @@ object Add {
   }
 }
 
+case class Min(signature: List[Type]) extends FunctorSpec {
+  def name: String = "min"
+  def inputIndices: List[Int] = List(0,1)
+  def outputIndex: Int = 2
 
+  require(signature.size == 3)
+  require(signature.toSet.size == 1)
+  require(signature.forall(_.isInstanceOf[NumberType]))
 
+  def literalToString(literal: Literal): String = {
+    require(literal.relation == this.getRelation)
+    val output = getOutput(literal)
+    val inputs = getInputs(literal)
+    require(inputs.size==2)
+    s"${output}=min(${inputs(0)},${inputs(1)})"
+  }
+}
+object Min {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+    val allTypes = inputTypes ++ outputTypes
+
+    val numberTypes: Set[Type] = outputTypes.filter(_.isInstanceOf[NumberType])
+    numberTypes.map { nt =>
+      require(inputTypes.contains(nt))
+      Min(List(nt, nt, nt))
+    }
+  }
+}
+
+case class Max(signature: List[Type]) extends FunctorSpec {
+  def name: String = "max"
+  def inputIndices: List[Int] = List(0,1)
+  def outputIndex: Int = 2
+
+  require(signature.size == 3)
+  require(signature.toSet.size == 1)
+  require(signature.forall(_.isInstanceOf[NumberType]))
+
+  def literalToString(literal: Literal): String = {
+    require(literal.relation == this.getRelation)
+    val output = getOutput(literal)
+    val inputs = getInputs(literal)
+    require(inputs.size==2)
+    s"${output}=max(${inputs(0)},${inputs(1)})"
+  }
+}
+object Max {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+    val allTypes = inputTypes ++ outputTypes
+
+    val numberTypes: Set[Type] = outputTypes.filter(_.isInstanceOf[NumberType])
+    numberTypes.map { nt =>
+      require(inputTypes.contains(nt))
+      Max(List(nt, nt, nt))
+    }
+  }
+}
+
+case class AppendList(signature: List[Type]) extends FunctorSpec {
+  def name: String = "safeAppend"
+  def inputIndices: List[Int] = List(0,1)
+  def outputIndex: Int = 2
+
+  require(signature.size == 3)
+  require(signature(0)==signature(2))
+  require(AbstractFunctorSpec.isListType(signature(0)))
+  require(AbstractFunctorSpec.isListType(signature(2)))
+
+  def literalToString(literal: Literal): String = {
+    require(literal.relation == this.getRelation)
+    val output = getOutput(literal)
+    val inputs = getInputs(literal)
+
+    val h = inputs(0)
+    val tail = inputs(1)
+
+    s"${output}=cat(${h}, ${tail}), !contains(as(${tail},symbol), as(${h},symbol))"
+  }
+}
+object AppendList {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for type x and type xList */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+    val allTypes = inputTypes ++ outputTypes
+
+    val listTypes: Set[Type] = outputTypes.filter(AbstractFunctorSpec.isListType)
+    listTypes.map { lt =>
+      val nodeName = AbstractFunctorSpec.getNodeName(lt)
+      val _nodeTypes: Set[Type] = allTypes.filter(_.name == nodeName)
+      require(_nodeTypes.size==1)
+      val nodeType: Type = _nodeTypes.toList.head
+      AppendList(List(lt, nodeType, lt))
+    }
+  }
+}
