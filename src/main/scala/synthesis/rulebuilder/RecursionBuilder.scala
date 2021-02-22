@@ -68,13 +68,16 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     /** Bind input variables */
     val posLits = rule.getPositiveLiterals()
     val posParams: Map[Type, Set[Parameter]] = paramMapByType(posLits)
-    val inputBindings: Set[List[Parameter]] = allGroundedBindings(filterSpec.signature, posParams)
+    val inputBindings0: Set[List[Parameter]] = allGroundedBindings(filterSpec.signature, posParams)
+
+    /** Filters should have unique inputs */
+    val inputBindings = inputBindings0.filter(l => l.toSet.size == l.size)
 
     /** All input parameters should have appeared in the body */
     val allParams = posLits.flatMap(_.fields)
     assert(inputBindings.forall(_.forall(p => allParams.contains(p))))
 
-    val filterLits = inputBindings.map(ps => Literal(filterSpec.getRelation, ps))
+    val filterLits = inputBindings.map(ps => FunctorLiteral(filterSpec.getRelation, ps, filterSpec))
     val r1 = filterLits.map(lit => rule.addLiteral(lit))
 
     /** Filter can be negated as well */
@@ -95,9 +98,9 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
   override def refineRule(rule: Rule): Set[Rule] = {
     val simpleRules = super.refineRule(rule)
     val functorRules = addFunctor(rule)
-    // val filterRules = addFilter(rule)
-    // simpleRules ++ functorRules ++ filterRules
-    simpleRules ++ functorRules
+    val filterRules = addFilter(rule)
+    // simpleRules ++ functorRules
+    simpleRules ++ functorRules ++ filterRules
   }
 }
 

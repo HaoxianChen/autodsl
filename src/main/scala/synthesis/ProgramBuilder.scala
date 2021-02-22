@@ -1,10 +1,10 @@
 package synthesis
 
-import synthesis.rulebuilder.{AggregateLiteral, Aggregator, ArgMax, ArgMin, RuleBuilder}
+import synthesis.rulebuilder.{AggregateLiteral, OutputAggregator, ArgMax, ArgMin, RuleBuilder}
 import synthesis.search.SynthesisConfigSpace
 
-class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[Aggregator]) {
-  def getAggregators: Set[Aggregator] = aggregators
+class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[OutputAggregator]) {
+  def getAggregators: Set[OutputAggregator] = aggregators
   /** Three top level interface: most general programs, refine, and add a rule to the program. */
   def mostGeneralPrograms(): Set[Program] = {
     val mostGeneralRules = ruleBuilder.mostGeneralRules()
@@ -39,7 +39,7 @@ class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[Aggregator]) {
   }
 
   def isAggregateRule(rule: Rule): Boolean = {
-    val allAggRels = aggregators.map(_._getAggHeadRel)
+    val allAggRels = aggregators.map(_.getAggHeadRel)
     val allRels = rule.getAllRelations()
     allRels.intersect(allAggRels).nonEmpty
   }
@@ -51,7 +51,7 @@ object ProgramBuilder {
     val ruleBuilder = configSpace.get_config().get_rule_builder(problem)
     problem.domain match {
       case "routing" => {
-        val aggregators: Set[Aggregator] = ArgMin.allInstances(problem) ++ ArgMax.allInstances(problem)
+        val aggregators: Set[OutputAggregator] = ArgMin.allInstances(problem) ++ ArgMax.allInstances(problem)
         new ProgramBuilder(ruleBuilder, aggregators)
       }
       case "NIB" => {

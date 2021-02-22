@@ -1,7 +1,7 @@
 package synthesis.search
 
 import synthesis.{Problem, Relation}
-import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AppendList, ConstantBuilder, FunctorBuilder, MakeList, Max, Min, PrependList, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AppendList, ConstantBuilder, FunctorBuilder, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
 
 case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
   private var current_config_id: Int = 0
@@ -39,7 +39,13 @@ object SynthesisConfigSpace {
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
         _getConfigSpace(recursion = true, functors=functors)
       }
-      case "consensus" => _getConfigSpace(recursion = false, maxConstants = List(0))
+      case "consensus" => {
+        val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
+          Quorum.allInstances
+        )
+        val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
+        _getConfigSpace(recursion = false, functors=functors)
+      }
       case _ => ???
     }
   }
@@ -59,21 +65,25 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
     val inputRels = problem.inputRels
     val outputRels = if (relevantOutRels.nonEmpty) relevantOutRels else problem.outputRels
 
-    val builder = if (recursion) {
-      require(maxConstants==0)
-      if (functors.nonEmpty) {
+    val builder =
+      if (recursion) {
+        require(maxConstants == 0)
+        if (functors.nonEmpty) {
+          FunctorBuilder(inputRels, outputRels, recursion, functors)
+        }
+        else {
+          new RecursionBuilder(inputRels, outputRels)
+        }
+      }
+      else if (maxConstants > 0) {
+        ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants)
+      }
+      else if (functors.nonEmpty) {
         FunctorBuilder(inputRels, outputRels, recursion, functors)
       }
       else {
-        new RecursionBuilder(inputRels, outputRels)
+        new SimpleRuleBuilder(inputRels, outputRels)
       }
-    }
-    else if (maxConstants > 0) {
-      ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants)
-    }
-    else {
-      new SimpleRuleBuilder(inputRels, outputRels)
-    }
     builder
   }
 }

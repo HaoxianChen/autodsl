@@ -1,8 +1,9 @@
 package synthesis.search
 
-import synthesis.rulebuilder.{AbstractFunctorSpec, Add, MakeList, PrependList}
-import synthesis.search.SynthesisConfigSpace._getConfigSpace
+import synthesis.rulebuilder.{AggCount, InputAggregator}
 import synthesis.{Problem, Program, Relation, Tuple}
+
+import scala.reflect.internal.Reporter.Count
 
 abstract class Synthesis(problem: Problem) {
   def learnNPrograms(idb: Set[Tuple]): List[Program]
@@ -22,8 +23,13 @@ object Synthesis {
   def apply(problem: Problem): Synthesis = problem.domain match {
     case "SDN" => SynthesisAllPrograms(problem)
     case "routing" => new ProgramSynthesizer(problem)
-    case "NIB" =>new ProgramSynthesizer(problem)
-    case "consensus" => SynthesisAllPrograms(problem)
+    case "NIB" => SynthesisAllPrograms(problem)
+    case "consensus" => {
+      /** Use the count aggregator */
+      val preprocessors: Set[InputAggregator] = AggCount.allInstances(problem)
+      val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
+      SynthesisAllPrograms(newProblem)
+    }
     case _ => ???
   }
 }

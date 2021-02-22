@@ -92,7 +92,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   }
 
   def getRelevantIdb(idb: Set[Tuple]): Set[Tuple] = {
-    val aggRels = programBuilder.getAggregators.map(_._getAggHeadRel) ++
+    val aggRels = programBuilder.getAggregators.map(_.getAggHeadRel) ++
       programBuilder.getAggregators.map(_.relToAgg)
     idb.filterNot(t => aggRels.contains(t.relation))
   }

@@ -69,8 +69,28 @@ abstract class FunctorSpec() extends AbstractFunctorSpec {
 
 }
 
-abstract class FilterSpec(name: String, signature: List[Type])
-  extends AbstractFunctorSpec
+abstract class FilterSpec() extends AbstractFunctorSpec {}
+
+case class Quorum() extends FilterSpec {
+  def name: String = "Quorum"
+  def signature: List[Type] = List(AggCount.countType, AggCount.countType)
+
+  def literalToString(literal: Literal): String = {
+    require(literal.fields.size == 2)
+    val a = literal.fields(0)
+    val b = literal.fields(1)
+    s"${a} > ${b} / 2"
+  }
+
+  def makeLiteral(inputs: List[Parameter], output: Parameter): FunctorLiteral = {
+    require(inputs.size == 2)
+    val rel: Relation = Relation(this.name, this.signature)
+    FunctorLiteral(rel, inputs, this)
+  }
+}
+object Quorum {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = Set(Quorum())
+}
 
 case class MakeList(signature: List[Type]) extends FunctorSpec {
   def name : String = "makeList"

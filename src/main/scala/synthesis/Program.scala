@@ -94,7 +94,8 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   override def toString: String = {
     val mr = this.maskUngroundVars()
     if (mr.body.nonEmpty) {
-      val simpleLiterals: Set[Literal] = mr.getPositiveLiterals()
+      // val simpleLiterals: Set[Literal] = mr.getPositiveLiterals()
+      val simpleLiterals: Set[Literal] = mr.body.diff(negations)
       val body_str: String = {
         (simpleLiterals.map(_.toString) ++ mr.negations.map("!" + _.toString)).mkString(",")
       }
@@ -118,7 +119,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     rename(bindings.toMap)
   }
 
-  def getPositiveLiterals(): Set[Literal] = body.diff(negations)
+  def getPositiveLiterals(): Set[Literal] = body.diff(negations).filter(_.isInstanceOf[SimpleLiteral])
 
   def addLiteral(literal: Literal): Rule = this.copy(body=this.body+literal)
   def addNegatedLiteral(literal: Literal): Rule = this.copy(negations=this.negations + literal, body = this.body+literal)
