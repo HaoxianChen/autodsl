@@ -1,5 +1,7 @@
 package synthesis
 
+import synthesis.rulebuilder.{FunctorLiteral, FunctorSpec}
+
 import scala.collection.mutable
 
 sealed abstract class Type() {
@@ -43,9 +45,6 @@ abstract class Literal {
   def renameRelation(newRels: Map[Relation, Relation]): Literal
 
   def _rename(binding: Map[Parameter, Parameter]): List[Parameter] = fields.map(p => binding.getOrElse(p, p))
-}
-object Literal {
-  def apply(relation: Relation, fields: List[Parameter]): Literal = SimpleLiteral(relation, fields)
 }
 
 case class SimpleLiteral(relation: Relation, fields: List[Parameter]) extends Literal {
@@ -95,7 +94,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     val mr = this.maskUngroundVars()
     if (mr.body.nonEmpty) {
       // val simpleLiterals: Set[Literal] = mr.getPositiveLiterals()
-      val simpleLiterals: Set[Literal] = mr.body.diff(negations)
+      val simpleLiterals: Set[Literal] = mr.body.diff(mr.negations)
       val body_str: String = {
         (simpleLiterals.map(_.toString) ++ mr.negations.map("!" + _.toString)).mkString(",")
       }
@@ -130,6 +129,8 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     assert(otherNegatedLits.size == this.negations.size - 1)
     val newBody = otherLits + newLit
     val newNegation = otherNegatedLits + newLit
+    require(newBody.size == this.body.size)
+    require(newNegation.size == this.negations.size)
     this.copy(body = newBody, negations=newNegation)
   }
 
@@ -150,10 +151,11 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   def getVarSet(): Set[Variable] = _getVarList(body.toList :+ head).toSet
   def getHeadVars(): List[Variable] = _getVarList(List(head))
   def _getGroundedVars(): List[Variable] = {
-    getPositiveLiterals().toList.flatMap(_.fields).flatMap {
+    val v1 = getPositiveLiterals().toList.flatMap(_.fields).flatMap {
       case _: Constant => None
       case v: Variable => Some(v)
     }
+    v1 ++ getFunctorOutputs()
   }
   def getUngroundHeadVariables(): List[Variable] = {
     getHeadVars().filterNot(v => _getGroundedVars().contains(v))
@@ -179,9 +181,25 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     getHeadVars().toSet.subsetOf(_getGroundedVars().toSet)
   }
 
+  def getFunctorOutputs(): Set[Variable] = {
+    val allFields = body.flatMap {
+      case lit: FunctorLiteral => lit.abstractFunctorSpec match {
+        case f: FunctorSpec => Some(f.getOutput(lit).asInstanceOf[Variable])
+        case _ => None
+      }
+      case _ => None
+    }
+    allFields map {
+      case v: Variable => v
+      case _ => throw new Exception(s"Functor output should not be types other than Variable.")
+    }
+  }
+
   def freeVariables(): Set[Variable] = {
     val allVars = _getVarList(body.toList :+ head)
-    val posVars = _getVarList(getPositiveLiterals().toList :+ head)
+    val posLits = getPositiveLiterals()
+    val functorOutputs: Set[Variable] = getFunctorOutputs()
+    val posVars = _getVarList(posLits.toList :+ head) ++ functorOutputs
     val paramCounts = allVars.groupBy(identity) map {case (p, ps) => p ->  ps.size}
     val boundVars = allVars.filter(v => paramCounts(v) > 1).toSet.intersect(posVars.toSet)
     allVars.toSet.diff(boundVars)

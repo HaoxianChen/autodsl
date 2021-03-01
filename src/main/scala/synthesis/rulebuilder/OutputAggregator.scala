@@ -90,7 +90,7 @@ abstract class OutputAggregator extends Aggregator {
     val aggFields = (this.indices :+ this.aggIndex).map(i => toAgg.fields(i))
     val aggHead: Literal = SimpleLiteral(getAggHeadRel, aggFields)
 
-    val head = Literal(this.relation, toAgg.fields)
+    val head = SimpleLiteral(this.relation, toAgg.fields)
     val body = Set(toAgg, aggHead)
     Rule(head, body)
   }

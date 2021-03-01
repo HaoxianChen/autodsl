@@ -6,7 +6,8 @@ class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
                       constantPool: Map[Type, Set[Constant]],
                       recursion: Boolean = true,
                       maxConstants: Int = 2)
-  extends SimpleRuleBuilder(inputRels, outputRels) {
+  //extends SimpleRuleBuilder(inputRels, outputRels) {
+  extends RecursionBuilder(inputRels, outputRels, recursion=recursion) {
 
   def _bindToConstant(rule: Rule, variable: Variable): Set[Rule] = {
     require(rule.getVarSet().contains(variable))

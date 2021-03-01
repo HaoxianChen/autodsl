@@ -30,6 +30,7 @@ object Synthesis {
       val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
       SynthesisAllPrograms(newProblem)
     }
+    case "overlay" => SynthesisAllPrograms(problem)
     case _ => ???
   }
 }

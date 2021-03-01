@@ -69,7 +69,40 @@ abstract class FunctorSpec() extends AbstractFunctorSpec {
 
 }
 
-abstract class FilterSpec() extends AbstractFunctorSpec {}
+abstract class FilterSpec() extends AbstractFunctorSpec {
+  def makeLiteral(inputs: List[Parameter], output: Parameter): FunctorLiteral = {
+    require(inputs.size == 2)
+    val rel: Relation = Relation(this.name, this.signature)
+    FunctorLiteral(rel, inputs, this)
+  }
+}
+
+case class Greater(signature: List[Type]) extends FilterSpec {
+  def name: String = "Greater"
+  require(signature.forall(_.isInstanceOf[NumberType]))
+  require(signature.size == 2)
+
+  def literalToString(literal: Literal): String = {
+    require(literal.fields.size == 2)
+    val a = literal.fields(0)
+    val b = literal.fields(1)
+    s"${a} > ${b}"
+  }
+}
+object Greater {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+
+    val numberTypes: Set[Type] = outputTypes.filter(_.isInstanceOf[NumberType])
+    numberTypes.map { nt =>
+      require(inputTypes.contains(nt))
+      Greater(List(nt, nt))
+    }
+  }
+}
+
 
 case class Quorum() extends FilterSpec {
   def name: String = "Quorum"
@@ -81,13 +114,35 @@ case class Quorum() extends FilterSpec {
     val b = literal.fields(1)
     s"${a} > ${b} / 2"
   }
+}
 
-  def makeLiteral(inputs: List[Parameter], output: Parameter): FunctorLiteral = {
-    require(inputs.size == 2)
-    val rel: Relation = Relation(this.name, this.signature)
-    FunctorLiteral(rel, inputs, this)
+case class TimeOut(signature: List[Type], timeOut: Int = 20) extends FilterSpec {
+  def name: String = "TimeOut"
+  require(signature.forall(_.name == TimeOut.timeType.name))
+  require(signature.size == 2)
+
+  def literalToString(literal: Literal): String = {
+    require(literal.fields.size == 2)
+    val a = literal.fields(0)
+    val b = literal.fields(1)
+    s"${a} - ${b} > ${timeOut}"
   }
 }
+object TimeOut {
+  val timeType = NumberType(s"Time")
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+
+    val timeTypes: Set[Type] = outputTypes.filter(_.name == TimeOut.timeType.name)
+    timeTypes.map { nt =>
+      require(inputTypes.contains(nt))
+      TimeOut(List(nt, nt))
+    }
+  }
+}
+
 object Quorum {
   def allInstances(problem: Problem): Set[AbstractFunctorSpec] = Set(Quorum())
 }
@@ -186,7 +241,6 @@ object Add {
     /** Look for Number types */
     val inputTypes = problem.inputTypes
     val outputTypes = problem.outputTypes
-    val allTypes = inputTypes ++ outputTypes
 
     val numberTypes: Set[Type] = outputTypes.filter(_.isInstanceOf[NumberType])
     numberTypes.map { nt =>
@@ -295,6 +349,36 @@ object AppendList {
       require(_nodeTypes.size==1)
       val nodeType: Type = _nodeTypes.toList.head
       AppendList(List(lt, nodeType, lt))
+    }
+  }
+}
+case class Increment(signature: List[Type]) extends FunctorSpec {
+  def name: String = "increment"
+  def inputIndices: List[Int] = List(0)
+  def outputIndex: Int = 1
+
+  require(signature.size == 2)
+  require(signature.toSet.size == 1)
+  require(signature.forall(_.isInstanceOf[NumberType]))
+
+  def literalToString(literal: Literal): String = {
+    require(literal.relation == this.getRelation)
+    val output = getOutput(literal)
+    val inputs = getInputs(literal)
+    require(inputs.size==1)
+    s"${output}=${inputs.head}+1"
+  }
+}
+object Increment {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+
+    val numberTypes: Set[Type] = outputTypes.filter(_.isInstanceOf[NumberType])
+    numberTypes.map { nt =>
+      require(inputTypes.contains(nt))
+      Increment(List(nt, nt))
     }
   }
 }

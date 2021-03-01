@@ -1,6 +1,7 @@
 package synthesis.rulebuilder
 
 import synthesis._
+import synthesis.rulebuilder.ConstantBuilder.getConstantPool
 import synthesis.rulebuilder.SimpleRuleBuilder.paramMapByType
 
 class RecursionBuilder(inputRels: Set[Relation], outputRels: Set[Relation], recursion: Boolean=true)
@@ -25,8 +26,10 @@ class RecursionBuilder(inputRels: Set[Relation], outputRels: Set[Relation], recu
 
 class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
                     recursion: Boolean,
-                    functors: Set[FunctorSpec], filters: Set[FilterSpec])
-  extends RecursionBuilder(inputRels, outputRels, recursion=recursion) {
+                    functors: Set[FunctorSpec], filters: Set[FilterSpec],
+                     constantPool: Map[Type, Set[Constant]] = Map(),
+                    maxConstants: Int = 0)
+  extends ConstantBuilder(inputRels, outputRels, constantPool, recursion=recursion, maxConstants = maxConstants) {
 
   def allGroundedBindings(sig: List[Type], paramMap: Map[Type, Set[Parameter]]): Set[List[Parameter]] = {
     sig match {
@@ -100,22 +103,40 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     val functorRules = addFunctor(rule)
     val filterRules = addFilter(rule)
     // simpleRules ++ functorRules
-    simpleRules ++ functorRules ++ filterRules
+    val rules = simpleRules ++ functorRules ++ filterRules
+    require(rules.flatMap(_.body).forall(lit => inputRels.contains(lit.relation) || lit.isInstanceOf[FunctorLiteral]))
+    rules
   }
 }
 
 object FunctorBuilder {
   def apply(inputRels: Set[Relation], outputRels: Set[Relation],
              recursion: Boolean,
-             abstractFunctorSpecs: Set[AbstractFunctorSpec]): FunctorBuilder = {
-    val functors: Set[FunctorSpec] = abstractFunctorSpecs.flatMap {
+             abstractFunctorSpecs: Set[AbstractFunctorSpec]
+           ): FunctorBuilder = {
+    val functors = getFunctors(abstractFunctorSpecs)
+    val filters = getFfilters(abstractFunctorSpecs)
+    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters)
+  }
+
+  def getFunctors(abstractFunctorSpecs: Set[AbstractFunctorSpec]): Set[FunctorSpec] = abstractFunctorSpecs.flatMap {
       case f: FunctorSpec => Some(f)
       case _: FilterSpec => None
     }
-    val filters: Set[FilterSpec] = abstractFunctorSpecs.flatMap {
-      case _: FunctorSpec => None
-      case f: FilterSpec => Some(f)
-    }
-    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters)
+
+  def getFfilters(abstractFunctorSpecs: Set[AbstractFunctorSpec]): Set[FilterSpec] = abstractFunctorSpecs.flatMap {
+    case f: FilterSpec => Some(f)
+    case _: FunctorSpec => None
+  }
+
+  def apply(inputRels: Set[Relation], outputRels: Set[Relation],
+            recursion: Boolean,
+            abstractFunctorSpecs: Set[AbstractFunctorSpec],
+            edb: Examples, idb: Examples,
+            maxConstants: Int, maxConstantPoolSize: Int=5): FunctorBuilder = {
+    val functors = getFunctors(abstractFunctorSpecs)
+    val filters = getFfilters(abstractFunctorSpecs)
+    val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
+    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters, constantPool, maxConstants)
   }
 }

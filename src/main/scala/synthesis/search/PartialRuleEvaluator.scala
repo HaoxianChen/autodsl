@@ -1,6 +1,6 @@
 package synthesis.search
 
-import synthesis.{Constant, Evaluator, Literal, Problem, Program, Relation, Rule, Tuple, Variable}
+import synthesis.{Constant, Evaluator, Literal, Problem, Program, Relation, Rule, SimpleLiteral, Tuple, Variable}
 
 import scala.collection.mutable
 
@@ -60,7 +60,7 @@ case class PartialRuleEvaluator(problem: Problem) {
 
     val newOutRel = _getStrippedRelation(unBoundRule)
     assert(newOutRel.signature.size == newFields.size)
-    val newHead = Literal(newOutRel, newFields)
+    val newHead = SimpleLiteral(newOutRel, newFields)
     Rule(newHead, unBoundRule.body)
   }
 

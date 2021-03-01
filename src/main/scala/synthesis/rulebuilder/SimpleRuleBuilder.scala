@@ -1,6 +1,6 @@
 package synthesis.rulebuilder
 import synthesis._
-import synthesis.rulebuilder.SimpleRuleBuilder.{newUnboundedLiteral, paramMapByType}
+import synthesis.rulebuilder.SimpleRuleBuilder.{newUnboundedLiteral, newVar, paramMapByType}
 
 import scala.collection.mutable
 
@@ -92,7 +92,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
           }
         }
     }
-    _allBindings(rel.signature, paramMap).map(fields => Literal(rel, fields))
+    _allBindings(rel.signature, paramMap).map(fields => SimpleLiteral(rel, fields))
   }
 
   def addNegation(rule: Rule): Set[Rule] = {
@@ -104,20 +104,22 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     }
     else {
       // The relations that add negated literal to
-      val negRels: Set[Relation] = inputRels.diff(rule.body.map(_.relation))
+      // val negRels: Set[Relation] = inputRels.diff(rule.body.map(_.relation))
+      val negRels: Set[Relation] = inputRels
       val posParams: Map[Type, Set[Parameter]] = paramMapByType(rule.getPositiveLiterals())
 
       def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {
         /** All possible bindings to the literal from posLit */
         val negatedLits: Set[Literal] = allBindings(rel, posParams)
-        negatedLits.map(l => rule.addNegatedLiteral(l))
+        val nl = negatedLits.diff(rule.body)
+        nl.map(l => rule.addNegatedLiteral(l))
       }
       negRels.flatMap(r => addNegationByRel(rule, r))
     }
   }
 
   def relaxOneBindingFromNegation(rule: Rule, lit: Literal): Set[Rule] = {
-    val params = paramMapByType(rule.body)
+    val params = paramMapByType(rule.body+rule.head)
     val paramCounts: Map[Type, Int] = params.map {case (t, ps) => t -> ps.size}
 
     val boundParams: Set[Parameter] = rule.getBoundParams()
@@ -143,13 +145,14 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
       }
 
     require(rule.negations.contains(lit))
-    val relaxedLits: Set[Literal] = _relaxBinding(lit.fields).map(fs => Literal(lit.relation, fs))
+    val relaxedLits: Set[Literal] = _relaxBinding(lit.fields).map(fs => SimpleLiteral(lit.relation, fs))
     relaxedLits.map(nl => rule.updateNegatedLiteral(lit,nl))
   }
 
   def relaxNegation(rule: Rule): Set[Rule] = {
     /** Relax one negated literal parameter bindings */
-    rule.negations.flatMap(lit => relaxOneBindingFromNegation(rule, lit))
+    val simpleNegations = rule.negations.filter(_.isInstanceOf[SimpleLiteral])
+    simpleNegations.flatMap(lit => relaxOneBindingFromNegation(rule, lit))
   }
 
   def bindInstanceIds(rule: Rule): Rule = {
@@ -157,13 +160,17 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     val allInstanceIds = (rule.body + rule.head).flatMap(_.fields).filter(_._type == instanceType)
     val instanceIdVar = Variable("instanceid0", instanceType)
     val newBindings: Map[Parameter, Parameter] = allInstanceIds.map(p=>(p->instanceIdVar)).toMap
-    rule.rename(newBindings)
+    val nr = rule.rename(newBindings)
+    require(nr.body.map(_.relation) == rule.body.map(_.relation))
+    nr
   }
 
   def refineRule(rule: Rule): Set[Rule] = {
-    val refinedRules: Set[Rule] = addGeneralLiteral(rule) ++ addBinding(rule) ++
-                                  addNegation(rule) ++ relaxNegation(rule)
-    val refined2 = refinedRules.map(bindInstanceIds)
+    val addLiterals = addGeneralLiteral(rule) ++ addNegation(rule)
+    val refinedRules: Set[Rule] = (addBinding(rule) ++  relaxNegation(rule)).
+      filter(_.maskUngroundVars().body.size==rule.body.size)
+
+    val refined2 = (refinedRules++addLiterals).map(bindInstanceIds)
     refined2.map(_.normalize())
   }
 }
@@ -179,7 +186,7 @@ object SimpleRuleBuilder {
       fields += Variable(_type, c)
     }
     require(fields.size == relation.signature.size)
-    Literal(relation, fields.toList)
+    SimpleLiteral(relation, fields.toList)
   }
 
   def paramMapByType(literals: Set[Literal]): Map[Type, Set[Parameter]] = {

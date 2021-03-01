@@ -9,12 +9,12 @@ case class ScoredRule(rule: Rule, idb: Set[Tuple], score: Double) extends Ordere
     /*** Prioritize rules with more outputs */
     else if (this.idb.size > that.idb.size) 1
     else if (this.idb.size < that.idb.size) -1
-    /*** Prioritize rules with more free variables */
-    else if (this.rule.freeVariables().size > that.rule.freeVariables().size) 1
-    else if (this.rule.freeVariables().size < that.rule.freeVariables().size) -1
     /*** Prioritize rules with fewer literals */
     else if (this.rule.body.size < that.rule.body.size) 1
     else if (this.rule.body.size > that.rule.body.size) -1
+    /*** Prioritize rules with more free variables */
+    else if (this.rule.freeVariables().size > that.rule.freeVariables().size) 1
+    else if (this.rule.freeVariables().size < that.rule.freeVariables().size) -1
     /*** Prioritize rules with fewer constants */
     else if (this.rule.getConstantList.size < that.rule.getConstantList.size) 1
     else if (this.rule.getConstantList.size > that.rule.getConstantList.size) -1
