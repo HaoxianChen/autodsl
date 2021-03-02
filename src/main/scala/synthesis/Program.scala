@@ -1,6 +1,6 @@
 package synthesis
 
-import synthesis.rulebuilder.{FunctorLiteral, FunctorSpec}
+import synthesis.rulebuilder.{AggregateLiteral, FunctorLiteral, FunctorSpec}
 
 import scala.collection.mutable
 
@@ -187,6 +187,7 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
         case f: FunctorSpec => Some(f.getOutput(lit).asInstanceOf[Variable])
         case _ => None
       }
+      case lit: AggregateLiteral => Some(lit.getOutput)
       case _ => None
     }
     allFields map {
@@ -230,11 +231,21 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   def isValid(): Boolean = isHeadBounded()
 }
 
-case class Program(rules: Set[Rule]) {
+case class Program(rules: Set[Rule]) extends Ordered[Program] {
   override def toString: String = rules.mkString("\n")
+  val literalCounts: Int = rules.toList.map(_.body.size).sum
+  val fieldCounts: Int = rules.toList.flatMap(_.body.toList.map(_.fields.size)).sum
   def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
 
   def renameRelation(newRels :Map[Relation, Relation]): Program = Program(rules.map(_.renameRelation(newRels)))
+
+  override def compare(that: Program): Int = {
+    if (this.rules.size < that.rules.size) -1
+    else if (this.rules.size > that.rules.size) 1
+    else if (this.literalCounts < that.literalCounts) -1
+    else if (this.literalCounts > that.literalCounts) 1
+    else 0
+  }
 }
 object Program {
   def apply(): Program = Program(Set())

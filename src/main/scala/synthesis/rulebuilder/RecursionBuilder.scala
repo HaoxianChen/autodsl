@@ -104,7 +104,9 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     val filterRules = addFilter(rule)
     // simpleRules ++ functorRules
     val rules = simpleRules ++ functorRules ++ filterRules
-    require(rules.flatMap(_.body).forall(lit => inputRels.contains(lit.relation) || lit.isInstanceOf[FunctorLiteral]))
+    require(rules.flatMap(_.body).forall(lit => inputRels.contains(lit.relation)
+      || outputRels.contains(lit.relation)
+      || lit.isInstanceOf[FunctorLiteral]))
     rules
   }
 }

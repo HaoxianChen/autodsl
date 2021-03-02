@@ -49,7 +49,8 @@ case class SynthesisAllPrograms(problem: Problem,
     assert(examples.isEmpty)
     val programs = combineRules(rules, idb)
     logger.debug(s"Found ${programs.size} programs.")
-    programs
+    /** sort programs */
+    programs.sorted
   }
 
   def combineRules(rules: Set[Rule], idb: Set[Tuple]): List[Program] = {

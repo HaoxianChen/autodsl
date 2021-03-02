@@ -27,12 +27,16 @@ object Main extends App {
     // }
 
     /*** Display results */
+    var literalCounts: Int = 0
+    var fieldCounts: Int = 0
     for ((rel,ps)<-programs) {
-      println(s"$rel: ${ps.size} programs:")
-      for (p <- ps) {
-        println(p+"\n")
-      }
+      val p = ps.head
+      literalCounts += p.literalCounts
+      fieldCounts += p.fieldCounts
+      println(s"$rel: ${ps.size} programs, smallest one contains ${p.literalCounts} literals")
+      println(p)
     }
+    println(s"${literalCounts} literals, ${fieldCounts} fields.")
   }
 
   if (args(0)== "parse") {
@@ -81,6 +85,7 @@ object Main extends App {
       "firewall/stateless-firewall",
       "firewall/stateful-firewall",
       "nib/reachable",
+      "routing/shortest-path"
     ).map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- allProblems) {
       println(problemFile)

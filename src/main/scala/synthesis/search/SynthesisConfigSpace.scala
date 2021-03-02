@@ -83,7 +83,7 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
         }
       }
       else if (maxConstants > 0 && functors.isEmpty) {
-        ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants)
+        ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants, recursion=recursion)
       }
       else if (functors.nonEmpty) {
         FunctorBuilder(inputRels, outputRels, recursion, functors, problem.edb, problem.idb, maxConstants=maxConstants)
