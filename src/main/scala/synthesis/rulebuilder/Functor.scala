@@ -11,6 +11,8 @@ sealed abstract class AbstractFunctorSpec {
   def makeLiteral(inputs: List[Parameter], output: Parameter): FunctorLiteral
 
   def getRelation: Relation = Relation(name, signature)
+
+  def isLiteralValid(literal: FunctorLiteral): Boolean = true
 }
 object AbstractFunctorSpec {
   def isListType(_type: Type): Boolean = _type.name.endsWith("List")
@@ -33,6 +35,8 @@ case class FunctorLiteral(relation: Relation, fields: List[Parameter],
     val newRel = newRels.getOrElse(this.relation, this.relation)
     this.copy(relation=newRel)
   }
+
+  def isValid: Boolean = abstractFunctorSpec.isLiteralValid(this)
 }
 
 abstract class FunctorSpec() extends AbstractFunctorSpec {
@@ -266,6 +270,10 @@ case class Min(signature: List[Type]) extends FunctorSpec {
     require(inputs.size==2)
     s"${output}=min(${inputs(0)},${inputs(1)})"
   }
+
+  override def isLiteralValid(literal: FunctorLiteral): Boolean = {
+    this.getInputs(literal).toSet.size == 2
+  }
 }
 object Min {
   def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
@@ -297,6 +305,10 @@ case class Max(signature: List[Type]) extends FunctorSpec {
     val inputs = getInputs(literal)
     require(inputs.size==2)
     s"${output}=max(${inputs(0)},${inputs(1)})"
+  }
+
+  override def isLiteralValid(literal: FunctorLiteral): Boolean = {
+    this.getInputs(literal).toSet.size == 2
   }
 }
 object Max {

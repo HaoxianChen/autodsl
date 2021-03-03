@@ -61,10 +61,10 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     val outputBindings: Set[Parameter] = unboundHeadVars.filter(v => v._type == functorSpec.outputSig)
 
     /** Cross product of input and output bindings */
-    val functorLits: Set[Literal] = inputBindings.flatMap(ib => outputBindings.map(
+    val functorLits: Set[FunctorLiteral] = inputBindings.flatMap(ib => outputBindings.map(
       ob => functorSpec.makeLiteral(ib, ob)))
 
-    functorLits.map(lit => rule.addLiteral(lit))
+    functorLits.filter(_.isValid).map(lit => rule.addLiteral(lit))
   }
 
   def addOneFilter(rule: Rule, filterSpec: FilterSpec): Set[Rule] = {
