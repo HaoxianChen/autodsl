@@ -5,6 +5,9 @@ import synthesis.rulebuilder.SimpleRuleBuilder.{newUnboundedLiteral, newVar, par
 import scala.collection.mutable
 
 class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) extends RuleBuilder {
+  def candidateRelations(rule: Rule): Set[Relation] = inputRels.diff(rule.body.map(_.relation))
+  def candidateNegRelations(rule: Rule): Set[Relation] = inputRels.diff(rule.negations.map(_.relation))
+
   def _addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
     /** Add relation to rule, without binding the variables */
     val allLiterals = rule.body + rule.head
@@ -51,7 +54,8 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
 
   def addGeneralLiteral(rule: Rule) : Set[Rule] = {
     var newRules: Set[Rule] = Set()
-    for (rel <- inputRels.diff(rule.body.map(_.relation))) {
+    // for (rel <- inputRels.diff(rule.body.map(_.relation))) {
+    for (rel <- candidateRelations(rule)) {
       newRules += _addGeneralLiteral(rule, rel)
     }
     newRules
@@ -105,7 +109,8 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
     else {
       // The relations that add negated literal to
       // val negRels: Set[Relation] = inputRels.diff(rule.body.map(_.relation))
-      val negRels: Set[Relation] = inputRels
+      // val negRels: Set[Relation] = inputRels
+      val negRels: Set[Relation] = candidateNegRelations(rule)
       val posParams: Map[Type, Set[Parameter]] = paramMapByType(rule.getPositiveLiterals())
 
       def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {
@@ -166,11 +171,12 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
   }
 
   def refineRule(rule: Rule): Set[Rule] = {
-    val addLiterals = addGeneralLiteral(rule) ++ addNegation(rule)
+    val addLiterals = addGeneralLiteral(rule).flatMap(r => addBinding(r))
+    val addNegations = addNegation(rule)
     val refinedRules: Set[Rule] = (addBinding(rule) ++  relaxNegation(rule)).
       filter(_.maskUngroundVars().body.size==rule.body.size)
 
-    val refined2 = (refinedRules++addLiterals).map(bindInstanceIds)
+    val refined2 = (refinedRules++addLiterals++addNegations).map(bindInstanceIds)
     refined2.map(_.normalize())
   }
 }

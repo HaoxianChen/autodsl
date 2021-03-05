@@ -76,12 +76,22 @@ object AggCount {
     problem.inputRels.flatMap(_allInstances)
   }
   def _allInstances(relation: Relation): Set[InputAggregator] = {
+    val instanceType = NumberType("InstanceId")
+    val hasInstanceId = relation.signature.contains(instanceType)
+    def getIsntanceIdIdx(sig: List[Type]): Int = sig.indexOf(instanceType)
+    val signature = relation.signature.filterNot(_ == instanceType)
+
     def _allInstances(relation: Relation, numIndices: Int): Set[InputAggregator] = {
-      val allIndices: Set[List[Int]] = relation.signature.indices.toList.combinations(numIndices).toSet
-      allIndices.map(ix => AggCount(relation, ix))
+      val allIndices: Set[List[Int]] = signature.indices.toList.combinations(numIndices).toSet
+      val allIndices2 = if (hasInstanceId) {
+        val idx = getIsntanceIdIdx(relation.signature)
+        allIndices.map(_:+idx)
+      }
+      else allIndices
+      allIndices2.map(ix => AggCount(relation, ix))
     }
     val minIndex = 0
-    val maxIndex = relation.signature.size - 1
+    val maxIndex = signature.size - 1
     (minIndex to maxIndex).toSet.flatMap(i => _allInstances(relation,i))
   }
 }

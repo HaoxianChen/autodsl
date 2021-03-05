@@ -1,7 +1,7 @@
 package synthesis.search
 
 import synthesis.{Problem, Relation}
-import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AppendList, ConstantBuilder, FunctorBuilder, Greater, Increment, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AggCount, AppendList, ConstantBuilder, FunctorBuilder, Greater, Increment, InputAggregator, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
 
 case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
   private var current_config_id: Int = 0
@@ -43,8 +43,9 @@ object SynthesisConfigSpace {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
           Quorum.allInstances
         )
+        val inputAggregators = AggCount.allInstances(problem)
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
-        _getConfigSpace(recursion = false, functors=functors)
+        _getConfigSpace(recursion = false, functors=functors, inputAggregators=inputAggregators)
       }
       case "overlay" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
@@ -60,14 +61,21 @@ object SynthesisConfigSpace {
     val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(recursion, maxConstants = c))
     SynthesisConfigSpace(allConfigs)
   }
-  def _getConfigSpace(recursion: Boolean, functors: Set[AbstractFunctorSpec], maxConstants: Int=0): SynthesisConfigSpace = {
-    val synthesisConfigs = SynthesisConfigs(recursion, maxConstants = maxConstants, functors=functors)
+  // def _getConfigSpace(recursion: Boolean, functors: Set[AbstractFunctorSpec], maxConstants: Int=0): SynthesisConfigSpace = {
+  //   val synthesisConfigs = SynthesisConfigs(recursion, maxConstants = maxConstants, functors=functors)
+  //   SynthesisConfigSpace(List(synthesisConfigs))
+  // }
+  def _getConfigSpace(recursion: Boolean, functors: Set[AbstractFunctorSpec],
+                      inputAggregators: Set[InputAggregator]=Set(), maxConstants: Int=0): SynthesisConfigSpace = {
+    val synthesisConfigs = SynthesisConfigs(recursion, maxConstants = maxConstants, functors=functors,
+      inputAggregators=inputAggregators)
     SynthesisConfigSpace(List(synthesisConfigs))
   }
 }
 
 case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
-                            functors: Set[AbstractFunctorSpec]) {
+                            functors: Set[AbstractFunctorSpec],
+                           inputAggregators: Set[InputAggregator]) {
   def get_rule_builder(problem: Problem, relevantOutRels: Set[Relation] = Set()): RuleBuilder = {
     val inputRels = problem.inputRels
     val outputRels = if (relevantOutRels.nonEmpty) relevantOutRels else problem.outputRels
@@ -86,7 +94,8 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
         ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants, recursion=recursion)
       }
       else if (functors.nonEmpty) {
-        FunctorBuilder(inputRels, outputRels, recursion, functors, problem.edb, problem.idb, maxConstants=maxConstants)
+        FunctorBuilder(inputRels, outputRels, recursion, functors, problem.edb, problem.idb, maxConstants=maxConstants,
+        inputAggregators=inputAggregators)
       }
       else {
         new SimpleRuleBuilder(inputRels, outputRels)
@@ -95,6 +104,7 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
   }
 }
 object SynthesisConfigs {
-  def apply(recursion: Boolean, maxConstants: Int): SynthesisConfigs = new SynthesisConfigs(recursion, maxConstants, Set())
+  def apply(recursion: Boolean, maxConstants: Int): SynthesisConfigs = new SynthesisConfigs(recursion, maxConstants, Set(), Set())
+  def apply(recursion: Boolean, maxConstants: Int, functors: Set[AbstractFunctorSpec]): SynthesisConfigs = new SynthesisConfigs(recursion, maxConstants, functors, Set())
 }
 

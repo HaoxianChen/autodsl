@@ -2,10 +2,12 @@ package synthesis
 
 import java.nio.file.{Files, Path, Paths}
 
+import com.typesafe.scalalogging.Logger
 import sys.process._
 
 case class Evaluator(problem: Problem) {
   private var cache: Map[Program, Examples] = Map()
+  private val logger = Logger(s"Evaluator")
 
   private val name = problem.name
   private val types = problem.types
@@ -36,10 +38,11 @@ case class Evaluator(problem: Problem) {
       val programPath = dumpProgram(program, problemDir)
 
       // run souffle to derive output
-      runSouffle(problemDir, programPath)
+      // runSouffle(problemDir, programPath)
 
-      // load results from file
-      val idb: Examples = loadOutput(problemDir, outRels)
+      // // load results from file
+      // val idb: Examples = loadOutput(problemDir, outRels)
+      val idb = runAndGetResults(problemDir, programPath, outRels)
 
       // update cache
       cache = cache.updated(program, idb)
@@ -57,8 +60,24 @@ case class Evaluator(problem: Problem) {
     // dump program and edb to files
     val programPath: Path  = dumpProgram(programSpec, problemDir)
 
-    runSouffle(problemDir, programPath)
-    val idb: Examples = loadOutput(problemDir, outRels)
+    // runSouffle(problemDir, programPath)
+    // val idb: Examples = loadOutput(problemDir, outRels)
+    val idb = runAndGetResults(problemDir, programPath, outRels)
+    idb
+  }
+
+  def runAndGetResults(problemDir: Path, programPath: Path, outRels: Set[Relation]): Examples = {
+    var i = 0
+    var success = false
+    var idb = Examples()
+    while (i < 10 && !success) {
+      runSouffle(problemDir, programPath)
+      val (_idb, _success) = loadOutput(problemDir, outRels)
+      idb = _idb
+      success = _success
+      i += 1
+    }
+    if (!success) logger.warn(s"Failed to get results after $i trails: $problemDir")
     idb
   }
 
@@ -117,23 +136,29 @@ case class Evaluator(problem: Problem) {
     ruleHeadRels ++ ruleBodyRels
   }
 
-  def loadOutput(dir: Path, outRels: Set[Relation]): Examples = {
+  def loadOutput(dir: Path, outRels: Set[Relation]): (Examples, Boolean) = {
     var idb = Examples()
+    var success = true
     for (rel <- outRels) {
       val outFile = Paths.get(dir.toString, s"${rel.name}.csv")
 
       // wait until file is written
       var i = 0
-      while (i < 1000 && Files.notExists(outFile)) {
+      while (i < 10 && Files.notExists(outFile)) {
         Thread.sleep(100) // sleep for 100 milliseconds
         i+=1
       }
-      require(Files.exists(outFile), s"output file not produced ${outFile} after $i trails.")
-
-      val facts = Misc.readCsv(outFile.toString)
-      val tuples = facts.map(Examples.strToTuple(rel, _)).toSet
-      idb = idb.addTuples(rel, tuples)
+      // require(Files.exists(outFile), s"output file not produced ${outFile} after $i trails.")
+      if (Files.exists(outFile)) {
+        val facts = Misc.readCsv(outFile.toString)
+        val tuples = facts.map(Examples.strToTuple(rel, _)).toSet
+        idb = idb.addTuples(rel, tuples)
+     }
+      else {
+        logger.warn(s"output file not produced ${outFile} after $i trails.")
+        success = false
+      }
     }
-    idb
+    (idb, success)
   }
 }

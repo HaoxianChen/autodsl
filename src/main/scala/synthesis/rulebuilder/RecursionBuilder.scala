@@ -28,8 +28,27 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
                     recursion: Boolean,
                     functors: Set[FunctorSpec], filters: Set[FilterSpec],
                      constantPool: Map[Type, Set[Constant]] = Map(),
-                    maxConstants: Int = 0)
+                    maxConstants: Int = 0,
+                    inputAggregators: Set[InputAggregator] = Set())
   extends ConstantBuilder(inputRels, outputRels, constantPool, recursion=recursion, maxConstants = maxConstants) {
+
+  private val aggToRelMap: Map[Relation, Relation] = inputAggregators.map(ia => ia.getAggHeadRel -> ia.relation).toMap
+  private val relToAggMap: Map[Relation, Set[Relation]] = inputAggregators.groupBy(_.relation) map {
+    case (rel, ias) => rel -> ias.map(_.getAggHeadRel)
+  }
+
+  override def candidateRelations(rule: Rule): Set[Relation] = {
+    val preAggRels: Set[Relation] = rule.body.flatMap(lit => aggToRelMap.get(lit.relation))
+    val aggRels = preAggRels.flatMap(rel => relToAggMap.getOrElse(rel,Set()))
+    val candidateRels = super.candidateRelations(rule)
+    candidateRels.diff(aggRels)
+  }
+  override def candidateNegRelations(rule: Rule): Set[Relation] = {
+    val preAggRels: Set[Relation] = rule.body.flatMap(lit => aggToRelMap.get(lit.relation))
+    val aggRels = preAggRels.flatMap(rel => relToAggMap.getOrElse(rel,Set()))
+    val candidateRels = super.candidateNegRelations(rule)
+    candidateRels.diff(aggRels)
+  }
 
   def allGroundedBindings(sig: List[Type], paramMap: Map[Type, Set[Parameter]]): Set[List[Parameter]] = {
     sig match {
@@ -135,10 +154,12 @@ object FunctorBuilder {
             recursion: Boolean,
             abstractFunctorSpecs: Set[AbstractFunctorSpec],
             edb: Examples, idb: Examples,
-            maxConstants: Int, maxConstantPoolSize: Int=5): FunctorBuilder = {
+            maxConstants: Int, maxConstantPoolSize: Int=5,
+           inputAggregators: Set[InputAggregator]): FunctorBuilder = {
     val functors = getFunctors(abstractFunctorSpecs)
     val filters = getFfilters(abstractFunctorSpecs)
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
-    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters, constantPool, maxConstants)
+    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters, constantPool, maxConstants,
+      inputAggregators=inputAggregators)
   }
 }
