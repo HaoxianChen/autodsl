@@ -4,33 +4,45 @@ import synthesis._
 import synthesis.rulebuilder.ConstantBuilder.getConstantPool
 import synthesis.rulebuilder.SimpleRuleBuilder.paramMapByType
 
-class RecursionBuilder(inputRels: Set[Relation], outputRels: Set[Relation], recursion: Boolean=true)
-  extends SimpleRuleBuilder(inputRels, outputRels) {
+class RecursionBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
+                      maxRelCount: Int = 1,
+                       recursion: Boolean=true)
+  extends SimpleRuleBuilder(inputRels, outputRels, maxRelCount = maxRelCount) {
 
-  override def addGeneralLiteral(rule: Rule): Set[Rule] = {
-    if (!recursion) {
-      super.addGeneralLiteral(rule)
-    }
-    else {
-      var newRules: Set[Rule] = Set()
-      val bodyRels = rule.body.map(_.relation)
-      val rels = (inputRels + rule.head.relation).diff(bodyRels)
-      for (rel <- rels) {
-        newRules += _addGeneralLiteral(rule, rel)
-      }
-      newRules
-    }
+  override def candidateRelations(rule: Rule): Set[Relation] = {
+    val rels = super.candidateRelations(rule)
+    if (recursion) rels + rule.head.relation
+    else rels
   }
+
+  // override def addGeneralLiteral(rule: Rule): Set[Rule] = {
+  //   if (!recursion) {
+  //     super.addGeneralLiteral(rule)
+  //   }
+  //   else {
+  //     var newRules: Set[Rule] = Set()
+  //     val bodyRels = rule.body.map(_.relation)
+  //     val rels = (inputRels + rule.head.relation).diff(bodyRels)
+  //     for (rel <- rels) {
+  //       newRules += _addGeneralLiteral(rule, rel)
+  //     }
+  //     newRules
+  //   }
+  // }
 
 }
 
 class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
+                     maxRelCount: Int = 1,
                     recursion: Boolean,
                     functors: Set[FunctorSpec], filters: Set[FilterSpec],
                      constantPool: Map[Type, Set[Constant]] = Map(),
                     maxConstants: Int = 0,
                     inputAggregators: Set[InputAggregator] = Set())
-  extends ConstantBuilder(inputRels, outputRels, constantPool, recursion=recursion, maxConstants = maxConstants) {
+  extends ConstantBuilder(inputRels, outputRels,
+    maxRelCount=maxRelCount,
+    constantPool,
+    recursion=recursion, maxConstants = maxConstants) {
 
   private val aggToRelMap: Map[Relation, Relation] = inputAggregators.map(ia => ia.getAggHeadRel -> ia.relation).toMap
   private val relToAggMap: Map[Relation, Set[Relation]] = inputAggregators.groupBy(_.relation) map {
@@ -132,12 +144,13 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
 
 object FunctorBuilder {
   def apply(inputRels: Set[Relation], outputRels: Set[Relation],
-             recursion: Boolean,
-             abstractFunctorSpecs: Set[AbstractFunctorSpec]
+            maxRelCount: Int,
+            recursion: Boolean,
+             abstractFunctorSpecs: Set[AbstractFunctorSpec],
            ): FunctorBuilder = {
     val functors = getFunctors(abstractFunctorSpecs)
     val filters = getFfilters(abstractFunctorSpecs)
-    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters)
+    new FunctorBuilder(inputRels, outputRels, maxRelCount, recursion, functors, filters)
   }
 
   def getFunctors(abstractFunctorSpecs: Set[AbstractFunctorSpec]): Set[FunctorSpec] = abstractFunctorSpecs.flatMap {
@@ -151,6 +164,7 @@ object FunctorBuilder {
   }
 
   def apply(inputRels: Set[Relation], outputRels: Set[Relation],
+           maxRelCount: Int,
             recursion: Boolean,
             abstractFunctorSpecs: Set[AbstractFunctorSpec],
             edb: Examples, idb: Examples,
@@ -159,7 +173,7 @@ object FunctorBuilder {
     val functors = getFunctors(abstractFunctorSpecs)
     val filters = getFfilters(abstractFunctorSpecs)
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
-    new FunctorBuilder(inputRels, outputRels, recursion, functors, filters, constantPool, maxConstants,
+    new FunctorBuilder(inputRels, outputRels, maxRelCount, recursion, functors, filters, constantPool, maxConstants,
       inputAggregators=inputAggregators)
   }
 }

@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.Logger
 import synthesis._
 
 import scala.collection.mutable
+import scala.math.abs
 
 class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   /** Synthesize program on a program basis */
@@ -29,12 +30,14 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
 
       val refinedPrograms: Set[Program] = refineProgram(baseProgram, idb)
 
-      val candidatePrograms: Set[ScoredProgram] = refinedPrograms.diff(exploredPrograms).map(p => evalProgram(p, idb))
+      val candidatePrograms: Set[ScoredProgram] = refinedPrograms.diff(exploredPrograms).map(p => evalProgram(p, idb, Some(baseProgram)))
 
       validPrograms ++= candidatePrograms.filter(isProgramValid)
       exploredPrograms ++= refinedPrograms
 
-      val pnext = candidatePrograms.filter(needsRefinement)
+      val toRefine = candidatePrograms.filter(needsRefinement)
+      val staled = toRefine.filter(isStaled)
+      val pnext = toRefine.diff(staled)
       programPool ++= pnext
     }
     /** todo: order the valid programs */
@@ -73,13 +76,20 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     newRules.map(r => Program(program.rules+r))
   }
 
+  def isStaled(scoredProgram: ScoredProgram): Boolean = {
+    if (scoredProgram.score_history.size == ScoredProgram.maxHistSize) {
+      scoredProgram.diff().map(d=>abs(d)).max < 1e-3
+    }
+    else false
+  }
+
   def needsRefinement(scoredProgram: ScoredProgram): Boolean = {
     scoredProgram.score > 1e-4
   }
 
   def isComplete(program: Program): Boolean = program.rules.forall(_.isHeadBounded())
 
-  def evalProgram(program: Program, refIdb: Set[Tuple]): ScoredProgram = {
+  def evalProgram(program: Program, refIdb: Set[Tuple], baseProgram: Option[ScoredProgram]=None): ScoredProgram = {
     val (idb0,partialRelationMap)  = evaluator.evalAndPartialRelations(program)
     /** Filter only relevant idb */
     val idb = getRelevantIdb(idb0)
@@ -88,7 +98,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       val partialRelation: PartialRelation = partialRelationMap(rel)
       partialRelation.getPartialIdb(tuple)
     }
-    ScoredProgram(program, idb, refIdb, getPartialIdb)
+    ScoredProgram(program, idb, refIdb, getPartialIdb, baseProgram)
   }
 
   def getRelevantIdb(idb: Set[Tuple]): Set[Tuple] = {
@@ -100,11 +110,15 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   def isProgramValid(program: ScoredProgram): Boolean = program.score >= 1-1e-3
 }
 
-case class ScoredProgram(program: Program, idb: Set[Tuple], precision: Double, recall: Double, completeness: Double) extends Ordered[ScoredProgram] {
+case class ScoredProgram(program: Program, idb: Set[Tuple], precision: Double, recall: Double, completeness: Double,
+                         score_history: List[Double]) extends Ordered[ScoredProgram] {
   val score = precision * recall * completeness
   override def compare(that: ScoredProgram): Int = {
     if (this.score < that.score) -1
     else if (this.score > that.score) 1
+
+    else if (this.program > that.program) -1
+    else if (this.program < that.program) 1
 
     else if (this.completeness < that.completeness) -1
     else if (this.completeness > that.completeness) 1
@@ -117,11 +131,18 @@ case class ScoredProgram(program: Program, idb: Set[Tuple], precision: Double, r
 
   override def toString(): String = s"${this.score} ${this.program.toString}"
 
+  def diff(): List[Double] = Misc.listDiff(this.score_history)
+
+  def nextScoreHistory(): List[Double] = Misc.slidingWindowUpdate(score_history, score, ScoredProgram.maxHistSize)
 }
 object ScoredProgram {
-  def apply(program: Program, idb: Set[Tuple], refIdb: Set[Tuple], getPartialIdb: (Relation, Tuple)=>Tuple): ScoredProgram = {
+  val maxHistSize: Int = 2
+  def apply(program: Program, idb: Set[Tuple], refIdb: Set[Tuple], getPartialIdb: (Relation, Tuple)=>Tuple,
+           parent: Option[ScoredProgram]=None): ScoredProgram = {
     val (precision, recall) = getScore(idb, refIdb, getPartialIdb)
-    ScoredProgram(program, idb, precision, recall, completeness(program))
+
+    val history = if (parent.isDefined) parent.get.nextScoreHistory() else List()
+    ScoredProgram(program, idb, precision, recall, completeness(program), history)
   }
 
   def completeness(program: Program): Double = {

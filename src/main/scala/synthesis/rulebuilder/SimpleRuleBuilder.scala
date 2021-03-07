@@ -4,8 +4,20 @@ import synthesis.rulebuilder.SimpleRuleBuilder.{newUnboundedLiteral, newVar, par
 
 import scala.collection.mutable
 
-class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) extends RuleBuilder {
-  def candidateRelations(rule: Rule): Set[Relation] = inputRels.diff(rule.body.map(_.relation))
+class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
+                       maxRelCount: Int=1) extends RuleBuilder {
+
+  def _bodyRelCounts(rule: Rule): Map[Relation, Int] = {
+    val allRelsList: Seq[Relation] = rule.body.toSeq.map(_.relation)
+    allRelsList.groupBy(identity).map {
+      case (rel,allRels) => rel -> allRels.size
+    }
+  }
+  def candidateRelations(rule: Rule): Set[Relation] = {
+    val relCounts = _bodyRelCounts(rule)
+    inputRels.filter(rel => relCounts.getOrElse(rel,0) < maxRelCount)
+    // inputRels
+  }
   def candidateNegRelations(rule: Rule): Set[Relation] = inputRels.diff(rule.negations.map(_.relation))
 
   def _addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
@@ -55,7 +67,8 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
   def addGeneralLiteral(rule: Rule) : Set[Rule] = {
     var newRules: Set[Rule] = Set()
     // for (rel <- inputRels.diff(rule.body.map(_.relation))) {
-    for (rel <- candidateRelations(rule)) {
+    val candidateRels = candidateRelations(rule)
+    for (rel <- candidateRels) {
       newRules += _addGeneralLiteral(rule, rel)
     }
     newRules
@@ -177,7 +190,29 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation]) ext
       filter(_.maskUngroundVars().body.size==rule.body.size)
 
     val refined2 = (refinedRules++addLiterals++addNegations).map(bindInstanceIds)
-    refined2.map(_.normalize())
+    refined2.map(_.normalize()).map(removeShadowedLiteral)
+  }
+
+  def removeShadowedLiteral(rule: Rule): Rule = {
+    var shadowed: Set[Literal] = Set()
+    val ungroundVars: Set[Parameter] = rule.freeVariables().map(_.asInstanceOf[Parameter])
+    def isShaowed(lit1: Literal, lit2: Literal): Boolean = {
+      var _shadowed = true
+      for ((f1,f2) <- lit1.fields zip lit2.fields) {
+        if (f1 != f2 && !ungroundVars.contains(f1)) _shadowed =false
+      }
+      _shadowed
+    }
+    val allPosLits = rule.getPositiveLiterals()
+    for (lit <- allPosLits) {
+      val others = (allPosLits - lit).diff(shadowed).filter(_.relation == lit.relation)
+      if (others.exists(l => isShaowed(lit,l))) shadowed += lit
+    }
+    var newRule: Rule = rule
+    for (lit <- shadowed) {
+      newRule = newRule.removeLiteral(lit)
+    }
+    newRule
   }
 }
 

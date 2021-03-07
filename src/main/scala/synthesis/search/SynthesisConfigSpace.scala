@@ -20,7 +20,7 @@ object SynthesisConfigSpace {
   def emptySpace(): SynthesisConfigSpace = SynthesisConfigSpace(List())
   def getConfigSpace(problem: Problem): SynthesisConfigSpace = {
     problem.domain match {
-      case "SDN" => _getConfigSpace(recursion = false, maxConstants = List(0,5))
+      case "SDN" => _getConfigSpace(maxRelCount=1,recursion = false, maxConstants = List(0,5))
       case "NIB" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
           PrependList.allInstances, MakeList.allInstances,
@@ -28,7 +28,7 @@ object SynthesisConfigSpace {
           Add.allInstances, Min.allInstances, Max.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
-        _getConfigSpace(recursion = true, functors = functors)
+        _getConfigSpace(maxRelCount=2, recursion = true, functors = functors)
       }
       case "routing" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
@@ -37,7 +37,7 @@ object SynthesisConfigSpace {
           Add.allInstances, Min.allInstances, Max.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
-        _getConfigSpace(recursion = true, functors=functors)
+        _getConfigSpace(maxRelCount=1, recursion = true, functors=functors)
       }
       case "consensus" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
@@ -45,35 +45,31 @@ object SynthesisConfigSpace {
         )
         val inputAggregators = AggCount.allInstances(problem)
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
-        _getConfigSpace(recursion = false, functors=functors, inputAggregators=inputAggregators)
+        _getConfigSpace(maxRelCount=1, recursion = false, functors=functors, inputAggregators=inputAggregators)
       }
       case "overlay" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
           Increment.allInstances, Greater.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
-        _getConfigSpace(recursion = false, functors=functors, maxConstants = 1)
+        _getConfigSpace(maxRelCount=2, recursion = false, functors=functors, maxConstants = 1)
       }
       case _ => ???
     }
   }
-  def _getConfigSpace(recursion: Boolean, maxConstants: List[Int]): SynthesisConfigSpace = {
-    val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(recursion, maxConstants = c))
+  def _getConfigSpace(maxRelCount:Int, recursion: Boolean, maxConstants: List[Int]): SynthesisConfigSpace = {
+    val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(maxRelCount,recursion, maxConstants = c))
     SynthesisConfigSpace(allConfigs)
   }
-  // def _getConfigSpace(recursion: Boolean, functors: Set[AbstractFunctorSpec], maxConstants: Int=0): SynthesisConfigSpace = {
-  //   val synthesisConfigs = SynthesisConfigs(recursion, maxConstants = maxConstants, functors=functors)
-  //   SynthesisConfigSpace(List(synthesisConfigs))
-  // }
-  def _getConfigSpace(recursion: Boolean, functors: Set[AbstractFunctorSpec],
+  def _getConfigSpace(maxRelCount:Int,recursion: Boolean, functors: Set[AbstractFunctorSpec],
                       inputAggregators: Set[InputAggregator]=Set(), maxConstants: Int=0): SynthesisConfigSpace = {
-    val synthesisConfigs = SynthesisConfigs(recursion, maxConstants = maxConstants, functors=functors,
+    val synthesisConfigs = SynthesisConfigs(maxRelCount, recursion, maxConstants = maxConstants, functors=functors,
       inputAggregators=inputAggregators)
     SynthesisConfigSpace(List(synthesisConfigs))
   }
 }
 
-case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
+case class SynthesisConfigs(maxRelCount:Int, recursion: Boolean, maxConstants: Int,
                             functors: Set[AbstractFunctorSpec],
                            inputAggregators: Set[InputAggregator]) {
   def get_rule_builder(problem: Problem, relevantOutRels: Set[Relation] = Set()): RuleBuilder = {
@@ -84,27 +80,27 @@ case class SynthesisConfigs(recursion: Boolean, maxConstants: Int,
       if (recursion) {
         require(maxConstants == 0)
         if (functors.nonEmpty) {
-          FunctorBuilder(inputRels, outputRels, recursion, functors)
+          FunctorBuilder(inputRels, outputRels, maxRelCount, recursion, functors)
         }
         else {
-          new RecursionBuilder(inputRels, outputRels)
+          new RecursionBuilder(inputRels, outputRels, maxRelCount)
         }
       }
       else if (maxConstants > 0 && functors.isEmpty) {
-        ConstantBuilder(inputRels, outputRels, problem.edb, problem.idb, maxConstants=maxConstants, recursion=recursion)
+        ConstantBuilder(inputRels, outputRels, maxRelCount, problem.edb, problem.idb, maxConstants=maxConstants, recursion=recursion)
       }
       else if (functors.nonEmpty) {
-        FunctorBuilder(inputRels, outputRels, recursion, functors, problem.edb, problem.idb, maxConstants=maxConstants,
+        FunctorBuilder(inputRels, outputRels, maxRelCount, recursion, functors, problem.edb, problem.idb, maxConstants=maxConstants,
         inputAggregators=inputAggregators)
       }
       else {
-        new SimpleRuleBuilder(inputRels, outputRels)
+        new SimpleRuleBuilder(inputRels, outputRels, maxRelCount)
       }
     builder
   }
 }
 object SynthesisConfigs {
-  def apply(recursion: Boolean, maxConstants: Int): SynthesisConfigs = new SynthesisConfigs(recursion, maxConstants, Set(), Set())
-  def apply(recursion: Boolean, maxConstants: Int, functors: Set[AbstractFunctorSpec]): SynthesisConfigs = new SynthesisConfigs(recursion, maxConstants, functors, Set())
+  def apply(maxRelCount: Int, recursion: Boolean, maxConstants: Int): SynthesisConfigs = new SynthesisConfigs(maxRelCount,recursion, maxConstants, Set(), Set())
+  def apply(maxRelCount: Int, recursion: Boolean, maxConstants: Int, functors: Set[AbstractFunctorSpec]): SynthesisConfigs = new SynthesisConfigs(maxRelCount,recursion, maxConstants, functors, Set())
 }
 

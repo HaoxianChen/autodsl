@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import scala.io.Source
+import scala.util.Random
 
 
 object Misc {
@@ -97,5 +98,29 @@ object Misc {
     val bw = new BufferedWriter(new FileWriter(path.toFile))
     bw.write(string)
     bw.close()
+  }
+
+  def sampleList[T](list: List[T], n: Int): List[T] = {
+    Random.shuffle(list).take(n)
+  }
+  def sampleSet[T](set: Set[T], n: Int): Set[T] = sampleList(set.toList, n).toSet
+
+  def listDiff(list: List[Double]): List[Double] = {
+    if (list.size >= 2) {
+      list.sliding(2).map { case Seq(x, y, _*) => y - x }.toList
+    }
+    else if (list.size == 1) {
+      List(list.head)
+    }
+    else {
+      List()
+    }
+  }
+
+  def slidingWindowUpdate[T](list: List[T], a: T, N: Int): List[T] = {
+    val left = if (list.size < N) list else list.takeRight(N-1)
+    val newList = left :+ a
+    require(newList.size <= N)
+    newList
   }
 }

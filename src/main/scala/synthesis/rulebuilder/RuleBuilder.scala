@@ -8,6 +8,7 @@ abstract class RuleBuilder() {
   def refineRule(rule: Rule): Set[Rule]
 
   def candidateRelations(rule: Rule): Set[Relation]
+  def candidateNegRelations(rule: Rule): Set[Relation]
 
   // refine steps
   def addGeneralLiteral(rule: Rule): Set[Rule]

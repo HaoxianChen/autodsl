@@ -143,11 +143,11 @@ case class Evaluator(problem: Problem) {
       val outFile = Paths.get(dir.toString, s"${rel.name}.csv")
 
       // wait until file is written
-      var i = 0
-      while (i < 10 && Files.notExists(outFile)) {
-        Thread.sleep(100) // sleep for 100 milliseconds
-        i+=1
-      }
+      // var i = 0
+      // while (i < 10 && Files.notExists(outFile)) {
+      //   Thread.sleep(100) // sleep for 100 milliseconds
+      //   i+=1
+      // }
       // require(Files.exists(outFile), s"output file not produced ${outFile} after $i trails.")
       if (Files.exists(outFile)) {
         val facts = Misc.readCsv(outFile.toString)
@@ -155,7 +155,8 @@ case class Evaluator(problem: Problem) {
         idb = idb.addTuples(rel, tuples)
      }
       else {
-        logger.warn(s"output file not produced ${outFile} after $i trails.")
+        // logger.warn(s"output file not produced ${outFile} after $i trails.")
+        logger.warn(s"output file ${outFile} not found.")
         success = false
       }
     }

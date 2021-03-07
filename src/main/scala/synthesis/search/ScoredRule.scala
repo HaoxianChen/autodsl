@@ -1,8 +1,9 @@
 package synthesis.search
 
-import synthesis.{Rule, Tuple}
+import synthesis.{Misc, Rule, Tuple}
 
-case class ScoredRule(rule: Rule, idb: Set[Tuple], score: Double) extends Ordered[ScoredRule]{
+case class ScoredRule(rule: Rule, idb: Set[Tuple],
+                     score: Double, score_history: List[Double]) extends Ordered[ScoredRule]{
   override def compare(that: ScoredRule): Int = {
     if (this.score < that.score) -1
     else if (this.score > that.score) 1
@@ -23,23 +24,31 @@ case class ScoredRule(rule: Rule, idb: Set[Tuple], score: Double) extends Ordere
 
   override def toString(): String = s"${this.rule.toString} ${this.score}"
 
+  def diff(): List[Double] = Misc.listDiff(this.score_history)
 }
 object ScoredRule {
-  def apply(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple]): ScoredRule = {
+  val maxHistSize: Int = 3
+  def apply(rule: Rule, refIdb: Set[Tuple], ruleEvaluator: Rule=>Set[Tuple], parentRule: Option[ScoredRule]=None): ScoredRule = {
     val idb = ruleEvaluator(rule)
-    new ScoredRule(rule, idb, scoreRule(rule, refIdb, idb))
+    val precision = _ioScore(refIdb, idb)
+    val score = precision * _completenessScore(rule)
+    val history: List[Double] = updateScoreHistory(parentRule, score)
+    new ScoredRule(rule, idb, score, history)
+  }
+
+  def updateScoreHistory(parentRule: Option[ScoredRule], score: Double): List[Double] = {
+    val history = if (parentRule.isDefined) {
+      parentRule.get.score_history
+    }
+    else {List()}
+    Misc.slidingWindowUpdate(history, score, maxHistSize)
   }
 
   def isValid(scoredRule: ScoredRule): Boolean = scoredRule.score >= 1-1e-3
 
   def isTooGeneral(scoredRule: ScoredRule): Boolean = scoredRule.score > 0 && !isValid(scoredRule)
 
-
-  def scoreRule(rule: Rule, refIdb: Set[Tuple], idb: Set[Tuple]): Double = {
-    _ioScore(rule, refIdb, idb) * _completenessScore(rule)
-  }
-
-  def _ioScore(rule: Rule, refIdb: Set[Tuple], idb: Set[Tuple]): Double = {
+  def _ioScore(refIdb: Set[Tuple], idb: Set[Tuple]): Double = {
     if (idb.nonEmpty) {
       val pos: Set[Tuple] = idb.intersect(refIdb)
       val neg: Set[Tuple] = idb.diff(refIdb)
@@ -48,7 +57,8 @@ object ScoredRule {
       val nneg = neg.size
       require(npos + nneg == idb.size)
 
-      npos.toDouble / (npos + nneg).toDouble
+      val precision = npos.toDouble / idb.size.toDouble
+     precision
     }
     else 0
   }

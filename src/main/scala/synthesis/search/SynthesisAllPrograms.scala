@@ -1,9 +1,10 @@
 package synthesis.search
 
 import com.typesafe.scalalogging.Logger
-import synthesis.{Problem, Program, Relation, Rule, Tuple}
+import synthesis.{Misc, Problem, Program, Relation, Rule, Tuple}
 
 import scala.collection.mutable
+import scala.math.abs
 
 case class SynthesisAllPrograms(problem: Problem,
                                 recursion: Boolean = true,
@@ -161,6 +162,8 @@ case class SynthesisAllPrograms(problem: Problem,
     var iters: Int = 0
     var extraIters: Int = 0
 
+    val maxBranching: Int = 50
+
     // score the rules based on current idb set
     val generalRules = _getRelevantScoredRules(idb, generalSimpleRules, learnedRules)
 
@@ -179,9 +182,14 @@ case class SynthesisAllPrograms(problem: Problem,
       val baseRule = rulePool.dequeue()
 
       // refine the rules
-      val refinedRules = refineRule(baseRule.rule).diff(exploredRules)
+      val allRefinedRules = refineRule(baseRule.rule).diff(exploredRules)
+      val refinedRules = if (allRefinedRules.size > maxBranching) {
+        Misc.sampleSet(allRefinedRules, maxBranching)
+      }
+      else allRefinedRules
 
-      val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules))
+      require(refinedRules.size <= maxBranching)
+      val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules, Some(baseRule)))
 
       // Remember the ones that have been explored
       exploredRules ++= refinedRules
@@ -191,7 +199,11 @@ case class SynthesisAllPrograms(problem: Problem,
 
       // Put the too general ones into the pool, and forbid anything else from exploring again
       val tooGeneral = candidateRules.filter(refineCondition)
-      rulePool ++= tooGeneral
+
+      val staled = tooGeneral.filter(isRuleStaled)
+      rulePool ++= tooGeneral.diff(staled)
+      // If not all branches are exhausted yet
+      if (refinedRules.size < allRefinedRules.size) rulePool += baseRule
 
       iters += 1
       if (validRules.nonEmpty) extraIters += 1
@@ -216,10 +228,19 @@ case class SynthesisAllPrograms(problem: Problem,
     (newIdb, newLearnedRules, remainingRules)
   }
 
-  def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule]): ScoredRule = {
+  def isRuleStaled(rule: ScoredRule): Boolean = {
+    if (rule.score_history.size == ScoredRule.maxHistSize) {
+      rule.diff().map(d=>abs(d)).max < 1e-3
+    }
+    else {
+      false
+    }
+  }
+
+  def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule], parentRule: Option[ScoredRule]=None): ScoredRule = {
     val refIdb = evaluator.getRefIdb(rule, allIdb)
     def f_eval: Rule => Set[Tuple] = r => evaluator.evalRule(r, learnedRules)
-    ScoredRule(rule, refIdb, f_eval)
+    ScoredRule(rule, refIdb, f_eval, parentRule)
   }
 
 }

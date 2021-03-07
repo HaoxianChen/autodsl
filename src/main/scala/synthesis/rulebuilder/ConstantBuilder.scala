@@ -3,11 +3,11 @@ package synthesis.rulebuilder
 import synthesis._
 
 class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
+                      maxRelCount: Int = 1,
                       constantPool: Map[Type, Set[Constant]],
                       recursion: Boolean = true,
                       maxConstants: Int = 2)
-  //extends SimpleRuleBuilder(inputRels, outputRels) {
-  extends RecursionBuilder(inputRels, outputRels, recursion=recursion) {
+  extends RecursionBuilder(inputRels, outputRels, recursion=recursion, maxRelCount = maxRelCount) {
 
   def _bindToConstant(rule: Rule, variable: Variable): Set[Rule] = {
     require(rule.getVarSet().contains(variable))
@@ -43,11 +43,13 @@ class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
 }
 
 object ConstantBuilder {
-  def apply(inputRels: Set[Relation], outputRels: Set[Relation], edb: Examples, idb: Examples,
+  def apply(inputRels: Set[Relation], outputRels: Set[Relation],
+            maxRelCount: Int,
+            edb: Examples, idb: Examples,
             recursion: Boolean = true,
             maxConstants: Int = 2, maxConstantPoolSize: Int=5): ConstantBuilder = {
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
-    new ConstantBuilder(inputRels, outputRels, constantPool, recursion, maxConstants)
+    new ConstantBuilder(inputRels, outputRels, maxRelCount, constantPool, recursion, maxConstants)
   }
 
   def getConstantPool(edb: Examples, idb: Examples, maxConstantPoolSize:Int = 0): Map[Type, Set[Constant]] = {

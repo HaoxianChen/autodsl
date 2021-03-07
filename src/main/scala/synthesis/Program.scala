@@ -121,6 +121,10 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
   def getPositiveLiterals(): Set[Literal] = body.diff(negations).filter(_.isInstanceOf[SimpleLiteral])
 
   def addLiteral(literal: Literal): Rule = this.copy(body=this.body+literal)
+  def removeLiteral(literal: Literal): Rule = {
+    require(body.contains(literal))
+    this.copy(body=this.body-literal, negations=this.negations-literal)
+  }
   def addNegatedLiteral(literal: Literal): Rule = this.copy(negations=this.negations + literal, body = this.body+literal)
   def updateNegatedLiteral(oldLit: Literal, newLit: Literal): Rule = {
     val otherLits = this.body - oldLit
