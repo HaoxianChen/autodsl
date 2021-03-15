@@ -2,7 +2,7 @@ package synthesis
 
 import com.typesafe.scalalogging.Logger
 import synthesis.rulebuilder.ConstantBuilder
-import synthesis.search.{SynthesisAllPrograms, SynthesisConfigSpace}
+import synthesis.search.{Synthesis, SynthesisAllPrograms, SynthesisConfigSpace}
 
 import scala.math.log
 import scala.util.Random
@@ -121,7 +121,8 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
       val sizes = tuplesById.map {
         case (_, ts) => ts.size
       }
-      rel -> (sizes.min, sizes.max)
+      // rel -> (sizes.min, sizes.max)
+      rel -> (0, sizes.max)
   }
 
   private val random: Random = new Random()
@@ -152,7 +153,7 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
       else constantSet
     }
 
-    val edbMap = ConstantBuilder.getConstantPool(edb, idb)
+    val edbMap = ConstantBuilder.getAllConstantPool(edb, idb)
 
     val allTypes: Set[Type] = inputRels.flatMap(_.signature).filterNot(_.name == s"InstanceId")
     require(allTypes == edbMap.keySet)
@@ -162,7 +163,7 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
     }
   }
 
-  def sampleFromMap(_type: Type, seed: Int): Constant  = {
+  def sampleFromMap(_type: Type): Constant  = {
     // random.setSeed(seed)
     val constantList = constantMap(_type).toVector
     constantList(random.nextInt(constantList.size))
@@ -179,7 +180,7 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
       val sizes = min to max
 
       /** sample a size */
-      random.setSeed(instanceId)
+      //random.setSeed(instanceId)
       val numTuples: Int = sizes(random.nextInt(sizes.size))
 
       def newTuple(relation: Relation, instanceId: Int): Tuple = {
@@ -188,8 +189,8 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
           case (_type, i) => _type match {
             case NumberType(s"InstanceId") => Constant(instanceId.toString, instanceIdType)
             case t: Type => {
-              val seed = instanceId * i
-              sampleFromMap(t, seed)
+              // val seed = instanceId * i
+              sampleFromMap(t)
             }
           }
         }

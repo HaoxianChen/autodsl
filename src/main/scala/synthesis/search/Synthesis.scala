@@ -17,6 +17,7 @@ abstract class Synthesis(problem: Problem) {
     }
     programsByOutRels
   }
+  def getConfigSpace: SynthesisConfigSpace
 }
 
 object Synthesis {
@@ -24,6 +25,7 @@ object Synthesis {
     case "SDN" => SynthesisAllPrograms(problem)
     case "routing" => new ProgramSynthesizer(problem)
     case "NIB" => SynthesisAllPrograms(problem)
+    case "sensor" => SynthesisAllPrograms(problem)
     case "consensus" => {
       /** Use the count aggregator */
       val preprocessors: Set[InputAggregator] = AggCount.allInstances(problem)

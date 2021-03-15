@@ -1,7 +1,7 @@
 package synthesis.search
 
 import synthesis.{Problem, Relation}
-import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AggCount, AppendList, ConstantBuilder, FunctorBuilder, Greater, Increment, InputAggregator, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder}
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AggCount, AppendList, ConstantBuilder, FunctorBuilder, Greater, Increment, InputAggregator, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder, TimeOut}
 
 case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
   private var current_config_id: Int = 0
@@ -49,10 +49,13 @@ object SynthesisConfigSpace {
       }
       case "overlay" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
-          Increment.allInstances, Greater.allInstances
+          Increment.allInstances, Greater.allInstances, TimeOut.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
         _getConfigSpace(maxRelCount=2, recursion = false, functors=functors, maxConstants = 1)
+      }
+      case "sensor" => {
+        _getConfigSpace(maxRelCount=1,recursion = false, maxConstants = List(0))
       }
       case _ => ???
     }
@@ -92,6 +95,10 @@ case class SynthesisConfigs(maxRelCount:Int, recursion: Boolean, maxConstants: I
       else if (functors.nonEmpty) {
         FunctorBuilder(inputRels, outputRels, maxRelCount, recursion, functors, problem.edb, problem.idb, maxConstants=maxConstants,
         inputAggregators=inputAggregators)
+      }
+      else if (maxConstants > 0 ) {
+        FunctorBuilder(inputRels, outputRels, maxRelCount, recursion, functors,
+          problem.edb, problem.idb, maxConstants, inputAggregators)
       }
       else {
         new SimpleRuleBuilder(inputRels, outputRels, maxRelCount)

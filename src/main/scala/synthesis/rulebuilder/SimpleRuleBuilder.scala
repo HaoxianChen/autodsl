@@ -18,13 +18,14 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     inputRels.filter(rel => relCounts.getOrElse(rel,0) < maxRelCount)
     // inputRels
   }
-  def candidateNegRelations(rule: Rule): Set[Relation] = inputRels.diff(rule.negations.map(_.relation))
+  def candidateNegRelations(rule: Rule): Set[Relation] = inputRels.diff(rule.body.map(_.relation))
 
-  def _addGeneralLiteral(rule: Rule, relation: Relation) : Rule = {
+  def _addGeneralLiteral(rule: Rule, relation: Relation) : Set[Rule] = {
     /** Add relation to rule, without binding the variables */
     val allLiterals = rule.body + rule.head
     val newLiteral = newUnboundedLiteral(allLiterals, relation)
-    rule.addLiteral(newLiteral)
+    val r1 = rule.addLiteral(newLiteral)
+    addOneBindingLiteral(r1, newLiteral)
   }
 
   def mostGeneralRules(): Set[Rule] = {
@@ -66,16 +67,26 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
 
   def addGeneralLiteral(rule: Rule) : Set[Rule] = {
     var newRules: Set[Rule] = Set()
-    // for (rel <- inputRels.diff(rule.body.map(_.relation))) {
     val candidateRels = candidateRelations(rule)
     for (rel <- candidateRels) {
-      newRules += _addGeneralLiteral(rule, rel)
+      newRules ++= _addGeneralLiteral(rule, rel)
     }
     newRules
   }
 
   def addBinding(rule: Rule): Set[Rule] = {
     val freeVars: Set[Variable] = rule.freeVariables()
+    freeVars.flatMap(v => _bindVariableToBody(rule, v))
+  }
+
+  def addOneBindingLiteral(rule: Rule, lit: Literal): Set[Rule] = {
+    require(rule.getPositiveLiterals().contains(lit))
+    val ruleFv: Set[Variable] = rule.freeVariables()
+    val litVars: Set[Variable] = lit.fields.flatMap {
+      case v: Variable => Some(v)
+      case _: Constant => None
+    }.toSet
+    val freeVars = ruleFv.intersect(litVars)
     freeVars.flatMap(v => _bindVariableToBody(rule, v))
   }
 
@@ -184,7 +195,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
   }
 
   def refineRule(rule: Rule): Set[Rule] = {
-    val addLiterals = addGeneralLiteral(rule).flatMap(r => addBinding(r))
+    val addLiterals = addGeneralLiteral(rule)
     val addNegations = addNegation(rule)
     val refinedRules: Set[Rule] = (addBinding(rule) ++  relaxNegation(rule)).
       filter(_.maskUngroundVars().body.size==rule.body.size)

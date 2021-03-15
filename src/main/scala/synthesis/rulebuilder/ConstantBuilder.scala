@@ -72,8 +72,9 @@ object ConstantBuilder {
 
   def _getConstantPool(allConstants: Set[Constant], maxConstantPoolSize: Int = 0 ): Map[Type, Set[Constant]] = {
     // Remove Instance Id from constant map
-    val instanceType = NumberType("InstanceId")
-    val constantMap: Map[Type, Set[Constant]] = allConstants.groupBy(_._type).removed(instanceType)
+    val excludeTypes: Set[Type] = Set(NumberType("InstanceId"), NumberType("Count"), SymbolType("IP"), SymbolType("Mac"),
+    NumberType("Buf"))
+    val constantMap: Map[Type, Set[Constant]] = allConstants.filterNot(c => excludeTypes.contains(c._type)).groupBy(_._type)
 
     if (maxConstantPoolSize > 0) {
       constantMap.filter(t => t._2.size < maxConstantPoolSize)
@@ -81,5 +82,14 @@ object ConstantBuilder {
     else {
       constantMap
     }
+  }
+
+  def getAllConstantPool(edb: Examples, idb: Examples): Map[Type, Set[Constant]] = {
+
+    val allConstants = filterResponsiveExamples(edb, idb)
+
+    val excludeTypes: Set[Type] = Set(NumberType("InstanceId"))
+    val constantMap: Map[Type, Set[Constant]] = allConstants.filterNot(c => excludeTypes.contains(c._type)).groupBy(_._type)
+    constantMap
   }
 }

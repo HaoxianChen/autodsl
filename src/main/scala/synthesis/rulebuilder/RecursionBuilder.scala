@@ -11,7 +11,10 @@ class RecursionBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
 
   override def candidateRelations(rule: Rule): Set[Relation] = {
     val rels = super.candidateRelations(rule)
-    if (recursion) rels + rule.head.relation
+    val bodyRels = rule.body.map(_.relation)
+    if (recursion && !bodyRels.contains(rule.head.relation)) {
+      rels + rule.head.relation
+    }
     else rels
   }
 
@@ -168,8 +171,9 @@ object FunctorBuilder {
             recursion: Boolean,
             abstractFunctorSpecs: Set[AbstractFunctorSpec],
             edb: Examples, idb: Examples,
-            maxConstants: Int, maxConstantPoolSize: Int=5,
-           inputAggregators: Set[InputAggregator]): FunctorBuilder = {
+            maxConstants: Int,
+           inputAggregators: Set[InputAggregator], maxConstantPoolSize: Int=5
+  ): FunctorBuilder = {
     val functors = getFunctors(abstractFunctorSpecs)
     val filters = getFfilters(abstractFunctorSpecs)
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)

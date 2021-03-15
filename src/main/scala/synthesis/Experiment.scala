@@ -40,7 +40,7 @@ class ActiveLearningExperiment(maxExamples: Int =100, outDir: String = "results/
     // Randomly drop one example
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
-      randomDrop(problem, nDrop=1)
+      // randomDrop(problem, nDrop=1)
       randomDrop(problem, nDrop=3)
     }
   }
@@ -75,8 +75,10 @@ class ActiveLearningExperiment(maxExamples: Int =100, outDir: String = "results/
     (program, nQueries, duration)
   }
 
-  def sampleExamples(examples: Set[ExampleInstance], n_samples: Int, seed: Int =42): Set[ExampleInstance] = {
-    val rnd = new Random(seed)
+  // def sampleExamples(examples: Set[ExampleInstance], n_samples: Int, seed: Option[Int]=None): Set[ExampleInstance] = {
+  def sampleExamples(examples: Set[ExampleInstance], n_samples: Int): Set[ExampleInstance] = {
+    // val rnd = new Random(seed)
+    val rnd = new Random()
     rnd.shuffle(examples.toList).take(n_samples).toSet
   }
 }

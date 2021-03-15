@@ -97,22 +97,29 @@ case class SynthesisAllPrograms(problem: Problem,
     }
 
     // sort: non-recursive first, recursion later
+    // val ruleList: List[Rule] = rules.toList.sorted
     val ruleList: List[Rule] = {
       val recursiveRules = rules.filter(_.isRecursive())
       val nonRecursiveRules = rules.diff(recursiveRules)
 
-      // sort nonrecursive rules by the output sizes
       val nonRecursiveSorted: List[Rule] = {
         // def outputCounts(rule: Rule): Int = {
         //   val idb = evaluator.evalRule(rule, Set())
         //   idb.size
         // }
         // nonRecursiveRules.toList.sortBy(outputCounts)(Ordering[Int].reverse)
-        val scoredRules: List[ScoredRule] = nonRecursiveRules.map(r => scoreRule(r, idb, Set())).toList
-        val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
-        ans
+        if (recursiveRules.nonEmpty){
+          // If exists recursive rules, sort by rule size
+          nonRecursiveRules.toList.sortBy(_.body.size)
+        }
+        else {
+          // If non-recursive, sort by output size
+          val scoredRules: List[ScoredRule] = nonRecursiveRules.map(r => scoreRule(r, idb, Set())).toList
+          val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
+          ans
+        }
       }
-      nonRecursiveSorted ::: recursiveRules.toList
+      nonRecursiveSorted ::: recursiveRules.toList.sorted
     }
     logger.debug(s"Combine ${ruleList.size} rules into programs")
     val programs = _combineRules(List(),ruleList, idb).map(
@@ -196,6 +203,7 @@ case class SynthesisAllPrograms(problem: Problem,
 
       // keep the valid ones
       validRules ++= candidateRules.filter(validCondition)
+      rulePool ++= candidateRules.filter(validCondition) // see if more specific option is possible
 
       // Put the too general ones into the pool, and forbid anything else from exploring again
       val tooGeneral = candidateRules.filter(refineCondition)

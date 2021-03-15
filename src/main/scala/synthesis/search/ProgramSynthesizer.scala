@@ -16,6 +16,10 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
 
   logger.info(s"${programBuilder.getAggregators.size} aggreators.")
 
+  private val maxBranching: Int = 50
+
+  def getConfigSpace: SynthesisConfigSpace = ruleLearner.getConfigSpace
+
   def learnNPrograms(idb: Set[Tuple]): List[Program] = {
     var validPrograms: Set[ScoredProgram] = Set()
     var exploredPrograms: Set[Program] = Set()
@@ -28,7 +32,10 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     while (validPrograms.isEmpty) {
       val baseProgram: ScoredProgram = programPool.dequeue()
 
-      val refinedPrograms: Set[Program] = refineProgram(baseProgram, idb)
+      val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, idb)
+      val refinedPrograms: Set[Program] = if (allRefinedPrograms.size > maxBranching) {
+        Misc.sampleSet(allRefinedPrograms, maxBranching)
+      } else allRefinedPrograms
 
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.diff(exploredPrograms).map(p => evalProgram(p, idb, Some(baseProgram)))
 
@@ -39,6 +46,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       val staled = toRefine.filter(isStaled)
       val pnext = toRefine.diff(staled)
       programPool ++= pnext
+      if (refinedPrograms.size < allRefinedPrograms.size) programPool += baseProgram
     }
     /** todo: order the valid programs */
     validPrograms.toList.map(_.program)
@@ -77,7 +85,8 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   }
 
   def isStaled(scoredProgram: ScoredProgram): Boolean = {
-    if (scoredProgram.score_history.size == ScoredProgram.maxHistSize) {
+    val isComplete: Boolean = scoredProgram.completeness > 1-1e-3
+    if (scoredProgram.score_history.size == ScoredProgram.maxHistSize && isComplete) {
       scoredProgram.diff().map(d=>abs(d)).max < 1e-3
     }
     else false
@@ -114,14 +123,14 @@ case class ScoredProgram(program: Program, idb: Set[Tuple], precision: Double, r
                          score_history: List[Double]) extends Ordered[ScoredProgram] {
   val score = precision * recall * completeness
   override def compare(that: ScoredProgram): Int = {
-    if (this.score < that.score) -1
+    if (this.completeness < that.completeness) -1
+    else if (this.completeness > that.completeness) 1
+
+    else if (this.score < that.score) -1
     else if (this.score > that.score) 1
 
     else if (this.program > that.program) -1
     else if (this.program < that.program) 1
-
-    else if (this.completeness < that.completeness) -1
-    else if (this.completeness > that.completeness) 1
 
     else if (this.recall < that.recall) -1
     else if (this.recall > that.recall) 1
