@@ -3,7 +3,6 @@ package synthesis
 import java.nio.file.{Files, Path, Paths}
 
 import com.typesafe.scalalogging.Logger
-import sys.process._
 
 case class Evaluator(problem: Problem) {
   private var cache: Map[Program, Examples] = Map()
@@ -70,7 +69,7 @@ case class Evaluator(problem: Problem) {
     var i = 0
     var success = false
     var idb = Examples()
-    while (i < 10 && !success) {
+    while (i < 3 && !success) {
       runSouffle(problemDir, programPath)
       val (_idb, _success) = loadOutput(problemDir, outRels)
       idb = _idb
@@ -82,11 +81,15 @@ case class Evaluator(problem: Problem) {
   }
 
   def runSouffle(problemDir: Path, programPath: Path): Unit = {
-    val stdout = new StringBuilder
-    val stderr = new StringBuilder
     val cmd = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}"
-    val exitcode = cmd ! ProcessLogger(stdout append _, stderr append _)
-    require(exitcode == 0, s"Non-zero exit value: ${problemDir}\n$exitcode,\n$stdout,\n$stderr")
+    val timeOut = 100 // timout after 100 milliseconds
+    val (exitcode, stdout, stderr, isTimeOut) = Misc.runWithTimeOut(cmd, timeOut)
+    if (isTimeOut) {
+      logger.warn(s"$cmd time out after $timeOut ms.")
+    }
+    else {
+      require(exitcode == 0, s"Non-zero exit value: ${problemDir}\n$exitcode,\n$stdout,\n$stderr")
+    }
     require(!stderr.contains("Error"))
   }
 

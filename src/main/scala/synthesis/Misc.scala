@@ -5,7 +5,11 @@ import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import scala.concurrent.{Await, Future, TimeoutException, blocking, duration}
+import scala.concurrent.ExecutionContext.Implicits.global
+import sys.process._
 import scala.io.Source
+import scala.sys.process.ProcessLogger
 import scala.util.Random
 
 
@@ -122,5 +126,24 @@ object Misc {
     val newList = left :+ a
     require(newList.size <= N)
     newList
+  }
+
+  def runWithTimeOut(cmd: String, timeOut: Int): (Int, String, String, Boolean) = {
+    val stdout = new StringBuilder
+    val stderr = new StringBuilder
+
+    val p = cmd.run(ProcessLogger(stdout append _, stderr append _)) // start asynchronously
+    val f = Future(blocking(p.exitValue())) // wrap in Future
+
+    var isTimeOut = false
+    val exitcode = try {
+      Await.result(f, duration.Duration(timeOut, "millis"))
+    } catch {
+      case _: TimeoutException =>
+        isTimeOut = true
+        p.destroy()
+        p.exitValue()
+    }
+    (exitcode, stdout.toString(), stderr.toString(), isTimeOut)
   }
 }
