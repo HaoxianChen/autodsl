@@ -1,16 +1,20 @@
-# Specify problem
+# Problem specification
 
-## Declare types
+[Full example directory](reachable).
 
-Each new data type is defined by a line, 
-in the following format:
+## 1. Declare types (optional)
+This is an optional step.
+[Souffle](https://souffle-lang.github.io/types) 
+naturally supports ``number`` and ``symbol`` types.
+
+Custom types can be specified by adding following lines: 
 
 ```.type Node <: symbol ```
 
 Each type specifies the typename, 
 and it should be a subtype of either ``symbol`` or ``number``.
 
-## Declare relations
+## 2. Declare relations
 Each relation is declared in a line:
 
 ```
@@ -20,7 +24,7 @@ Each relation is declared in a line:
 where input relations are annotated with a ``*`` 
 before the relation name.
 
-## Specify input output examples
+## 3. Specify input output examples
 For every input relation ``rel_in``, 
 prepare a file named ``rel_in.facts`` to store
 input tuples.
@@ -37,7 +41,7 @@ specifies three tuples for the ``link`` relation:
 Similarly, for every output relation ``rel_out``,
 specify tuples in a file named ``rel_out.csv``. 
 
-## Multiple (EDB, IDB) pairs
+## 4. Multiple (EDB, IDB) pairs
 
 To specify multiple (EDB, IDB) pairs, 
 add a field named ``InstanceId`` in every relation.
@@ -64,4 +68,4 @@ a b 2
 c d 2
 ```
 
-See ``benchmarks/locality`` for a complete example.
+See [benchmarks/locality](locality) for a complete example.
