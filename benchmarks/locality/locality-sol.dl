@@ -1,0 +1,17 @@
+.type Address <: symbol
+.type Router <: symbol
+.type InstanceId <: number
+
+.decl local(a: Address, i: InstanceId)
+.decl spine(r: Router, i: InstanceId)
+.decl route(r: Router, src: Address, dst: Address, i: InstanceId)
+.decl violation(src: Address, dst: Address, i: InstanceId)
+
+.input local
+.input spine
+.input route
+
+violation(src,dst,i) :- route(r,src,dst,i), spine(r,i), local(src,i),
+  local(dst,i).
+
+.output violation

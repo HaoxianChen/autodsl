@@ -2,7 +2,7 @@ package synthesis
 
 import java.nio.file.Paths
 
-import synthesis.search.{Synthesis, SynthesisAllPrograms}
+import synthesis.search.{Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
 
 object Main extends App {
 
@@ -77,6 +77,22 @@ object Main extends App {
     require(repeats <= 10)
     val experiment = new DebloatingExperiment()
     experiment.go(problem, repeats=repeats)
+  }
+
+  else if (args(0) == "foil") {
+    val problem = Misc.readProblem(args(1))
+
+    val t1 = System.nanoTime
+
+    val config = SynthesisConfigs(maxRelCount = 2, recursion = true, maxConstants = 0, functors = Set(),
+      inputAggregators = Set())
+    val synthesizer = SynthesisAllPrograms(problem,maxRules = 1,
+                                           initConfigSpace = SynthesisConfigSpace(List(config)))
+    val programs = synthesizer.go()
+
+    val duration = (System.nanoTime - t1) / 1e9d
+    println(s"Finished in ${duration}s")
+    displayResults(problem, programs)
   }
 
   else if (args(0)== "regression-test") {

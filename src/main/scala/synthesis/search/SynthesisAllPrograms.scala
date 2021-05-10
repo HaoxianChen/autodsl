@@ -10,6 +10,7 @@ case class SynthesisAllPrograms(problem: Problem,
                                 recursion: Boolean = true,
                                 maxIters: Int = 20,
                                 maxRefineIters: Int = 100,
+                                maxRules: Int = 5,
                                 initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
                                ) extends Synthesis(problem) {
 
@@ -164,8 +165,7 @@ case class SynthesisAllPrograms(problem: Problem,
                    refineRule: Rule => Set[Rule],
                    validCondition: ScoredRule => Boolean = ScoredRule.isValid,
                    refineCondition: ScoredRule => Boolean = ScoredRule.isTooGeneral,
-                   maxExtraIters: Int = 1,
-                   maxRules: Int = 5): (Set[Tuple], Set[Rule], Set[Rule]) = {
+                   maxExtraIters: Int = 1): (Set[Tuple], Set[Rule], Set[Rule]) = {
     var iters: Int = 0
     var extraIters: Int = 0
 
