@@ -12,7 +12,7 @@ case class ExperimentRecord(results: Map[String, Any], program: Program) {
   require(results.contains("problem"))
 
   def dump(outDir: String = "results"): Unit = {
-    val s = JSONObject(results).toString()
+    val s = JSONObject(results).toString().replace(",",",\n")
 
     val problemDir = Paths.get(outDir, results("problem").toString)
     Misc.makeDir(problemDir)
@@ -33,15 +33,15 @@ case class ExperimentRecord(results: Map[String, Any], program: Program) {
 
 abstract class Experiment
 
-class ActiveLearningExperiment(maxExamples: Int =100, outDir: String = "results/active-learning") extends Experiment {
+class ActiveLearningExperiment(maxExamples: Int = 400, outDir: String = "results/active-learning") extends Experiment {
   private val logger = Logger("Experiment")
 
-  def go(problem: Problem, repeats: Int = 1): Unit = {
+  def go(problem: Problem, nDrop: Int ,repeats: Int = 1): Unit = {
     // Randomly drop one example
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
       // randomDrop(problem, nDrop=1)
-      randomDrop(problem, nDrop=3)
+      randomDrop(problem, nDrop=nDrop)
     }
   }
 
