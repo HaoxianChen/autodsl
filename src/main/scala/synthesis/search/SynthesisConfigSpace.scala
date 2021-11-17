@@ -20,12 +20,19 @@ object SynthesisConfigSpace {
   def emptySpace(): SynthesisConfigSpace = SynthesisConfigSpace(List())
   def getConfigSpace(problem: Problem): SynthesisConfigSpace = {
     problem.domain match {
-      case "SDN" => _getConfigSpace(maxRelCount=1,recursion = false, maxConstants = List(0,5))
+      case "SDN" => {
+        val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
+          UnEqual.allInstances
+        )
+        val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
+        _getConfigSpace(maxRelCount=1,recursion = false, maxConstants = List(0,5), functors=functors)
+      }
       case "NIB" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
           PrependList.allInstances, MakeList.allInstances,
           AppendList.allInstances,
-          Add.allInstances, Min.allInstances, Max.allInstances
+          Add.allInstances, Min.allInstances, Max.allInstances,
+          UnEqual.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
         _getConfigSpace(maxRelCount=2, recursion = true, functors = functors)
@@ -34,7 +41,8 @@ object SynthesisConfigSpace {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
           PrependList.allInstances, MakeList.allInstances,
           AppendList.allInstances,
-          Add.allInstances, Min.allInstances, Max.allInstances
+          Add.allInstances, Min.allInstances, Max.allInstances,
+          UnEqual.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
         _getConfigSpace(maxRelCount=1, recursion = true, functors=functors)
@@ -52,7 +60,7 @@ object SynthesisConfigSpace {
           Increment.allInstances, Greater.allInstances, TimeOut.allInstances
         )
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
-        _getConfigSpace(maxRelCount=2, recursion = false, functors=functors, maxConstants = 1)
+        _getConfigSpace(maxRelCount=2, recursion = false, functors=functors, maxConstants = List(1))
       }
       case "sensor" => {
         _getConfigSpace(maxRelCount=1,recursion = false, maxConstants = List(0))
@@ -69,15 +77,23 @@ object SynthesisConfigSpace {
       case _ => ???
     }
   }
-  def _getConfigSpace(maxRelCount:Int, recursion: Boolean, maxConstants: List[Int]): SynthesisConfigSpace = {
-    val allConfigs: List[SynthesisConfigs] = maxConstants.map (c => SynthesisConfigs(maxRelCount,recursion, maxConstants = c))
-    SynthesisConfigSpace(allConfigs)
-  }
-  def _getConfigSpace(maxRelCount:Int,recursion: Boolean, functors: Set[AbstractFunctorSpec],
-                      inputAggregators: Set[InputAggregator]=Set(), maxConstants: Int=0): SynthesisConfigSpace = {
-    val synthesisConfigs = SynthesisConfigs(maxRelCount, recursion, maxConstants = maxConstants, functors=functors,
+  // def _getConfigSpace(maxRelCount:Int, recursion: Boolean, maxConstants: List[Int],
+  //                     functors: Set[AbstractFunctorSpec]): SynthesisConfigSpace = {
+  //   val allConfigs: List[SynthesisConfigs] = maxConstants.map (
+  //     c => SynthesisConfigs(maxRelCount,recursion, maxConstants = c, functors=functors))
+  //   SynthesisConfigSpace(allConfigs)
+  // }
+  def _getConfigSpace(maxRelCount:Int,
+                      recursion: Boolean,
+                      functors: Set[AbstractFunctorSpec] = Set(),
+                      inputAggregators: Set[InputAggregator]=Set(),
+                      maxConstants: List[Int] = List(0))
+  : SynthesisConfigSpace = {
+    val allConfigs: List[SynthesisConfigs] = maxConstants.map (
+         c => SynthesisConfigs(maxRelCount, recursion, maxConstants = c, functors=functors,
       inputAggregators=inputAggregators)
-    SynthesisConfigSpace(List(synthesisConfigs))
+      )
+    SynthesisConfigSpace(allConfigs)
   }
 }
 

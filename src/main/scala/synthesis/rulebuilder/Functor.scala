@@ -123,12 +123,8 @@ object UnEqual {
   def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
     /** Look for Number types */
     val inputTypes = problem.inputTypes
-    val outputTypes = problem.outputTypes
 
-    (inputTypes++outputTypes).map { t =>
-      require(inputTypes.contains(t))
-      UnEqual(List(t, t))
-    }
+    inputTypes.map { t => UnEqual(List(t, t)) }
   }
 }
 
