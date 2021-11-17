@@ -6,6 +6,7 @@ import scala.collection.mutable
 
 case class PartialRuleEvaluator(problem: Problem) {
   private val evaluator = Evaluator(problem)
+  private val MAXRULES: Int = 10
 
   def getRefIdb(rule: Rule, idb: Set[Tuple]): Set[Tuple] = {
     val relevantIdb = idb.filter(_.relation == rule.head.relation)
@@ -25,17 +26,30 @@ case class PartialRuleEvaluator(problem: Problem) {
     }
   }
 
-  def evalRule(rule: Rule, learnedRules: Set[Rule]): Set[Tuple] = {
+  def evalRule(rule: Rule, learnedRules: Set[Rule], isRecursive: Boolean): Set[Tuple] = {
     val newRule = if (rule.isHeadBounded()) rule else getStripedRule(rule)
-    val oldIdb = evaluator.eval(Program(learnedRules))
-    val newIdb = evaluator.eval(Program(learnedRules+newRule))
-    newIdb.diff(oldIdb)
+    evalRules(Set(newRule), learnedRules, isRecursive)
   }
 
-  def evalRules(rules: Set[Rule], learnedRules: Set[Rule]): Set[Tuple] = {
+  def evalRules(rules: Set[Rule], learnedRules: Set[Rule], isRecursive: Boolean): Set[Tuple] = {
+    /** Evaluator can handle at most MAXRULES at a time. */
+    rules.grouped(MAXRULES).toSet.flatMap(rs => _evalRules(rs, learnedRules, isRecursive))
+  }
+
+  def _evalRules(rules: Set[Rule], learnedRules: Set[Rule], isRecursive: Boolean): Set[Tuple] = {
     require(rules.forall(_.isHeadBounded()))
-    val oldIdb = evaluator.eval(Program(learnedRules))
-    val newIdb = evaluator.eval(Program(learnedRules++rules))
+    val oldIdb = if (isRecursive) {
+      evaluator.eval(Program(learnedRules))
+    }
+    else {
+      learnedRules.grouped(MAXRULES).toSet.flatMap((rs: Set[Rule]) => evaluator.eval(Program(rs)))
+    }
+    val newIdb = if (isRecursive) {
+      evaluator.eval(Program(learnedRules++rules))
+    }
+    else {
+      evaluator.eval(Program(rules))
+    }
     newIdb.diff(oldIdb)
   }
 

@@ -73,7 +73,7 @@ case class SynthesisAllPrograms(problem: Problem,
           case head :: tail => {
             // keep this rule
             val ruleSet1: Set[List[Rule]] = {
-              val coveredIdb = evaluator.evalRule(head, learnedRules.toSet)
+              val coveredIdb = evaluator.evalRule(head, learnedRules.toSet, getConfigSpace.get_config().recursion)
               val nextIdb = remainingIdb.diff(coveredIdb)
 
               if (coveredIdb.intersect(remainingIdb).nonEmpty) {
@@ -233,7 +233,7 @@ case class SynthesisAllPrograms(problem: Problem,
     }
     val newLearnedRules: Set[Rule] = validRules.map(_.rule)
     val newIdb = if(newLearnedRules.nonEmpty) {
-      evaluator.evalRules(newLearnedRules, learnedRules)
+      evaluator.evalRules(newLearnedRules, learnedRules, this.getConfigSpace.get_config().recursion)
     }
     else {Set[Tuple]()}
     // assert(newIdb.nonEmpty)
