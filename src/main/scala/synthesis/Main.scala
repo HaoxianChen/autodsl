@@ -107,11 +107,10 @@ object Main extends App {
     for (problemFile <- allProblems) {
       println(problemFile)
       val problem = Misc.readProblem(problemFile.toString)
-      // val programs = SynthesisNPrograms(problem).go()
       val t1 = System.nanoTime
 
-      val programs = SynthesisAllPrograms(problem).go()
-      // val programs = BasicSynthesis(problem).go()
+      val synthesizer = Synthesis(problem)
+      val programs = synthesizer.go()
 
       val duration = (System.nanoTime - t1) / 1e9d
       println(s"Finished in ${duration}s")

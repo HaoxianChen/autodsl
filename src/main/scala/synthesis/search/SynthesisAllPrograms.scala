@@ -1,7 +1,7 @@
 package synthesis.search
 
 import com.typesafe.scalalogging.Logger
-import synthesis.{Misc, Problem, Program, Relation, Rule, Tuple}
+import synthesis.{Literal, Misc, Problem, Program, Relation, Rule, Tuple}
 
 import scala.collection.mutable
 import scala.math.abs
@@ -20,6 +20,8 @@ case class SynthesisAllPrograms(problem: Problem,
   private val configSpace: SynthesisConfigSpace = {
     if (initConfigSpace.isEmpty) SynthesisConfigSpace.getConfigSpace(problem) else initConfigSpace
   }
+
+  private val syntaxConstraint = SyntaxConstraint()
 
   def getConfigSpace: SynthesisConfigSpace = configSpace
 
@@ -196,7 +198,9 @@ case class SynthesisAllPrograms(problem: Problem,
       else allRefinedRules
 
       require(refinedRules.size <= maxBranching)
-      val candidateRules: Set[ScoredRule] = refinedRules.map(r => scoreRule(r, idb, learnedRules, Some(baseRule)))
+      val candidateRules: Set[ScoredRule] = refinedRules
+          .filter(syntaxConstraint.filter)
+          .map(r => scoreRule(r, idb, learnedRules, Some(baseRule)))
 
       // Remember the ones that have been explored
       exploredRules ++= refinedRules
@@ -247,9 +251,22 @@ case class SynthesisAllPrograms(problem: Problem,
 
   def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule], parentRule: Option[ScoredRule]=None): ScoredRule = {
     val refIdb = evaluator.getRefIdb(rule, allIdb)
-    def f_eval: Rule => Set[Tuple] = r => evaluator.evalRule(r, learnedRules)
+    def f_eval: Rule => Set[Tuple] = r => evaluator.evalRule(r, learnedRules,
+      this.getConfigSpace.get_config().recursion)
     ScoredRule(rule, refIdb, f_eval, parentRule)
   }
 
 }
 
+case class SyntaxConstraint() {
+  def filter(rule: Rule): Boolean = {
+    /** The negated use of != filter is redundant */
+    val negLits: Set[Literal] = rule.negations
+    val hasNegInEq: Boolean = negLits.exists(_.relation.name == s"UnEqual")
+
+    /** Relations reserved for events, i.e., relation name with
+     * prefix 'recv' or 'send', should appear in body once, positively. */
+    // todo
+    !hasNegInEq
+  }
+}

@@ -107,6 +107,30 @@ object Greater {
   }
 }
 
+case class UnEqual(signature: List[Type]) extends FilterSpec {
+  def name: String = s"UnEqual"
+  require(signature.size==2)
+  require(signature.head == signature(1))
+
+  def literalToString(literal: Literal): String = {
+    require(literal.fields.size == 2)
+    val a = literal.fields(0)
+    val b = literal.fields(1)
+    s"${a} != ${b}"
+  }
+}
+object UnEqual {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for Number types */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+
+    (inputTypes++outputTypes).map { t =>
+      require(inputTypes.contains(t))
+      UnEqual(List(t, t))
+    }
+  }
+}
 
 case class Quorum() extends FilterSpec {
   def name: String = "Quorum"
@@ -118,6 +142,9 @@ case class Quorum() extends FilterSpec {
     val b = literal.fields(1)
     s"${a} > ${b} / 2"
   }
+}
+object Quorum {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = Set(Quorum())
 }
 
 case class TimeOut(signature: List[Type], timeOut: Int = 20) extends FilterSpec {
@@ -147,8 +174,38 @@ object TimeOut {
   }
 }
 
-object Quorum {
-  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = Set(Quorum())
+case class ListContain(signature: List[Type]) extends FilterSpec {
+  def name: String = "ListContain"
+  require(signature.size==2)
+  require(AbstractFunctorSpec.isListType(signature(1)))
+
+  def literalToString(literal: Literal): String = {
+    require(literal.relation == this.getRelation)
+    require(literal.fields.size == 2)
+
+    val h = literal.fields.head
+    val tail = literal.fields(1)
+
+    s"contains(as(${h},symbol), as(${tail},symbol))"
+  }
+}
+object ListContain {
+  def allInstances(problem: Problem): Set[AbstractFunctorSpec] = {
+    /** Look for type x and type xList */
+    val inputTypes = problem.inputTypes
+    val outputTypes = problem.outputTypes
+    val allTypes = inputTypes ++ outputTypes
+
+    val listTypes: Set[Type] = outputTypes.filter(AbstractFunctorSpec.isListType)
+    listTypes.map { lt =>
+      val nodeName = AbstractFunctorSpec.getNodeName(lt)
+      val _nodeTypes: Set[Type] = allTypes.filter(_.name == nodeName)
+      require(_nodeTypes.size==1)
+      val nodeType: Type = _nodeTypes.toList.head
+      ListContain(List(nodeType, lt))
+    }
+  }
+
 }
 
 case class MakeList(signature: List[Type]) extends FunctorSpec {

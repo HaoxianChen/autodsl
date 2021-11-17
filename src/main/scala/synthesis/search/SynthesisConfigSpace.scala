@@ -1,7 +1,7 @@
 package synthesis.search
 
 import synthesis.{Problem, Relation}
-import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AggCount, AppendList, ConstantBuilder, FunctorBuilder, Greater, Increment, InputAggregator, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder, TimeOut}
+import synthesis.rulebuilder.{AbstractFunctorSpec, Add, AggCount, AppendList, ConstantBuilder, FunctorBuilder, Greater, UnEqual, Increment, InputAggregator, ListContain, MakeList, Max, Min, PrependList, Quorum, RecursionBuilder, RuleBuilder, SimpleRuleBuilder, TimeOut}
 
 case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
   private var current_config_id: Int = 0
@@ -56,6 +56,15 @@ object SynthesisConfigSpace {
       }
       case "sensor" => {
         _getConfigSpace(maxRelCount=1,recursion = false, maxConstants = List(0))
+      }
+      case "routingProto" => {
+        val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
+          Max.allInstances, Increment.allInstances, Greater.allInstances,
+          AppendList.allInstances, PrependList.allInstances, ListContain.allInstances,
+          UnEqual.allInstances
+        )
+        val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
+        _getConfigSpace(maxRelCount=1, recursion = false, functors = functors)
       }
       case _ => ???
     }

@@ -33,6 +33,7 @@ object Synthesis {
       SynthesisAllPrograms(newProblem)
     }
     case "overlay" => SynthesisAllPrograms(problem)
+    case "routingProto" => SynthesisAllPrograms(problem)
     case _ => ???
   }
 }
