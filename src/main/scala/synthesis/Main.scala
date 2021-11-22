@@ -18,6 +18,7 @@ object Main extends App {
     val nTotal = nInputRels + nOutputRels
     println(s"$nTotal Relations ($nInputRels, $nOutputRels)")
     println(s"$nTotalTuples examples ($nInputTuples, $nOutputTuples).")
+    println(s"${problem.getNumExampleInstances} example instances.")
 
     /*** Display examples */
     // val exampleInstances = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)

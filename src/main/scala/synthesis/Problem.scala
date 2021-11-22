@@ -110,6 +110,8 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
     this.copy(idb=newIdb)
   }
 
+  def getNumExampleInstances: Int = ExampleInstance.fromEdbIdb(edb,idb).size
+
   def addOracleSpec(oracleSpec: String): Problem = this.copy(oracleSpec=Some(oracleSpec))
 
 
