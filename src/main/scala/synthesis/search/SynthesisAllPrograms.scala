@@ -266,7 +266,10 @@ case class SyntaxConstraint() {
 
     /** Relations reserved for events, i.e., relation name with
      * prefix 'recv' or 'send', should appear in body once, positively. */
-    // todo
-    !hasNegInEq
+    val hasNegEventRel: Boolean = negLits.exists(_.relation.name.startsWith("recv"))
+
+    /** Inequal and greater cannot apply to same parameters. */
+    // todo.
+    (!hasNegInEq) && (!hasNegEventRel)
   }
 }

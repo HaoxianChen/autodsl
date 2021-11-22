@@ -132,19 +132,48 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     }
     else {
       // The relations that add negated literal to
-      // val negRels: Set[Relation] = inputRels.diff(rule.body.map(_.relation))
-      // val negRels: Set[Relation] = inputRels
       val negRels: Set[Relation] = candidateNegRelations(rule)
-      val posParams: Map[Type, Set[Parameter]] = paramMapByType(rule.getPositiveLiterals())
+      // val posParams: Map[Type, Set[Parameter]] = paramMapByType(rule.getPositiveLiterals())
 
       def addNegationByRel(rule: Rule, rel: Relation): Set[Rule] = {
-        /** All possible bindings to the literal from posLit */
-        val negatedLits: Set[Literal] = allBindings(rel, posParams)
+        // /** All possible bindings to the literal from posLit */
+        // val negatedLits: Set[Literal] = allBindings(rel, posParams)
+        /** Bind at most 2 variables in the negated body */
+        val MAX_NEG_VARS: Int = 2
+        val negatedLits: Set[Literal] = bindNVariables(rel, rule, MAX_NEG_VARS)
         val nl = negatedLits.diff(rule.body)
         nl.map(l => rule.addNegatedLiteral(l))
       }
       negRels.flatMap(r => addNegationByRel(rule, r))
     }
+  }
+
+  def bindNVariables(relation: Relation, rule: Rule, n: Int): Set[Literal] = {
+    def _bindNVariables(sig:List[Type], posParams: Map[Type, Set[Parameter]], n: Int): Set[List[Parameter]] = {
+      require(n >= 0)
+      require(sig.size >= n)
+      sig match {
+        case Nil => Set(List())
+        case head::tail => {
+          val bindHead: Set[List[Parameter]] = if (n > 0) {
+            /** bind head variable */
+            val hv: Set[Parameter] = posParams.getOrElse(head,Set())
+            val tailBindings = _bindNVariables(tail,posParams,n-1)
+            hv.flatMap(h => tailBindings.map(h::_))
+          } else { Set() }
+          val freeHead: Set[List[Parameter]] = if (sig.size > n) {
+            /** do not bind head variable */
+            val hv: Variable = newVar(rule.body, head)
+            val tailBindings = _bindNVariables(tail, posParams, n)
+            tailBindings.map(l => hv::l)
+          } else {Set()}
+          bindHead++freeHead
+        }
+      }
+    }
+    val posParams: Map[Type, Set[Parameter]] = paramMapByType(rule.getPositiveLiterals())
+    val fields: Set[List[Parameter]] = _bindNVariables(relation.signature,posParams,n)
+    fields.map(SimpleLiteral(relation,_))
   }
 
   def relaxOneBindingFromNegation(rule: Rule, lit: Literal): Set[Rule] = {
@@ -252,9 +281,9 @@ object SimpleRuleBuilder {
   }
 
   def newVar(literals: Set[Literal], _type: Type): Variable = {
-    /** return literal of _type whose name is unseen in the set of literals */
+    /** return variable of _type whose name is unseen in the set of literals */
     val paramCounts: Map[Type, Int] = getParamCounts(literals)
-    val c = paramCounts(_type)
+    val c = paramCounts.getOrElse(_type,0)
     val v = Variable(_type, c)
     require(!literals.flatMap(_.fields).contains(v))
     v
