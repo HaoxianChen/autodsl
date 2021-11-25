@@ -75,6 +75,17 @@ class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
     allRelations.map (r => r->getInx(r)).toMap
   }
 
+  def updateProblem(problem: Problem, newExamples: ExampleInstance): Problem = {
+    require(newExamples.nonEmpty)
+    val nextId: Int = if (problem.edb.elems.nonEmpty) {
+      problem.edb.toTuples().map(t => getInstanceId(t)).max + 1
+    }
+    else 0
+    val nextExample = assignInstanceId(newExamples, nextId)
+    val relevantIdb = nextExample.output.filter(t => problem.outputRels.contains(t.relation))
+    problem.addEdb(nextExample.input).addIdb(relevantIdb)
+  }
+
   def getInstanceIdIndex(relation: Relation): Int = instanceIdIndices(relation)
 
   def assignInstanceId(tupleInstance: TupleInstance, id: Int) :TupleInstance = {
@@ -229,22 +240,13 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     for (rel <- p0.outputRels) {
       val (sol, newExamples) = interactiveLearning(rel, problem)
       solutions += sol
-      problem = newExamples.foldLeft(problem)(updateProblem)
+      problem = newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
       nQueries += newExamples.size
     }
     /** Merge solutions altogether */
     val finalSolution = solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
     (finalSolution, nQueries)
   }
-
-  def updateProblem(problem: Problem, newExamples: ExampleInstance): Problem = {
-    require(newExamples.nonEmpty)
-    val nextId: Int = problem.edb.toTuples().map(t => exampleTranslator.getInstanceId(t)).max + 1
-    val nextExample = exampleTranslator.assignInstanceId(newExamples, nextId)
-    val relevantIdb = nextExample.output.filter(t => problem.outputRels.contains(t.relation))
-    problem.addEdb(nextExample.input).addIdb(relevantIdb)
-  }
-
 
   def interactiveLearning(outRel: Relation, initProblem: Problem): (Program, Set[ExampleInstance]) = {
     require(initProblem.outputRels.contains(outRel))
@@ -260,7 +262,7 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
     do {
       // add new examples
       if (nextExample.isDefined) {
-        problem = updateProblem(problem, nextExample.get)
+        problem = exampleTranslator.updateProblem(problem, nextExample.get)
         newExamples += nextExample.get
       }
 

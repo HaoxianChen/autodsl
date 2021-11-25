@@ -3,7 +3,6 @@ package synthesis.search
 import synthesis.rulebuilder.{AggCount, InputAggregator}
 import synthesis.{Problem, Program, Relation, Tuple}
 
-import scala.reflect.internal.Reporter.Count
 
 abstract class Synthesis(problem: Problem) {
   def learnNPrograms(idb: Set[Tuple]): List[Program]

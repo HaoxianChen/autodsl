@@ -65,7 +65,6 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
                    edb: Examples , idb: Examples, oracleSpec: Option[String]) {
 
   private val typeMap: Map[String,Type] = (for (t<-types) yield t.name -> t).toMap
-  // private val relationMap: Map[String, Relation] = (for (rel <- inputRels++outputRels) yield rel.name -> rel).toMap
 
   def addType(_type: Type): Problem = {
     val newTypes = types + _type
@@ -110,7 +109,12 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
     this.copy(idb=newIdb)
   }
 
-  def getNumExampleInstances: Int = ExampleInstance.fromEdbIdb(edb,idb).size
+  def getNumExampleInstances: Int = {
+    if (types.contains(NumberType(s"InstanceId"))) {
+      ExampleInstance.fromEdbIdb(edb,idb).size
+    }
+    else 1
+  }
 
   def addOracleSpec(oracleSpec: String): Problem = this.copy(oracleSpec=Some(oracleSpec))
 
@@ -121,7 +125,6 @@ case class Problem(name: String, domain: String, types: Set[Type], inputRels: Se
   def getType(name: String): Option[Type] = typeMap.get(name)
   def inputTypes: Set[Type] = inputRels.flatMap(_.signature)
   def outputTypes: Set[Type] = outputRels.flatMap(_.signature)
-  // def getRelation(relName: String): Option[Relation] = relationMap.get(name)
 }
 
 object Problem {
