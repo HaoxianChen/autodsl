@@ -1,15 +1,16 @@
-package synthesis
+package synthesis.util
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-import scala.concurrent.{Await, Future, TimeoutException, blocking, duration}
+import synthesis.{Parser, Problem, Relation}
+
 import scala.concurrent.ExecutionContext.Implicits.global
-import sys.process._
+import scala.concurrent._
 import scala.io.Source
-import scala.sys.process.ProcessLogger
+import scala.sys.process.{ProcessLogger, _}
 import scala.util.Random
 
 

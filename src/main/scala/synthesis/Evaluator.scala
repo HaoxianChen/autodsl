@@ -3,6 +3,7 @@ package synthesis
 import java.nio.file.{Files, Path, Paths}
 
 import com.typesafe.scalalogging.Logger
+import synthesis.util.Misc
 
 case class Evaluator(problem: Problem) {
   private var cache: Map[Program, Examples] = Map()

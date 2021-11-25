@@ -3,6 +3,7 @@ package synthesis
 import java.nio.file.Paths
 
 import synthesis.search.{Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
+import synthesis.util.{ExampleConvertor, Misc}
 
 object Main extends App {
 
@@ -119,6 +120,12 @@ object Main extends App {
       displayResults(problem ,programs)
       assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
     }
+  }
+
+  else if (args(0)=="parse-examples") {
+    val dir = args(1)
+    val exampleCovertor = new ExampleConvertor()
+    exampleCovertor.parse(dir)
   }
 }
 

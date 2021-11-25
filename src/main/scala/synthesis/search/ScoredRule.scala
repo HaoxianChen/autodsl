@@ -1,6 +1,7 @@
 package synthesis.search
 
-import synthesis.{Misc, Rule, Tuple}
+import synthesis.util.Misc
+import synthesis.{Rule, Tuple}
 
 case class ScoredRule(rule: Rule, idb: Set[Tuple],
                      score: Double, score_history: List[Double]) extends Ordered[ScoredRule]{

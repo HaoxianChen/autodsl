@@ -2,6 +2,7 @@ package synthesis.search
 
 import com.typesafe.scalalogging.Logger
 import synthesis._
+import synthesis.util.Misc
 
 import scala.collection.mutable
 import scala.math.abs

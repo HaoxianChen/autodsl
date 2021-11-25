@@ -1,7 +1,8 @@
 package synthesis.search
 
 import com.typesafe.scalalogging.Logger
-import synthesis.{Literal, Misc, Problem, Program, Relation, Rule, Tuple}
+import synthesis.util.Misc
+import synthesis.{Literal, Problem, Program, Relation, Rule, Tuple}
 
 import scala.collection.mutable
 import scala.math.abs
