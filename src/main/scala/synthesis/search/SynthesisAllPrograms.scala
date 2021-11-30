@@ -10,7 +10,8 @@ import scala.math.abs
 case class SynthesisAllPrograms(problem: Problem,
                                 recursion: Boolean = true,
                                 maxIters: Int = 20,
-                                maxRefineIters: Int = 100,
+                                // maxRefineIters: Int = 100,
+                                maxRefineIters: Int = 400,
                                 maxRules: Int = 5,
                                 initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
                                ) extends Synthesis(problem) {
@@ -187,6 +188,7 @@ case class SynthesisAllPrograms(problem: Problem,
     var validRules: Set[ScoredRule] = generalRules.filter(validCondition)
 
     while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty && validRules.size < maxRules) {
+      if (iters % 20 == 0) logger.info(s"iteration $iters")
 
       // pop highest scored rule from pool
       val baseRule = rulePool.dequeue()
@@ -267,10 +269,16 @@ case class SyntaxConstraint() {
 
     /** Relations reserved for events, i.e., relation name with
      * prefix 'recv' or 'send', should appear in body once, positively. */
-    val hasNegEventRel: Boolean = negLits.exists(_.relation.name.startsWith("recv"))
+    def isEventLiteral(lit: Literal): Boolean = lit.relation.name.startsWith("recv")
+    val hasNegEventRel: Boolean = negLits.exists(isEventLiteral)
+
+    val redundantEventRel: Boolean = {
+      val eventLits = rule.body.filter(isEventLiteral)
+      eventLits.size > 1
+    }
 
     /** Inequal and greater cannot apply to same parameters. */
     // todo.
-    (!hasNegInEq) && (!hasNegEventRel)
+    (!hasNegInEq) && (!hasNegEventRel) && (!redundantEventRel)
   }
 }

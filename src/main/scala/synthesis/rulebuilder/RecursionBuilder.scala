@@ -135,7 +135,8 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
   override def refineRule(rule: Rule): Set[Rule] = {
     val simpleRules = super.refineRule(rule)
     val functorRules = addFunctor(rule)
-    val filterRules = addFilter(rule)
+    /** Only add filters when the all head variable is bound. */
+    val filterRules = if (rule.isHeadBounded()) addFilter(rule) else Set()
     // simpleRules ++ functorRules
     val rules = simpleRules ++ functorRules ++ filterRules
     require(rules.flatMap(_.body).forall(lit => inputRels.contains(lit.relation)

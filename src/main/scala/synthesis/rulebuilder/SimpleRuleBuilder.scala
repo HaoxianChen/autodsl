@@ -25,6 +25,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     val allLiterals = rule.body + rule.head
     val newLiteral = newUnboundedLiteral(allLiterals, relation)
     val r1 = rule.addLiteral(newLiteral)
+    /** Bind one variable of the new literal */
     addOneBindingLiteral(r1, newLiteral)
   }
 
@@ -52,6 +53,16 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     require(rule.getVarSet().contains(variable))
     // val paramMap = _paramMapByType(rule.body)
     val paramMap = paramMapByType(rule.getPositiveLiterals())
+    _bindVariableToParameters(rule,variable, paramMap)
+  }
+
+  def _bindVariableToHead(rule: Rule, variable: Variable): Set[Rule] = {
+    require(rule.getVarSet().contains(variable))
+    val paramMap = paramMapByType(Set(rule.head))
+    _bindVariableToParameters(rule,variable, paramMap)
+  }
+
+  def _bindVariableToParameters(rule: Rule, variable: Variable, paramMap: Map[Type, Set[Parameter]]) :Set[Rule]= {
     val availableVars: Set[Variable] = {
       val params = paramMap.getOrElse(variable._type, Set()) - variable
       params.flatMap {
@@ -64,6 +75,7 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     /** Some binding will end up with two identical literals, filter out these cases */
     boundRules.filter(r => r.body.size == rule.body.size)
   }
+
 
   def addGeneralLiteral(rule: Rule) : Set[Rule] = {
     var newRules: Set[Rule] = Set()
@@ -87,7 +99,9 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
       case _: Constant => None
     }.toSet
     val freeVars = ruleFv.intersect(litVars)
-    freeVars.flatMap(v => _bindVariableToBody(rule, v))
+    /** Have one of the field bind to either body or head. */
+    freeVars.flatMap(v => _bindVariableToBody(rule, v)
+      ++ _bindVariableToHead(rule,v))
   }
 
   // def addNegation(rule: Rule): Set[Rule] = {
