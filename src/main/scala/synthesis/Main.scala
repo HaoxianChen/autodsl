@@ -105,7 +105,9 @@ object Main extends App {
       "firewall/stateful-firewall",
       "nib/reachable",
       "routing/shortest-path",
-      "wireless/dsr"
+      "wireless/dsr",
+      "consensus/2pc-no-timer",
+      "consensus/paxos/paxos-value"
     ).map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- allProblems) {
       println(problemFile)

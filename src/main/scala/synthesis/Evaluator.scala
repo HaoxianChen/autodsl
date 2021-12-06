@@ -16,7 +16,7 @@ case class Evaluator(problem: Problem) {
   private val edb = problem.edb
 
   // Prepare tmp directory
-  private val tmpdir = Paths.get("tmp")
+  private val tmpdir = Paths.get("/var/tmp/souffle/")
   if (Files.notExists(tmpdir)) tmpdir.toFile.mkdir()
 
   def _eval(program: Program): Examples = {
