@@ -1,6 +1,6 @@
 package synthesis
 
-import synthesis.rulebuilder.{AggregateLiteral, FunctorLiteral, FunctorSpec}
+import synthesis.rulebuilder.{AggregateLiteral, FunctorLiteral, FunctorSpec, AggMax}
 
 import scala.collection.mutable
 
@@ -206,6 +206,16 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     }
   }
 
+  def _getAggVars(): Set[Variable] = {
+    body.flatMap {
+      case aggLit: AggregateLiteral => aggLit.aggregator match {
+        case agg: AggMax => Some(aggLit.fields(agg.aggIndex).asInstanceOf[Variable])
+        case _ => None
+      }
+      case _ => None
+    }
+  }
+
   def freeVariables(): Set[Variable] = {
     val allVars = _getVarList(body.toList :+ head)
     val posLits = getPositiveLiterals()
@@ -214,7 +224,9 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     val posVars = _getVarList(posLits.toList) ++ functorOutputs
     val paramCounts = allVars.groupBy(identity) map {case (p, ps) => p ->  ps.size}
     val boundVars = allVars.filter(v => paramCounts(v) > 1).toSet.intersect(posVars.toSet)
-    allVars.toSet.diff(boundVars)
+
+    val aggVars = _getAggVars()
+    allVars.toSet.diff(boundVars++aggVars)
   }
 
   def normalize(): Rule = {

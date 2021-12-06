@@ -1,6 +1,6 @@
 package synthesis.search
 
-import synthesis.rulebuilder.{AggCount, InputAggregator}
+import synthesis.rulebuilder.{AggCount, AggMax, InputAggregator}
 import synthesis.{Problem, Program, Relation, Tuple}
 
 
@@ -26,8 +26,14 @@ object Synthesis {
     case "NIB" => SynthesisAllPrograms(problem)
     case "sensor" => SynthesisAllPrograms(problem)
     case "consensus" => {
+      SynthesisAllPrograms(problem)
+    }
+    case "consensusbarrier" => {
       /** Use the count aggregator */
-      val preprocessors: Set[InputAggregator] = AggCount.allInstances(problem)
+      val preprocessors: Set[InputAggregator] = {
+        AggCount.allInstances(problem) ++ AggMax.allInstances(problem)
+        // AggMax.allInstances(problem)
+      }
       val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
       SynthesisAllPrograms(newProblem)
     }

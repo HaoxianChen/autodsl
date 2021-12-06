@@ -127,6 +127,9 @@ object Main extends App {
     val exampleCovertor = new ExampleConvertor()
     exampleCovertor.parse(dir)
   }
+  else {
+    assert(false, s"Unrecognized command ${args(0)}")
+  }
 }
 
 

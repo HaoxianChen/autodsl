@@ -11,7 +11,7 @@ case class SynthesisAllPrograms(problem: Problem,
                                 recursion: Boolean = true,
                                 maxIters: Int = 20,
                                 // maxRefineIters: Int = 100,
-                                maxRefineIters: Int = 400,
+                                maxRefineIters: Int = 3000,
                                 maxRules: Int = 5,
                                 initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
                                ) extends Synthesis(problem) {
@@ -277,8 +277,51 @@ case class SyntaxConstraint() {
       eventLits.size > 1
     }
 
+    val redundantAgg = hasRedundantAggRelations(rule)
+    val unusedAgg = unusedAggOutput(rule)
+    val negatedAgg = negatedAggregate(rule)
+
     /** Inequal and greater cannot apply to same parameters. */
     // todo.
-    (!hasNegInEq) && (!hasNegEventRel) && (!redundantEventRel)
+    (!hasNegInEq) && (!hasNegEventRel) && (!redundantEventRel) &&
+      (!redundantAgg) && (!unusedAgg) &&
+      (!negatedAgg)
+  }
+
+  def negatedAggregate(rule: Rule): Boolean = {
+    rule.negations.intersect(aggLits(rule)).nonEmpty
+  }
+
+  val aggSubString: Set[String] = Set("cnt", "max")
+
+  def aggLits(rule: Rule): Set[Literal] = {
+    rule.body.filter(lit => {
+      aggSubString.exists(s => lit.relation.name.contains(s"_${s}"))
+    })
+  }
+
+  def unusedAggOutput(rule: Rule): Boolean = {
+    val ret = aggLits(rule).exists(lit => lit.fields.last.name == "_")
+    ret
+  }
+
+  def hasRedundantAggRelations(rule: Rule): Boolean = {
+    /** Don't have multiple aggregate predicates in the rule */
+    val aggSubString: List[String] = List("cnt", "max")
+
+    // val aggLits: Set[Literal] = rule.body.filter(lit => {
+    //   aggSubString.exists(s => lit.relation.name.contains(s))
+    // })
+
+    val aggRelList = aggLits(rule).toList.map ( lit => {
+      val relName = lit.relation.name
+      aggSubString.flatMap(key => {
+        if (relName.contains(key)) Some(relName.split(key).head)
+        else (None)
+      })
+    })
+    /** Check duplicates in aggregated relations */
+    aggRelList.toSet.size < aggRelList.size
+
   }
 }
