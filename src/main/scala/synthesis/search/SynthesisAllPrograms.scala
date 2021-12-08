@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.Logger
 import synthesis.util.Misc
 import synthesis.{Literal, Problem, Program, Relation, Rule, Tuple}
 
-import scala.collection.mutable
+import scala.collection.{MapView, mutable}
 import scala.math.abs
 
 case class SynthesisAllPrograms(problem: Problem,
@@ -181,6 +181,10 @@ case class SynthesisAllPrograms(problem: Problem,
     // var forbiddenRules: Set[ScoredRule] = Set()
     var exploredRules: Set[Rule] = Set()
 
+    // Remember the literals that cause the rule search to stale
+    var staledRules: Set[Rule] = Set()
+    var forbiddenLiterals: Set[Literal] = Set()
+
     // Set up the pool of rules to be refine
     var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
     rulePool ++= generalRules.filter(r => validCondition(r) || refineCondition(r))
@@ -217,8 +221,15 @@ case class SynthesisAllPrograms(problem: Problem,
 
       val staled = tooGeneral.filter(isRuleStaled)
       rulePool ++= tooGeneral.diff(staled)
+      staledRules ++= staled.map(_.rule)
       // If not all branches are exhausted yet
       if (refinedRules.size < allRefinedRules.size) rulePool += baseRule
+
+      // Update forbidden negated literals
+      if (staled.nonEmpty) {
+        forbiddenLiterals ++= getForbiddenLiterals(staledRules)
+        rulePool = rulePool.filter(_.rule.maskUngroundVars().negations.intersect(forbiddenLiterals).isEmpty)
+      }
 
       iters += 1
       if (validRules.nonEmpty) extraIters += 1
@@ -250,6 +261,20 @@ case class SynthesisAllPrograms(problem: Problem,
     else {
       false
     }
+  }
+
+  val maxStaledNegLiterals: Int = 10
+  def countFreq[T](l: List[T]): MapView[T, Int] = l.groupBy(x=>x).mapValues(_.size)
+  def getForbiddenLiterals(staledRules: Set[Rule]): Set[Literal] = {
+    val allNegLitsStaled: List[Literal] = staledRules.toList.flatMap {
+      r => r.maskUngroundVars().negations.filter(lit => problem.inputRels.contains(lit.relation))
+    }
+    val freq1 = countFreq(allNegLitsStaled)
+
+    val ret = freq1.flatMap {
+      case (lit, c) => if (c>maxStaledNegLiterals) Some(lit) else None
+    }.toSet
+    ret
   }
 
   def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule], parentRule: Option[ScoredRule]=None): ScoredRule = {
