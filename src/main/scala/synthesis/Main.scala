@@ -57,6 +57,10 @@ object Main extends App {
     println(s"Finished in ${duration}s")
     displayResults(problem, programs)
   }
+  else if (args(0) == "synth") {
+    val experiment = new SynthesisExperiment()
+    experiment.run(update=args(1).toBoolean)
+  }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
     val maxExamples: Int = args(2).toInt
