@@ -16,23 +16,23 @@ class ExampleParser extends JavaTokenParsers {
    *  each instance is a set of tuples.
    *  Tuples are represented as (tuple_name, [args])
    * */
-  def examples: Parser[(List[(String, List[Int])], List[List[(String, List[Int])]])] = {
+  def examples: Parser[(List[(String, List[String])], List[List[(String, List[String])]])] = {
     ((("Static"~>"{"~> tupleList <~"}")) ~ ("Examples"~>"{"~>exampleInstanceList<~"}") ^^ {
       case s~e => (s,e)
     })
   }
 
-  def tuple: Parser[(String, List[Int])] = {
-    (ident ~ ("("~> repsep(wholeNumber,",")<~")")) ^^ {
-      case name ~ fields => (name, fields.map(_.toInt))
+  def tuple: Parser[(String, List[String])] = {
+    (ident ~ ("("~> repsep(wholeNumber|stringLiteral,",")<~")")) ^^ {
+      case name ~ fields => (name, fields)
     }
   }
-  def tupleList: Parser[List[(String, List[Int])]] = repsep(tuple, ",")
+  def tupleList: Parser[List[(String, List[String])]] = repsep(tuple, ",")
 
-  def exampleInstance: Parser[List[(String, List[Int])]]  = {
+  def exampleInstance: Parser[List[(String, List[String])]]  = {
     ("input"~>"{"~>tupleList<~"}") ~ ("output"~>"{"~>tupleList<~"}") ^^ {
       case in~out => in++out
     }
   }
-  def exampleInstanceList: Parser[List[List[(String, List[Int])]]] = exampleInstance.+
+  def exampleInstanceList: Parser[List[List[(String, List[String])]]] = exampleInstance.+
 }
