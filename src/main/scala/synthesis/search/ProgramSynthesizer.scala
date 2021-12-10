@@ -2,6 +2,7 @@ package synthesis.search
 
 import com.typesafe.scalalogging.Logger
 import synthesis._
+import synthesis.rulebuilder.AggregateLiteral
 import synthesis.util.Misc
 
 import scala.collection.mutable
@@ -62,7 +63,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       val addedRule = addARule(program, idb)
       refinedPrograms ++ addedRule
     }
-    else if (isComplete(program) && scoredProgram.recall > 1-1e-4) {
+    else if (isComplete(program) && scoredProgram.recall > 1-1e-4 && !isAggProgram(program)) {
       logger.info(s"Aggregate output")
       val aggregated = programBuilder.aggregateOutput(program)
       refinedPrograms ++ aggregated
@@ -70,6 +71,10 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     else {
       refinedPrograms
     }
+  }
+
+  def isAggProgram(program: Program): Boolean = {
+    program.rules.exists(_.body.exists(_.isInstanceOf[AggregateLiteral]))
   }
 
   def addARule(program: Program, idb: Set[Tuple]): Set[Program] = {

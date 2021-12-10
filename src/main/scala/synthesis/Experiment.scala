@@ -73,10 +73,7 @@ class SynthesisExperiment(outDir: String = "results/synthesis") extends Experime
   def generateTable(): Unit = {
     def getLogFile(dir: String): String = {
       val problem = Misc.readProblem(dir)
-      val outDir: String = getOutDir(problem).toString
-      val files = Misc.getListOfFiles(outDir).filter(_.endsWith(".log"))
-      require(files.size==1, dir)
-      Paths.get(outDir,files.head).toString
+      getOutFile(problem).toString
     }
     val statLineNum: Int = 5
     val stats = allProblems.map { problemDir =>
@@ -89,8 +86,7 @@ class SynthesisExperiment(outDir: String = "results/synthesis") extends Experime
     Misc.writeFile(fileStr, outFile)
   }
 
-  def getOutDir(problem: Problem): Path = Paths.get(outDir,problem.domain)
-  def getOutFile(problem: Problem): Path = Paths.get(getOutDir(problem).toString,s"${problem.name}.log")
+  def getOutFile(problem: Problem): Path = Paths.get(outDir, problem.domain,s"${problem.name}.log")
 
   def isResultExist(problem: Problem): Boolean = getOutFile(problem).toFile.exists()
 
