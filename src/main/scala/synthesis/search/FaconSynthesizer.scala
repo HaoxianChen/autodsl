@@ -1,9 +1,8 @@
 package synthesis.search
 
 import com.typesafe.scalalogging.Logger
-import synthesis.rulebuilder.{ConstantBuilder, SimpleRuleBuilder}
-import synthesis.util.Misc
-import synthesis.{Constant, Evaluator, Literal, Parameter, Problem, Program, Relation, Rule, SimpleLiteral, Tuple, Type, Variable}
+import synthesis.rulebuilder.{SimpleRuleBuilder}
+import synthesis.{Evaluator, Literal, Parameter, Problem, Program, Relation, Rule, SimpleLiteral, Tuple, Type, Variable}
 
 class FaconSynthesizer(problem: Problem) extends SynthesisAllPrograms(problem) {
   private val logger = Logger("Facon")
@@ -83,13 +82,20 @@ class FaconSynthesizer(problem: Problem) extends SynthesisAllPrograms(problem) {
     }
 
     // Iterate on all rules
-    val evalResults: Set[(Rule, Set[Tuple])] = allRules.map(
-      r => (r,evalRule(r,learnedRules)))
-    val validRules: Set[Rule] = evalResults.flatMap {
-      case (rule, output) => if (validCondition(output)) Some(rule) else None
+    for (rule <- allRules) {
+      val output = evalRule(rule, learnedRules)
+      if (validCondition(output)) {
+        return (output, Set(rule))
+      }
     }
-    val newCoveredIdb = evalResults.flatMap(_._2)
-    (newCoveredIdb, validRules)
+    // val evalResults: Set[(Rule, Set[Tuple])] = allRules.map(
+    //   r => (r,evalRule(r,learnedRules)))
+    // val validRules: Set[Rule] = evalResults.flatMap {
+    //   case (rule, output) => if (validCondition(output)) Some(rule) else None
+    // }
+    // val newCoveredIdb = evalResults.flatMap(_._2)
+    // (newCoveredIdb, validRules)
+    (Set(), Set())
   }
 
   def iterateAllRules(outRel: Relation): Iterable[Rule] = {
@@ -101,13 +107,7 @@ class FaconSynthesizer(problem: Problem) extends SynthesisAllPrograms(problem) {
         remainSig match {
           case Nil => Set(List())
           case nextType::tail => {
-            val constantSet: Set[Constant] = ruleBuilder match {
-              case builder: ConstantBuilder =>
-                builder.getConstantPool.getOrElse(nextType, Set())
-              case _ => Set()
-            }
-
-            val ps0 = paramMap.getOrElse(nextType, Set()) ++ bounded.toSet.filter(_._type==nextType) ++ constantSet
+            val ps0 = paramMap.getOrElse(nextType, Set()) ++ bounded.toSet.filter(_._type==nextType)
 
             val paramSet: Set[Parameter] = if (allowNewVariable) {
               val newVar = Variable(nextType,ps0.size)

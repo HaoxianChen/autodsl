@@ -227,16 +227,6 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     simpleNegations.flatMap(lit => relaxOneBindingFromNegation(rule, lit))
   }
 
-  def bindInstanceIds(rule: Rule): Rule = {
-    val instanceType = NumberType("InstanceId")
-    val allInstanceIds = (rule.body + rule.head).flatMap(_.fields).filter(_._type == instanceType)
-    val instanceIdVar = Variable("instanceid0", instanceType)
-    val newBindings: Map[Parameter, Parameter] = allInstanceIds.map(p=>(p->instanceIdVar)).toMap
-    val nr = rule.rename(newBindings)
-    require(nr.body.map(_.relation) == rule.body.map(_.relation))
-    nr
-  }
-
   def refineRule(rule: Rule): Set[Rule] = {
     val addLiterals = addGeneralLiteral(rule)
     val addNegations = addNegation(rule)

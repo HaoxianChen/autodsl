@@ -1,7 +1,7 @@
 package synthesis
 import java.nio.file.{Path, Paths}
 import com.typesafe.scalalogging.Logger
-import synthesis.search.Synthesis
+import synthesis.search.{FaconSynthesizer, Synthesis}
 import synthesis.util.Misc
 
 import scala.io.Source
@@ -35,20 +35,42 @@ case class ExperimentRecord(results: Map[String, Any], program: Program) {
 
 abstract class Experiment
 
-class SynthesisExperiment(outDir: String = "results/synthesis") extends Experiment {
+class SynthesisExperiment(benchmarkDir: String = "/Users/hxc/projects/autodsl-bench",
+                          outDir: String = "results/synthesis",
+                         ) extends Experiment {
   private val logger = Logger("Synthesis")
-
-  val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
-  val allProblems = List(
-    // "forwarding/learning-switch",
-    // "firewall/stateless-firewall",
-    // "firewall/stateful-firewall",
+  def allProblems: List[Path] = List(
+    // SDN
+    "forwarding/learning-switch",
+    "forwarding/l2-pairs",
+    "firewall/stateless-firewall",
+    "firewall/stateful-firewall",
+    "firewall/l3-firewall",
+    "firewall/l3-stateful-firewall",
     // "nib/reachable",
     // "routing/shortest-path",
     // "wireless/dsr",
+    // Network analysis
+    "nod/locality",
+    // routing
+    "routing/ospf-synnet",
+    "routing/rip",
+    // consensus
     "consensus/2pc-no-timer",
-    // "consensus/paxos/paxos-value"
+    "consensus/paxos/paxos-acceptor",
+    "consensus/paxos/paxos-proposer",
+    "consensus/paxos/paxos-quorum",
+    "consensus/paxos/paxos-value",
+    // Wireless
+    "wireless/aodv/aodv-route",
+    "wireless/aodv/aodv-route-source",
+    "wireless/aodv/aodv-rrep",
+    "wireless/aodv/aodv-rreq",
+    "wireless/aodv/aodv-seq",
+    "wireless/dsdv",
+    "wireless/dsr"
   ).map(s => Paths.get(benchmarkDir, s))
+  def getSynthesizer(p: Problem): Synthesis = Synthesis(p)
 
   def run(update: Boolean): Unit = {
     for (problemFile <- allProblems) {
@@ -56,7 +78,7 @@ class SynthesisExperiment(outDir: String = "results/synthesis") extends Experime
       if (!isResultExist(problem) || update) {
         logger.info(s"run ${problem.name}")
         val t1 = System.nanoTime
-        val synthesizer = Synthesis(problem)
+        val synthesizer = getSynthesizer(problem)
         val programs = synthesizer.go()
         val duration = (System.nanoTime - t1) / 1e9d
         logger.info(s"Finished in ${duration}s")
@@ -136,6 +158,29 @@ class SynthesisExperiment(outDir: String = "results/synthesis") extends Experime
     Misc.makeDir(getOutFile(problem).getParent)
     Misc.writeFile(fileStr, getOutFile(problem))
   }
+}
+
+class FaconExperiment(outDir: String = "results/facon") extends SynthesisExperiment(outDir=outDir) {
+  private val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
+
+  override def getSynthesizer(p: Problem): Synthesis = new FaconSynthesizer(p)
+  override def allProblems: List[Path] = List(
+    // Network analysis
+    "nib/reachable",
+    "aws/publicIP",
+    "aws/subnet",
+    "aws/sshTunnel",
+    "nod/protection",
+    // "nod/locality",
+    // SDN
+    // "forwarding/learning-switch",
+    "forwarding/learning-switch-no-flood",
+    // "forwarding/l2-pairs",
+    "firewall/stateless-firewall",
+    "firewall/stateful-firewall",
+    "firewall/l3-firewall",
+    // "firewall/l3-stateful-firewall",
+  ).map(s => Paths.get(benchmarkDir, s))
 }
 
 class ActiveLearningExperiment(maxExamples: Int = 400, outDir: String = "results/active-learning") extends Experiment {

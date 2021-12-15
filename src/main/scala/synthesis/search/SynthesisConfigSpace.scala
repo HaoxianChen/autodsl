@@ -108,7 +108,7 @@ object SynthesisConfigSpace {
 case class SynthesisConfigs(maxRelCount:Int, recursion: Boolean, maxConstants: Int,
                             functors: Set[AbstractFunctorSpec],
                            inputAggregators: Set[InputAggregator]) {
-  def get_rule_builder(problem: Problem, relevantOutRels: Set[Relation] = Set()): RuleBuilder = {
+  def get_rule_builder(problem: Problem, relevantOutRels: Set[Relation] = Set()): SimpleRuleBuilder = {
     val inputRels = problem.inputRels
     val outputRels = if (relevantOutRels.nonEmpty) relevantOutRels else problem.outputRels
 

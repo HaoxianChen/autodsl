@@ -8,7 +8,6 @@ import scala.collection.{MapView, mutable}
 import scala.math.abs
 
 case class SynthesisAllPrograms(problem: Problem,
-                                recursion: Boolean = true,
                                 maxIters: Int = 20,
                                 // maxRefineIters: Int = 100,
                                 maxRefineIters: Int = 3000,

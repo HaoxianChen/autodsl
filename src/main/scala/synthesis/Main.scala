@@ -1,8 +1,7 @@
 package synthesis
 
 import java.nio.file.Paths
-
-import synthesis.search.{Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
+import synthesis.search.{FaconSynthesizer, Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
 import synthesis.util.{ExampleConvertor, Misc}
 
 object Main extends App {
@@ -85,7 +84,10 @@ object Main extends App {
     val experiment = new DebloatingExperiment()
     experiment.go(problem, repeats=repeats)
   }
-
+  else if (args(0) == "facon") {
+    val experiment = new FaconExperiment()
+    experiment.run(update=false)
+  }
   else if (args(0) == "foil") {
     val problem = Misc.readProblem(args(1))
 
