@@ -23,6 +23,11 @@ case class ScoredRule(rule: Rule, idb: Set[Tuple],
     else 0
   }
 
+  def discount(factor: Double): ScoredRule = {
+    require(factor>=0 && factor<=1)
+    this.copy(score = this.score*factor)
+  }
+
   override def toString(): String = s"${this.rule.toString} ${this.score}"
 
   def diff(): List[Double] = Misc.listDiff(this.score_history)

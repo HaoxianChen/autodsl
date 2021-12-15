@@ -173,9 +173,16 @@ case class SynthesisAllPrograms(problem: Problem,
     var extraIters: Int = 0
 
     val maxBranching: Int = 50
+    /** Discount the score of staled rules, and similar ones. */
+    val staleDiscount: Double = 0.1
 
     // score the rules based on current idb set
-    val generalRules = _getRelevantScoredRules(idb, generalSimpleRules, learnedRules)
+    val generalRules = if (generalSimpleRules.nonEmpty) {
+      _getRelevantScoredRules(idb, generalSimpleRules, learnedRules)
+    }
+    else {
+      _getRelevantScoredRules(idb, getMostGenearlRules(), learnedRules)
+    }
 
     // var forbiddenRules: Set[ScoredRule] = Set()
     var exploredRules: Set[Rule] = Set()
@@ -183,6 +190,7 @@ case class SynthesisAllPrograms(problem: Problem,
     // Remember the literals that cause the rule search to stale
     var staledRules: Set[Rule] = Set()
     var forbiddenLiterals: Set[Literal] = Set()
+    def toDiscount(sr:ScoredRule): Boolean = sr.rule.maskUngroundVars().negations.intersect(forbiddenLiterals).nonEmpty
 
     // Set up the pool of rules to be refine
     var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
@@ -218,17 +226,35 @@ case class SynthesisAllPrograms(problem: Problem,
       // Put the too general ones into the pool, and forbid anything else from exploring again
       val tooGeneral = candidateRules.filter(refineCondition)
 
-      val staled = tooGeneral.filter(isRuleStaled)
-      rulePool ++= tooGeneral.diff(staled)
-      staledRules ++= staled.map(_.rule)
+
+      /** Update rule pool */
       // If not all branches are exhausted yet
       if (refinedRules.size < allRefinedRules.size) rulePool += baseRule
 
-      // Update forbidden negated literals
+      // Discount staled rules
+      val staled = tooGeneral.filter(isRuleStaled)
+      staledRules ++= staled.map(_.rule)
+
       if (staled.nonEmpty) {
         forbiddenLiterals ++= getForbiddenLiterals(staledRules)
-        rulePool = rulePool.filter(_.rule.maskUngroundVars().negations.intersect(forbiddenLiterals).isEmpty)
+        val s0 = rulePool.size
+        // rulePool = rulePool.filterNot(toDiscount)
+        rulePool.mapInPlace{
+          r => if(toDiscount(r)) r.discount(staleDiscount) else r
+        }
+        require(rulePool.size == s0)
+
+        val discounted = tooGeneral.map{r =>
+          if (staled.contains(r)) r.discount(staleDiscount)
+          else r
+        }
+        rulePool ++= discounted
       }
+      else {
+        rulePool ++= tooGeneral
+      }
+
+      // rulePool ++= tooGeneral.diff(staled)
 
       iters += 1
       if (validRules.nonEmpty) extraIters += 1
@@ -240,10 +266,13 @@ case class SynthesisAllPrograms(problem: Problem,
     // require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
     logger.info(s"Found ${validRules.size} rules after $iters iterations.\n")
 
-    val remainingRules: Set[Rule] = {
-      val rs = rulePool.toSet
-      rs.map(_.rule)
-    }
+    // val remainingRules: Set[Rule] = {
+    //   val rs = rulePool.toSet
+    //   // rs.map(_.rule)
+    //   /** Do not carry all discounted rule into the next iterations. */
+    //   rs.filterNot(toDiscount).map(_.rule).diff(staledRules)
+    // }
+    val remainingRules: Set[Rule] = Set()
     val newLearnedRules: Set[Rule] = validRules.map(_.rule)
     val newIdb = if(newLearnedRules.nonEmpty) {
       evaluator.evalRules(newLearnedRules, learnedRules, this.getConfigSpace.get_config().recursion)
