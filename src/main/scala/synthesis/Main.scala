@@ -60,6 +60,10 @@ object Main extends App {
     val experiment = new SynthesisExperiment()
     experiment.run(update=args(1).toBoolean)
   }
+  else if (args(0) == "tab1") {
+    val experiment = new AllSynthesisExperiments()
+    experiment.run()
+  }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
     val maxExamples: Int = args(2).toInt
