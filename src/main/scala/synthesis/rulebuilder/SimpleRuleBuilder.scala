@@ -154,7 +154,8 @@ class SimpleRuleBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
         // val negatedLits: Set[Literal] = allBindings(rel, posParams)
         /** Bind at most 2 variables in the negated body */
         val MAX_NEG_VARS: Int = 2
-        val negatedLits: Set[Literal] = bindNVariables(rel, rule, MAX_NEG_VARS)
+        val N = if (rel.signature.size>MAX_NEG_VARS) MAX_NEG_VARS else rel.signature.size
+        val negatedLits: Set[Literal] = bindNVariables(rel, rule, N)
         val nl = negatedLits.diff(rule.body)
         nl.map(l => rule.addNegatedLiteral(l))
       }
