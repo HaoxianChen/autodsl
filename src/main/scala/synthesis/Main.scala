@@ -1,5 +1,7 @@
 package synthesis
 
+import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, DebloatingExperiment, FaconExperiment, SynthesisExperiment}
+
 import java.nio.file.Paths
 import synthesis.search.{FaconSynthesizer, Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
 import synthesis.util.{ExampleConvertor, Misc}
