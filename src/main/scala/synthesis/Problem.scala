@@ -1,5 +1,7 @@
 package synthesis
 
+import synthesis.activelearning.{ExampleInstance, TupleInstance}
+
 case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
   def addTuples(relation: Relation, tuples: Set[List[Constant]]): Examples = {
     val newMap = {
@@ -35,7 +37,7 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
     for ((i, tupleGroup) <- tuples.groupBy(t => t(idx))) {
       val _tupleGroup: Set[Tuple] = tupleGroup.map(t => Tuple(rel, t))
       val _i = i.name.toInt
-      val instance = TupleInstance(_tupleGroup, _i)
+      val instance = activelearning.TupleInstance(_tupleGroup, _i)
       allInstances += instance
     }
     allInstances

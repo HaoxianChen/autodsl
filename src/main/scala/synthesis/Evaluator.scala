@@ -91,7 +91,7 @@ case class Evaluator(problem: Problem) {
     else {
       require(exitcode == 0, s"Non-zero exit value: ${problemDir}\n$exitcode,\n$stdout,\n$stderr")
     }
-    require(!stderr.contains("Error"))
+    require(!stderr.contains("Error"), stderr)
   }
 
 

@@ -1,6 +1,7 @@
 package synthesis.rulebuilder
 
 import synthesis._
+import synthesis.activelearning.ExampleInstance
 
 class ConstantBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
                       maxRelCount: Int = 1,

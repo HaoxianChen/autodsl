@@ -1,7 +1,8 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.{ActiveLearning, ExampleInstance, Problem}
+import synthesis.Problem
+import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 
 class DebloatingExperiment(maxExamples: Int =100, outDir: String = "results/debloat") extends Experiment {
   private val logger = Logger("Debloating")

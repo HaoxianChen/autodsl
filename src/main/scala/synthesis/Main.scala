@@ -1,5 +1,6 @@
 package synthesis
 
+import synthesis.activelearning.ActiveLearning
 import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, DebloatingExperiment, FaconExperiment, SynthesisExperiment}
 
 import java.nio.file.Paths

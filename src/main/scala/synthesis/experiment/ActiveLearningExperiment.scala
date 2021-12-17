@@ -1,7 +1,8 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.{ActiveLearning, ExampleInstance, Problem, Program}
+import synthesis.activelearning.{ActiveLearning, ExampleInstance}
+import synthesis.{Problem, Program}
 
 import scala.util.Random
 
