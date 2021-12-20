@@ -99,7 +99,26 @@ class SynthesisExperiment(benchmarkDir: String = "/Users/hxc/projects/autodsl-be
 
   def getOutFile(problem: Problem): Path = Paths.get(outDir, problem.domain,s"${problem.name}.log")
 
-  def isResultExist(problem: Problem): Boolean = getOutFile(problem).toFile.exists()
+  def getProblemSignature(problem: Problem): Int = problem.hashCode()
+
+  def isResultExist(problem: Problem): Boolean = {
+    val outFile: Path = getOutFile(problem)
+    if (outFile.toFile.exists()) {
+      // Read and compare the problem signature
+      val sigLines  = Source.fromFile(outFile.toFile).getLines().filter(_.startsWith(s"sig:")).toList
+      if (sigLines.nonEmpty) {
+        assert(sigLines.size==1)
+        val sig = sigLines.head.split(s":")(1).trim().toInt
+        sig == getProblemSignature(problem)
+      }
+      else {
+        false
+      }
+    }
+    else {
+      false
+    }
+  }
 
   def writeResults(problem: Problem, programs: Map[Relation, List[Program]], duration: Int): Unit = {
     /*** Gather problem specs */
@@ -144,6 +163,7 @@ class SynthesisExperiment(benchmarkDir: String = "/Users/hxc/projects/autodsl-be
       fileStr += s"$rel: ${ps.size} programs, smallest one contains ${p.literalCounts} literals.\n"
       fileStr += s"$p\n"
     }
+    fileStr += s"sig:${getProblemSignature(problem)}\n"
     Misc.makeDir(getOutFile(problem).getParent)
     Misc.writeFile(fileStr, getOutFile(problem))
   }
