@@ -69,8 +69,9 @@ object Main extends App {
   }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
+    val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
     val maxExamples: Int = args(2).toInt
-    val learner = new ActiveLearning(problem, maxExamples)
+    val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
     val (program, nQueries) = learner.go()
     println(s"${nQueries} queries.")
     println(program)
@@ -78,18 +79,20 @@ object Main extends App {
   else if (args(0) == "drop") {
     /** Random drop some example from the complete example pool. */
     val problem = Misc.readProblem(args(1))
+    val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
     val nDrop: Int = args(2).toInt
     val repeats: Int = args(3).toInt
     require(repeats <= 10)
     val experiment = new ActiveLearningExperiment()
-    experiment.go(problem, nDrop=nDrop, repeats=repeats)
+    experiment.go(problem, staticConfigRelations, nDrop=nDrop, repeats=repeats)
   }
   else if (args(0) == "debloat") {
     val problem = Misc.readProblem(args(1))
+    val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
     val repeats: Int = args(2).toInt
     require(repeats <= 10)
     val experiment = new DebloatingExperiment()
-    experiment.go(problem, repeats=repeats)
+    experiment.go(problem, staticConfigRelations, repeats=repeats)
   }
   else if (args(0) == "facon") {
     val experiment = new FaconExperiment()

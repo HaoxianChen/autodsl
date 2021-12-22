@@ -62,16 +62,15 @@ case class ExamplePool(instances: Set[TupleInstance]) {
 }
 
 
-class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
+class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20) {
   private val logger = Logger("Active-learning")
 
   private val exampleTranslator = new ExampleTranslator(p0.inputRels, p0.outputRels)
 
-  private val exampleGenerator = new ExampleGenerator(p0.inputRels, p0.edb, p0.idb)
+  private val exampleGenerator = new ExampleGenerator(p0.inputRels, staticConfigRelations, p0.edb, p0.idb)
   private val edbPool: ExamplePool = exampleGenerator.generateRandomInputs(numNewExamples)
 
   private val oracle = p0.oracleSpec.get
-  private val staticConfigRelations: Set[Relation] = ???
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
   def go(): (Program, Int) = {
@@ -140,6 +139,9 @@ class ActiveLearning(p0: Problem, numNewExamples: Int = 20) {
 
     val validCandidates: List[Program] = candidates.filter(p=>isProgramValid(p, problem))
     require(validCandidates.size < candidates.size || candidates.isEmpty, s"${validCandidates.size}")
+
+    val inValidCandidates = candidates.diff(validCandidates)
+    assert(inValidCandidates.nonEmpty || candidates.isEmpty)
 
     if (validCandidates.size < minPrograms) {
       val synthesizer = SynthesisAllPrograms(problem, initConfigSpace = configSpace)

@@ -322,7 +322,10 @@ case class SyntaxConstraint() {
 
     /** Relations reserved for events, i.e., relation name with
      * prefix 'recv' or 'send', should appear in body once, positively. */
-    def isEventLiteral(lit: Literal): Boolean = lit.relation.name.startsWith("recv")
+    def isEventLiteral(lit: Literal): Boolean = {
+      lit.relation.name.startsWith("recv") ||
+        lit.relation.name.contains("packet_in")
+    }
     val hasNegEventRel: Boolean = negLits.exists(isEventLiteral)
 
     val redundantEventRel: Boolean = {

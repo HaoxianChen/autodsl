@@ -1,21 +1,21 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.Problem
+import synthesis.{Problem, Relation}
 import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 
 class DebloatingExperiment(maxExamples: Int =100, outDir: String = "results/debloat") extends Experiment {
   private val logger = Logger("Debloating")
-  def go(problem: Problem, repeats: Int = 1): Unit = {
+  def go(problem: Problem, staticConfigRelations: Set[Relation], repeats: Int = 1): Unit = {
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
-      debloat(problem)
+      debloat(problem, staticConfigRelations)
     }
   }
 
-  def debloat(problem: Problem): Unit = {
+  def debloat(problem: Problem, staticConfigRelations: Set[Relation]): Unit = {
     val t1 = System.nanoTime
-    val learner = new ActiveLearning(problem, maxExamples)
+    val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
     val (program, nQueries) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d

@@ -2,23 +2,23 @@ package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
 import synthesis.activelearning.{ActiveLearning, ExampleInstance}
-import synthesis.{Problem, Program}
+import synthesis.{Problem, Program, Relation}
 
 import scala.util.Random
 
 class ActiveLearningExperiment(maxExamples: Int = 400, outDir: String = "results/active-learning") extends Experiment {
   private val logger = Logger("Experiment")
 
-  def go(problem: Problem, nDrop: Int ,repeats: Int = 1): Unit = {
+  def go(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int ,repeats: Int = 1): Unit = {
     // Randomly drop one example
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
       // randomDrop(problem, nDrop=1)
-      randomDrop(problem, nDrop=nDrop)
+      randomDrop(problem, staticConfigRelations, nDrop=nDrop)
     }
   }
 
-  def randomDrop(problem: Problem, nDrop: Int): (Program, Int, Double) = {
+  def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int): (Program, Int, Double) = {
     logger.info(s"Randomly drop ${nDrop} examples.")
     val examples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
     val n_remains = examples.size - nDrop
@@ -30,7 +30,7 @@ class ActiveLearningExperiment(maxExamples: Int = 400, outDir: String = "results
     val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
 
     val t1 = System.nanoTime
-    val learner = new ActiveLearning(newProblem, maxExamples)
+    val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples)
     val (program, nQueries) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d

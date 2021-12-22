@@ -1,7 +1,8 @@
 package synthesis.util
 
-import java.nio.file.{Path, Paths}
+import synthesis.util.ExampleConvertor.staticRelationFile
 
+import java.nio.file.{Path, Paths}
 import synthesis.util.Misc.writeFile
 
 /** Example Convertor
@@ -35,6 +36,10 @@ class ExampleConvertor {
       }
     }
 
+    // Write static config relations to file
+    val staticConfigRelNames: Set[String] = staticConfigs.map(_._1).toSet
+    writeFile(staticConfigRelNames.mkString("\n"),Paths.get(dir,staticRelationFile))
+
     // Write examples to files
     val examplesByRel: Map[String, List[List[String]]] = examplesWithId.flatten.groupBy(_._1).map {
       case (name, tupleList) => name -> tupleList.map(_._2)
@@ -49,4 +54,8 @@ class ExampleConvertor {
       }
     }
   }
+}
+
+object ExampleConvertor {
+  val staticRelationFile: String = "static_relations.log"
 }

@@ -3,8 +3,8 @@ package synthesis.activelearning
 import synthesis.{Constant, NumberType, Problem, Relation, Tuple, Type}
 
 class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
+  private val instanceIdType: Type = ExampleTranslator.instanceIdType
 
-  val instanceIdType: Type = NumberType(s"InstanceId")
   private val instanceIdIndices: Map[Relation, Int] = {
     val allRelations: Set[Relation] = inputRels++outputRels
     def getInx(relation: Relation): Int = {
@@ -62,3 +62,6 @@ class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
   }
 }
 
+object ExampleTranslator {
+  val instanceIdType: Type = NumberType(s"InstanceId")
+}

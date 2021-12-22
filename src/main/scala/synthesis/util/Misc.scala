@@ -70,6 +70,12 @@ object Misc {
     (problem.inputRels ++ problem.outputRels).foldLeft(p1)(relToProblem)
   }
 
+  def readStaticRelations(dir: String): Set[Relation] = {
+    val problem = readProblem(dir)
+    val line: String = fileToString(Paths.get(dir,ExampleConvertor.staticRelationFile).toString)
+    val staticRelationNames: Set[String] = line.split("\n").toSet
+    problem.inputRels.filter(rel => staticRelationNames.contains(rel.name))
+  }
   def readOracle(dir: String, problemName: String): Option[String] = {
     val solutionFile: Path = Paths.get(dir, s"$problemName-sol.dl")
     if (Files.exists(solutionFile)) {

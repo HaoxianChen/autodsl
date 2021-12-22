@@ -5,9 +5,23 @@ import synthesis.rulebuilder.ConstantBuilder
 
 import scala.util.Random
 
-class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, minConstantSize: Int = 3) {
+class ExampleGenerator(inputRels: Set[Relation], staticConfigRelations: Set[Relation],
+                       edb: Examples, idb: Examples, minConstantSize: Int = 3) {
   private val exampleTranslator = new ExampleTranslator(inputRels, Set())
   private val constantMap = buildConstantMap()
+
+  private val staticConfigTuples: Set[Tuple] = {
+    if (staticConfigRelations.isEmpty) {
+      Set()
+    }
+    else {
+      require(staticConfigRelations.forall(_.signature.last==ExampleTranslator.instanceIdType))
+      val allStaticTuples = edb.toTuples().filter(t => staticConfigRelations.contains(t.relation))
+      // Keep only one instance
+      val groupByInstanceId = allStaticTuples.groupBy(_.fields.last.name.toInt)
+      groupByInstanceId.values.head
+    }
+  }
   private val tupleSizes: Map[Relation, (Int, Int)] = edb.elems map {
     /** Count the number of tuples per relation per instance */
     case (rel, tuples) =>
@@ -16,7 +30,8 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
         case (_, ts) => ts.size
       }
       // rel -> (sizes.min, sizes.max)
-      rel -> (0, sizes.max)
+      val maxSize: Int = if (sizes.nonEmpty) sizes.max else 0
+      rel -> (0, maxSize)
   }
 
   private val random: Random = new Random()
@@ -65,7 +80,9 @@ class ExampleGenerator(inputRels: Set[Relation], edb: Examples, idb: Examples, m
 
   def generateRandomInputs(numNewExamples: Int): ExamplePool = {
     def genNewInstance(id: Int): TupleInstance = {
-      val tuples = inputRels.flatMap(rel => genNewTuples(rel, id))
+      // val tuples = inputRels.flatMap(rel => genNewTuples(rel, id))
+      val newTuples: Set[Tuple] = inputRels.diff(staticConfigRelations).flatMap(rel => genNewTuples(rel, id))
+      val tuples: Set[Tuple] = newTuples ++ staticConfigTuples.map(t => exampleTranslator.assignTupleId(t,id))
       TupleInstance(tuples, id)
     }
 
