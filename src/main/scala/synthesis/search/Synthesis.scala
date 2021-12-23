@@ -20,25 +20,34 @@ abstract class Synthesis(problem: Problem) {
 }
 
 object Synthesis {
-  def apply(problem: Problem): Synthesis = problem.domain match {
-    case "SDN" => SynthesisAllPrograms(problem)
+  def apply(problem: Problem,
+            initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
+           ): Synthesis = problem.domain match {
+    case "SDN" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
     case "routing" => new ProgramSynthesizer(problem)
-    case "NIB" => SynthesisAllPrograms(problem)
-    case "sensor" => SynthesisAllPrograms(problem)
+    case "NIB" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    case "sensor" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
     case "consensus" => {
-      SynthesisAllPrograms(problem)
+      SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+      // new ProgramSynthesizer(problem)
     }
+    case "consensusagg" => new ProgramSynthesizer(problem)
     case "consensusbarrier" => {
       /** Use the count aggregator */
-      val preprocessors: Set[InputAggregator] = {
-        AggCount.allInstances(problem) ++ AggMax.allInstances(problem)
-        // AggMax.allInstances(problem)
-      }
+      val preprocessors: Set[InputAggregator] = getPreprocessors(problem)
       val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
-      SynthesisAllPrograms(newProblem)
+      SynthesisAllPrograms(newProblem, initConfigSpace = initConfigSpace)
     }
-    case "overlay" => SynthesisAllPrograms(problem)
-    case "routingProto" => SynthesisAllPrograms(problem)
+    case "overlay" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    case "routingProto" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
     case _ => ???
+  }
+
+  def getPreprocessors(problem: Problem): Set[InputAggregator] = problem.domain match {
+    case "consensusbarrier" => {
+      // AggCount.allInstances(problem) ++ AggMax.allInstances(problem)
+      AggCount.allInstances(problem)
+    }
+    case _ => Set()
   }
 }

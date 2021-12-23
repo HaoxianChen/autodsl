@@ -65,7 +65,7 @@ class ExampleGenerator(inputRels: Set[Relation], staticConfigRelations: Set[Rela
     val edbMap = ConstantBuilder.getAllConstantPool(edb, idb)
 
     val allTypes: Set[Type] = inputRels.flatMap(_.signature).filterNot(_.name == s"InstanceId")
-    require(allTypes == edbMap.keySet)
+    require(allTypes == edbMap.keySet, s"$allTypes, ${edbMap.keySet}")
 
     edbMap map {
       case (_type, constantSet) => {_type -> expandConstantSet(constantSet)}

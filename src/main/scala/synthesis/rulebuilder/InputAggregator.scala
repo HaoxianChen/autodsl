@@ -15,7 +15,7 @@ abstract class InputAggregator() extends Aggregator {
     val tuples = problem.edb.toInstances(aggRel)
     val tupleCounts = tuples.map(_.tuples.size)
     val minTuplesPerInstance = 3
-    if (tupleCounts.max >= minTuplesPerInstance) {
+    if (tuples.nonEmpty && tupleCounts.max >= minTuplesPerInstance) {
       val p1 = problem.addType(getOutputType)
       val evaluator = Evaluator(p1)
       val newEdb = evaluator.eval(Program(preProcessRules))

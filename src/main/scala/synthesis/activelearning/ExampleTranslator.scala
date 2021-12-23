@@ -26,7 +26,10 @@ class ExampleTranslator(inputRels: Set[Relation], outputRels: Set[Relation])  {
     problem.addEdb(nextExample.input).addIdb(relevantIdb)
   }
 
-  def getInstanceIdIndex(relation: Relation): Int = instanceIdIndices(relation)
+  def getInstanceIdIndex(relation: Relation): Int = {
+    require(instanceIdIndices.contains(relation), s"${relation}")
+    instanceIdIndices(relation)
+  }
 
   def assignInstanceId(tupleInstance: TupleInstance, id: Int) :TupleInstance = {
     val tuples = tupleInstance.tuples

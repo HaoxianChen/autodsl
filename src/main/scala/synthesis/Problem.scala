@@ -30,17 +30,22 @@ case class Examples(elems: Map[Relation, Set[List[Constant]]]) {
   }
 
   def toInstances(rel: Relation): Set[TupleInstance] = {
-    val tuples = elems(rel)
-    val instanceIdType: Type = NumberType("InstanceId")
-    val idx: Int = rel.signature.indexOf(instanceIdType)
-    var allInstances: Set[TupleInstance] = Set()
-    for ((i, tupleGroup) <- tuples.groupBy(t => t(idx))) {
-      val _tupleGroup: Set[Tuple] = tupleGroup.map(t => Tuple(rel, t))
-      val _i = i.name.toInt
-      val instance = activelearning.TupleInstance(_tupleGroup, _i)
-      allInstances += instance
+    if (elems.contains(rel)) {
+      val tuples = elems(rel)
+      val instanceIdType: Type = NumberType("InstanceId")
+      val idx: Int = rel.signature.indexOf(instanceIdType)
+      var allInstances: Set[TupleInstance] = Set()
+      for ((i, tupleGroup) <- tuples.groupBy(t => t(idx))) {
+        val _tupleGroup: Set[Tuple] = tupleGroup.map(t => Tuple(rel, t))
+        val _i = i.name.toInt
+        val instance = activelearning.TupleInstance(_tupleGroup, _i)
+        allInstances += instance
+      }
+      allInstances
     }
-    allInstances
+    else {
+      Set()
+    }
   }
 
   def addInstance(tupleInstance: TupleInstance): Examples = ???

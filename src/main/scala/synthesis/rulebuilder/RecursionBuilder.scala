@@ -139,9 +139,16 @@ class FunctorBuilder(inputRels: Set[Relation], outputRels: Set[Relation],
     val filterRules = if (rule.isHeadBounded()) addFilter(rule) else Set()
     // simpleRules ++ functorRules
     val rules = simpleRules ++ functorRules ++ filterRules
-    require(rules.flatMap(_.body).forall(lit => inputRels.contains(lit.relation)
-      || outputRels.contains(lit.relation)
-      || lit.isInstanceOf[FunctorLiteral]))
+    def conditions : Literal => Boolean = {lit => inputRels.contains(lit.relation) ||
+      outputRels.contains(lit.relation) ||
+      lit.isInstanceOf[FunctorLiteral] ||
+      lit.relation == rule.head.relation
+    }
+    val invalidRules = rules.filterNot(_.body.forall(conditions))
+    // require(rules.flatMap(_.body).forall(lit => inputRels.contains(lit.relation)
+    //   || outputRels.contains(lit.relation)
+    //   || lit.isInstanceOf[FunctorLiteral]), s"${invalidRules}")
+    assert(invalidRules.isEmpty, s"${outputRels}\n${invalidRules}")
     rules
   }
 }

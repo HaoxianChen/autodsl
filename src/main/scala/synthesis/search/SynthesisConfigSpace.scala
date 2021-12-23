@@ -55,6 +55,9 @@ object SynthesisConfigSpace {
         val functors: Set[AbstractFunctorSpec] = functorConstructors.flatMap(f => f(problem))
         _getConfigSpace(maxRelCount=1, recursion = false, functors=functors, inputAggregators=inputAggregators)
       }
+      case "consensusagg" => {
+        _getConfigSpace(maxRelCount = 1, recursion = false)
+      }
       case "consensusbarrier" => {
         val functorConstructors: Set[Problem => Set[AbstractFunctorSpec]] = Set(
           Quorum.allInstances

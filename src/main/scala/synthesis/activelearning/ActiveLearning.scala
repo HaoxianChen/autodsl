@@ -2,7 +2,8 @@ package synthesis.activelearning
 
 import com.typesafe.scalalogging.Logger
 import synthesis._
-import synthesis.search.{SynthesisAllPrograms, SynthesisConfigSpace}
+import synthesis.rulebuilder.InputAggregator
+import synthesis.search.{Synthesis, SynthesisAllPrograms, SynthesisConfigSpace}
 
 import scala.math.log
 
@@ -61,6 +62,14 @@ case class ExamplePool(instances: Set[TupleInstance]) {
   }
 }
 
+case class EvaluatorWrapper (problem: Problem)  {
+  private val preprocessors: Set[InputAggregator] = Synthesis.getPreprocessors(problem)
+  private val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
+  private val evaluator = Evaluator(newProblem)
+  def eval(program: Program): Set[Tuple] = evaluator.eval(program)
+  def eval(program: Program, outRel: Relation): Set[Tuple] = evaluator.eval(program).filter(_.relation==outRel)
+  def eval(programSpec: String, outRels: Set[Relation]): Set[Tuple] = evaluator.eval(programSpec, outRels)
+}
 
 class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20) {
   private val logger = Logger("Active-learning")
@@ -124,10 +133,10 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   }
 
   def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 20): List[Program] = {
-    val evaluator = Evaluator(problem)
+    val evaluator = EvaluatorWrapper(problem)
 
     def isProgramValid(program: Program, problem: Problem): Boolean = {
-      val idb = evaluator.eval(program)
+      val idb = evaluator.eval(program,outRel)
       val refIdb = problem.idb.toTuples()
 
       val allOutRels = program.rules.map(_.head.relation)
@@ -144,7 +153,8 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     assert(inValidCandidates.nonEmpty || candidates.isEmpty)
 
     if (validCandidates.size < minPrograms) {
-      val synthesizer = SynthesisAllPrograms(problem, initConfigSpace = configSpace)
+      // val synthesizer = SynthesisAllPrograms(problem, initConfigSpace = configSpace)
+      val synthesizer = Synthesis(problem, initConfigSpace = configSpace)
       val newCandidates = synthesizer.go()(outRel)
       configSpace = synthesizer.getConfigSpace
       require(newCandidates.forall(p=>isProgramValid(p, problem)))
@@ -155,7 +165,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
   }
 
-  def differentiate(candidates: List[Program]): Option[TupleInstance] = {
+  def differentiate(candidates: List[Program], outRel: Relation): Option[TupleInstance] = {
     require(candidates.size > 1)
     def entropy(tuples: List[TupleInstance]): Double = {
       val counts: List[Int] = tuples.groupBy(identity).map{
@@ -166,7 +176,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
     assert(edbPool.instances.size == numNewExamples)
 
-    val evalResults: Set[(TupleInstance, List[TupleInstance])] = evalCandidatePrograms(edbPool, candidates)
+    val evalResults: Set[(TupleInstance, List[TupleInstance])] = evalCandidatePrograms(edbPool, candidates, outRel)
     val edbEntropy: Set[(TupleInstance, Double)] = evalResults.map {
       case (t1, ts) => (t1, entropy(ts))
     }
@@ -179,11 +189,13 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     else None
   }
 
-  def evalCandidatePrograms(edbPool: ExamplePool, candidates: List[Program]): Set[(TupleInstance, List[TupleInstance])] = {
+  def evalCandidatePrograms(edbPool: ExamplePool, candidates: List[Program], outRel:Relation): Set[(TupleInstance, List[TupleInstance])] = {
     val newProblem = p0.copy(edb = edbPool.toExampleMap, idb=Examples())
     def evalProgram(program: Program): Map[Int, TupleInstance] = {
-      val evaluator = Evaluator(newProblem)
-      val idb = evaluator.eval(program)
+      // val evaluator = Evaluator(newProblem)
+      val evaluator = EvaluatorWrapper(newProblem)
+      // val idb = evaluator.eval(program)
+      val idb = evaluator.eval(program,outRel = outRel)
       idb.groupBy(exampleTranslator.getInstanceId) map {
         case (i,ts) => i -> TupleInstance(ts, i)
       }
@@ -200,13 +212,14 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
 
   def disambiguate(candidates: List[Program], outRel: Relation): Option[ExampleInstance] = {
     require(candidates.size > 1)
-    val nextEdb = differentiate(candidates)
+    val nextEdb = differentiate(candidates,outRel)
     if (nextEdb.isDefined) {
       val edb = nextEdb.get
       val edbPool = ExamplePool(Set(edb))
       val problem = p0.copy(edb=edbPool.toExampleMap)
 
-      val evaluator = Evaluator(problem)
+      // val evaluator = Evaluator(problem)
+      val evaluator = EvaluatorWrapper(problem)
       // val nextIdb = evaluator.eval(oracle, Set(outRel))
       val nextIdb = evaluator.eval(oracle, p0.outputRels)
 

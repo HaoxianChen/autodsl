@@ -1,6 +1,8 @@
 package synthesis.rulebuilder
 
 import synthesis._
+import synthesis.activelearning.ExampleTranslator
+import synthesis.rulebuilder.OutputAggregator.{allAggIndices, allIndexIndices}
 
 case class AggregateLiteral(relation: Relation, fields: List[Parameter], aggregator: Aggregator, indices: List[Int], outputIndex: Int) extends Literal {
   require(relation.signature.size == fields.size)
@@ -49,6 +51,10 @@ abstract class Aggregator {
   def name: String
   def relation: Relation
   def indices: List[Int]
+
+  require(relation.signature.contains(ExampleTranslator.instanceIdType))
+  val indexTypes: List[Type] = indices.map(i=>relation.signature(i))
+  require(indexTypes.contains(ExampleTranslator.instanceIdType))
 
   def literalToString(literal: AggregateLiteral): String
 
@@ -149,20 +155,7 @@ object ArgMin {
   }
 
   def _allInstancesByRel(relation: Relation): Set[ArgMin] = {
-    val allAggIndices: Set[Int] = relation.signature.zipWithIndex.flatMap {
-      case (t, i) => if (t.isInstanceOf[NumberType]) Some(i) else None
-    }.toSet
-    def _allIndexIndices(relation: Relation, aggIndex: Int, nIndices: Int): Set[List[Int]] = {
-      val n = relation.signature.size
-      val remainingIndices: List[Int] = (0 until n).filter(i => i!=aggIndex).toList
-      assert(remainingIndices.size == n-1)
-      remainingIndices.combinations(nIndices).toSet
-    }
-    def allIndexIndices(relation: Relation, aggIndex: Int): Set[List[Int]] = {
-      val n = relation.signature.size
-      (1 to n-2).flatMap(i => _allIndexIndices(relation, aggIndex, i)).toSet
-    }
-    val allAggregators =  allAggIndices.flatMap(i => {
+    val allAggregators =  allAggIndices(relation).flatMap(i => {
       val allIndices = allIndexIndices(relation, i)
       allIndices.map(ix => ArgMin(relation, ix, i))
     })
@@ -197,23 +190,40 @@ object ArgMax {
   }
 
   def _allInstancesByRel(relation: Relation): Set[ArgMax] = {
-    val allAggIndices: Set[Int] = relation.signature.zipWithIndex.flatMap {
-      case (t, i) => if (t.isInstanceOf[NumberType]) Some(i) else None
-    }.toSet
-    def _allIndexIndices(relation: Relation, aggIndex: Int, nIndices: Int): Set[List[Int]] = {
-      val n = relation.signature.size
-      val remainingIndices: List[Int] = (0 until n).filter(i => i!=aggIndex).toList
-      assert(remainingIndices.size == n-1)
-      remainingIndices.combinations(nIndices).toSet
-    }
-    def allIndexIndices(relation: Relation, aggIndex: Int): Set[List[Int]] = {
-      val n = relation.signature.size
-      (1 to n-2).flatMap(i => _allIndexIndices(relation, aggIndex, i)).toSet
-    }
-    val allAggregators =  allAggIndices.flatMap(i => {
+    val allAggregators =  allAggIndices(relation).flatMap(i => {
       val allIndices = allIndexIndices(relation, i)
       allIndices.map(ix => ArgMax(relation, ix, i))
     })
     allAggregators
+  }
+}
+
+object OutputAggregator {
+  private val instanceIdType = ExampleTranslator.instanceIdType
+  def getInstanceIdIndex(relation: Relation): Int = relation.signature.indexOf(instanceIdType)
+  def allAggIndices(relation: Relation): Set[Int] = {
+    relation.signature.zipWithIndex.flatMap {
+      case (t, i) => if (t.isInstanceOf[NumberType] && t != instanceIdType) Some(i) else None
+    }.toSet
+  }
+  def _allIndexIndices(relation: Relation, aggIndex: Int, nIndices: Int): Set[List[Int]] = {
+    require(nIndices>=1)
+    val n = relation.signature.size
+    require(n>=2)
+    val instanceIdIndex: Int = getInstanceIdIndex(relation)
+    require(instanceIdIndex != aggIndex)
+
+    val remainingIndices: List[Int] = (0 until n).
+          filter(i => i!=aggIndex).
+          filter(i => i !=instanceIdIndex).
+          toList
+    assert(remainingIndices.size == n-2, s"$relation, $aggIndex, $instanceIdIndex, ${remainingIndices}")
+    val comb = remainingIndices.combinations(nIndices-1)
+    // Add instanceId to each combination
+    comb.map(l => l :+ instanceIdIndex).toSet
+  }
+  def allIndexIndices(relation: Relation, aggIndex: Int): Set[List[Int]] = {
+    val n = relation.signature.size
+    (1 to n-2).flatMap(i => _allIndexIndices(relation, aggIndex, i)).toSet
   }
 }

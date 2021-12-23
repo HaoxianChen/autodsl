@@ -35,7 +35,12 @@ class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[OutputAggregator
   }
 
   def aggregateOutput(program: Program): Set[Program] = {
-    aggregators.map(agg => agg.getAggProgram(program))
+    // aggregators.map(agg => agg.getAggProgram(program))
+    val outRels: Set[Relation] = program.rules.map(_.head.relation)
+    val applicableAggregators: Set[OutputAggregator] = aggregators.filter(
+      agg => outRels.contains(agg.relation)
+    )
+    applicableAggregators.map(agg => agg.getAggProgram(program))
   }
 
   def isAggregateRule(rule: Rule): Boolean = {
@@ -52,6 +57,10 @@ object ProgramBuilder {
     problem.domain match {
       case "routing" => {
         val aggregators: Set[OutputAggregator] = ArgMin.allInstances(problem) ++ ArgMax.allInstances(problem)
+        new ProgramBuilder(ruleBuilder, aggregators)
+      }
+      case "consensusagg" => {
+        val aggregators: Set[OutputAggregator] = ArgMax.allInstances(problem)
         new ProgramBuilder(ruleBuilder, aggregators)
       }
       case "NIB" => {

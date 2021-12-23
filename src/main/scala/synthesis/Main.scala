@@ -116,15 +116,7 @@ object Main extends App {
 
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
-    val allProblems = List("forwarding/learning-switch",
-      "firewall/stateless-firewall",
-      "firewall/stateful-firewall",
-      "nib/reachable",
-      "routing/shortest-path",
-      "wireless/dsr",
-      "consensus/2pc-no-timer",
-      "consensus/paxos/paxos-value"
-    ).map(s => Paths.get(benchmarkDir, s))
+    val allProblems = SynthesisExperiment.regressionTests.map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- allProblems) {
       println(problemFile)
       val problem = Misc.readProblem(problemFile.toString)

@@ -90,7 +90,12 @@ object ConstantBuilder {
     val allConstants = filterResponsiveExamples(edb, idb)
 
     val excludeTypes: Set[Type] = Set(NumberType("InstanceId"))
-    val constantMap: Map[Type, Set[Constant]] = allConstants.filterNot(c => excludeTypes.contains(c._type)).groupBy(_._type)
+    val inRels: Set[Relation] = edb.elems.keySet
+    val includeTypes: Set[Type] = inRels.flatMap(_.signature)
+    val constantMap: Map[Type, Set[Constant]] = allConstants.
+      filterNot(c => excludeTypes.contains(c._type)).
+      filter(c => includeTypes.contains(c._type)).
+      groupBy(_._type)
     constantMap
   }
 }

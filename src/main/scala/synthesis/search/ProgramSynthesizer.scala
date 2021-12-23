@@ -27,11 +27,20 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     var exploredPrograms: Set[Program] = Set()
     var programPool: mutable.PriorityQueue[ScoredProgram] = new mutable.PriorityQueue()
 
+    val refRel: Set[Relation] = idb.map(_.relation)
+
     // init program Pool with the most general programs
-    val mostGeneralPrograms = programBuilder.mostGeneralPrograms()
+    val mostGeneralPrograms = programBuilder.mostGeneralPrograms().filter(
+      p => p.rules.forall(r => refRel.contains(r.head.relation))
+    )
     programPool ++= mostGeneralPrograms.map(p => evalProgram(p, idb))
 
-    while (validPrograms.isEmpty) {
+    var extraIters: Int = 0
+    val maxExtraIters: Int = 10
+    val maxSolutionSize: Int = 10
+    // while (validPrograms.isEmpty) {
+    assert(programPool.nonEmpty, s"$idb")
+    while (programPool.nonEmpty && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
       val baseProgram: ScoredProgram = programPool.dequeue()
 
       val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, idb)
@@ -39,7 +48,9 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
         Misc.sampleSet(allRefinedPrograms, maxBranching)
       } else allRefinedPrograms
 
-      val candidatePrograms: Set[ScoredProgram] = refinedPrograms.diff(exploredPrograms).map(p => evalProgram(p, idb, Some(baseProgram)))
+      val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
+        diff(exploredPrograms).
+        map(p => evalProgram(p, idb, Some(baseProgram)))
 
       validPrograms ++= candidatePrograms.filter(isProgramValid)
       exploredPrograms ++= refinedPrograms
@@ -49,9 +60,15 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       val pnext = toRefine.diff(staled)
       programPool ++= pnext
       if (refinedPrograms.size < allRefinedPrograms.size) programPool += baseProgram
+      if (validPrograms.nonEmpty) {
+        extraIters += 1
+      }
     }
-    /** todo: order the valid programs */
-    validPrograms.toList.map(_.program)
+
+    if (programPool.isEmpty) logger.debug(s"Runs out of candidate programs. Explored ${exploredPrograms.size}.")
+    assert(validPrograms.nonEmpty)
+    /** todo: better order the valid programs */
+    validPrograms.toList.map(_.program).sortBy(_.rules.size)
   }
 
   def refineProgram(scoredProgram: ScoredProgram, idb: Set[Tuple]): Set[Program] = {
@@ -132,14 +149,14 @@ case class ScoredProgram(program: Program, idb: Set[Tuple], precision: Double, r
     if (this.completeness < that.completeness) -1
     else if (this.completeness > that.completeness) 1
 
+    else if (this.recall < that.recall) -1
+    else if (this.recall > that.recall) 1
+
     else if (this.score < that.score) -1
     else if (this.score > that.score) 1
 
     else if (this.program > that.program) -1
     else if (this.program < that.program) 1
-
-    else if (this.recall < that.recall) -1
-    else if (this.recall > that.recall) 1
 
     else 0
   }
@@ -233,7 +250,7 @@ case class PartialRelation(relation: Relation, refRel: Relation, indices: List[I
   require(indices.size == relation.signature.size)
 
   def getPartialIdb(tuple: Tuple): Tuple = {
-    require(tuple.relation == this.refRel)
+    require(tuple.relation == this.refRel, s"${tuple.relation} ${this.refRel}")
     val newFields = this.indices.map (i => tuple.fields(i))
     Tuple(relation, newFields)
   }
