@@ -279,6 +279,7 @@ object SynthesisExperiment {
     "consensus/paxos/paxos-quorum",
     // "consensus/paxos/paxos-value",
     "consensus/paxos/paxos-maxballot",
+    "consensus/paxos/paxos-decide",
     // routing
     "routing/shortest-path",
     "routing/least-congestion",
@@ -328,11 +329,11 @@ object SynthesisExperiment {
     "consensus/paxos/paxos-decide",
     // routing
     "routing/shortest-path",
-    // "routing/least-congestion",
-    // "routing/ospf-synnet",
-    // "routing/bgp",
-    // "routing/tree",
-    // "routing/min-admin",
+    "routing/least-congestion",
+    "routing/ospf-synnet",
+    "routing/bgp",
+    "routing/tree",
+    "routing/min-admin",
     "routing/rip",
     // Sensor network
     "sensor/evidence",
