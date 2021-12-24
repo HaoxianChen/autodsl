@@ -1,8 +1,8 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.experiment.Experiment.allProblemDirStr
-import synthesis.{Problem, Program, Relation}
+import synthesis.experiment.Experiment.{allProblemDirStr, checkSolution}
+import synthesis.{Evaluator, Problem, Program, Relation, Rule}
 import synthesis.search.{FaconSynthesizer, Synthesis}
 import synthesis.util.Misc
 
@@ -28,13 +28,27 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthe
         val duration = (System.nanoTime - t1) / 1e9d
         logger.info(s"Finished in ${duration}s")
         assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
-        writeResults(problem, programs, duration.toInt)
+        val isCorrect: Boolean = checkSolution(problemFile.toString, getSolution(programs))
+        if (!isCorrect) {
+          logger.debug(s"Incorrect Solution: ${getSolutionFile(problem)}")
+        }
+        writeResults(problem, programs, duration.toInt, isCorrect)
       }
       else {
         logger.info(s"${problem.name} result exists. Skip.")
       }
+
     }
     generateTable()
+    // checkResultCorrectness()
+  }
+
+  def getSolution(programs: Map[Relation, List[Program]]): Program = {
+    var _rules: Set[Rule] = Set()
+    for ((rel,ps)<-programs) {
+      _rules ++= ps.head.rules
+    }
+    Program(_rules)
   }
 
   def generateTable(): Unit = {
@@ -53,7 +67,7 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthe
     Misc.writeFile(fileStr, outFile)
   }
 
-  def writeResults(problem: Problem, programs: Map[Relation, List[Program]], duration: Int): Unit = {
+  def writeResults(problem: Problem, programs: Map[Relation, List[Program]], duration: Int, isCorrect: Boolean): Unit = {
     /*** Gather problem specs */
     val nInputTuples: Int = problem.edb.toTuples().size
     val nOutputTuples: Int =  problem.idb.toTuples().size
@@ -79,12 +93,21 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthe
       "# rules literals variables \n" +
       "# examples(instances in out rows) \n" +
       "# time\n"
+
     val fields: Seq[Any] = Seq(problem.domain, problem.name, s"", s"", s"") ++
       Seq(nInputRels, nOutputRels) ++
       Seq(ruleCounts, literalCounts, fieldCounts) ++
       Seq(problem.getNumExampleInstances, nInputTuples, nOutputTuples, nTotalTuples) ++
       Seq(duration)
     fileStr += fields.mkString("\t") + "\n\n"
+
+    fileStr += s"correctness:"
+    if (isCorrect) {
+      fileStr += s"1\n"
+    }
+    else {
+      fileStr += s"0\n"
+    }
 
     fileStr += s"${problem.name}\n"
     fileStr += s"$nTotal Relations ($nInputRels, $nOutputRels)\n"
@@ -99,6 +122,11 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthe
     fileStr += s"sig:${getProblemSignature(problem)}\n"
     Misc.makeDir(getOutFile(problem).getParent)
     Misc.writeFile(fileStr, getOutFile(problem))
+
+    /** Write solution to file */
+    val evaluator = Evaluator(problem)
+    val pStr: String = evaluator.getSpecString(getSolution(programs))
+    Misc.writeFile(pStr, getSolutionFile(problem))
   }
 }
 
@@ -196,10 +224,14 @@ class AllSynthesisExperiments(benchmarkDir: String) {
       val problem: Problem = Misc.readProblem(problemDir.toString)
 
       // Read netspec's log file
-      val netspecStat: List[String] = {
+      val (netspecStat, correctness): (List[String], String) = {
         val logfile: String = netspec.getOutFile(problem).toString
-        val statLine = Source.fromFile(logfile).getLines().toList(statLineNum)
-        statLine.split("\t").toList
+        val logLines: List[String] = Source.fromFile(logfile).getLines().toList
+        val statLine = logLines(statLineNum)
+        val _correctness: String = {
+          logLines.filter(_.startsWith(s"correctness")).head.split(s":").last
+        }
+        (statLine.split("\t").toList, _correctness)
       }
       assert(netspecStat.length==15)
       val names: List[String] = netspecStat.take(2)
@@ -219,8 +251,9 @@ class AllSynthesisExperiments(benchmarkDir: String) {
         }
         else "-"
       }
-      val allStats: List[String] = (names ++ List(recur,agg,_udf) ++ features) :+ netSpecTime :+ faconTime
-      assert(allStats.length==netspecStat.length+1)
+      val times: List[String] = List(netSpecTime, faconTime, s"", s"") // place holders for the other two tools
+      val allStats: List[String] = (names ++ List(recur,agg,_udf) ++ features ++ times)  :+ correctness
+      assert(allStats.length==netspecStat.length+4)
       allStats.mkString("\t")
     }
     val fileStr = stats.mkString("\n") + "\n"

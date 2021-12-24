@@ -108,8 +108,14 @@ case class Evaluator(problem: Problem) {
     Misc.writeFile(specStr, programPath)
 
     // Write Input examples
-    for (rel <- edb.elems.keys) {
-      val str = edb.toFileStr(rel)
+    // for (rel <- edb.elems.keys) {
+    for (rel <- problem.inputRels) {
+      val str = if (edb.elems.contains(rel)) {
+         edb.toFileStr(rel)
+      }
+      else {
+        s""
+      }
       Misc.writeFile(str, Paths.get(dir.toString, s"${rel.name}.facts"))
     }
     programPath

@@ -68,7 +68,10 @@ case class EvaluatorWrapper (problem: Problem)  {
   private val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
   private val evaluator = Evaluator(newProblem)
   def eval(program: Program): Set[Tuple] = evaluator.eval(program)
-  def eval(program: Program, outRel: Relation): Set[Tuple] = evaluator.eval(program).filter(_.relation==outRel)
+  def eval(program: Program, outRel: Relation): Set[Tuple] = eval(program, Set(outRel))
+  def eval(program: Program, outRels: Set[Relation]): Set[Tuple] = evaluator.eval(program).filter(
+    t => outRels.contains(t.relation)
+  )
   def eval(programSpec: String, outRels: Set[Relation]): Set[Tuple] = evaluator.eval(programSpec, outRels)
 }
 
@@ -164,6 +167,14 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     else {
       validCandidates
     }
+  }
+
+  def differentiateFromOracle(solution: Program): Boolean = {
+    val newProblem = p0.copy(edb = edbPool.toExampleMap, idb=Examples())
+    val evaluator = EvaluatorWrapper(newProblem)
+    val idb = evaluator.eval(solution, newProblem.outputRels)
+    val refIdb = evaluator.eval(oracle, newProblem.outputRels)
+    idb==refIdb
   }
 
   def differentiate(candidates: List[Program], outRel: Relation): Option[TupleInstance] = {

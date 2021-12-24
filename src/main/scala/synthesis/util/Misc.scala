@@ -56,7 +56,7 @@ object Misc {
       .rename(problemName)
 
     // Read oracle program
-    val oracleSpec = readOracle(dir, problemName)
+    val oracleSpec = readDatalogProgram(dir, problemName)
     val p1 = if(oracleSpec.isDefined) problem.addOracleSpec(oracleSpec.get) else problem
 
     // Read Input Output examples
@@ -72,11 +72,17 @@ object Misc {
 
   def readStaticRelations(dir: String): Set[Relation] = {
     val problem = readProblem(dir)
-    val line: String = fileToString(Paths.get(dir,ExampleConvertor.staticRelationFile).toString)
-    val staticRelationNames: Set[String] = line.split("\n").toSet
-    problem.inputRels.filter(rel => staticRelationNames.contains(rel.name))
+    val configFile: Path = Paths.get(dir,ExampleConvertor.staticRelationFile)
+    if (configFile.toFile.exists()) {
+      val line: String = fileToString(configFile.toString)
+      val staticRelationNames: Set[String] = line.split("\n").toSet
+      problem.inputRels.filter(rel => staticRelationNames.contains(rel.name))
+    }
+    else {
+      Set()
+    }
   }
-  def readOracle(dir: String, problemName: String): Option[String] = {
+  def readDatalogProgram(dir: String, problemName: String): Option[String] = {
     val solutionFile: Path = Paths.get(dir, s"$problemName-sol.dl")
     if (Files.exists(solutionFile)) {
       Some(fileToString(solutionFile.toString))
