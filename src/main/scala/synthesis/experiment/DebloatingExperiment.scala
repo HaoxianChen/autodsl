@@ -4,7 +4,8 @@ import com.typesafe.scalalogging.Logger
 import synthesis.{Problem, Relation}
 import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 
-class DebloatingExperiment(maxExamples: Int =100, outDir: String = "results/debloat") extends Experiment {
+class DebloatingExperiment(maxExamples: Int =100, outDir: String = "results/debloat")
+    extends Experiment(outDir) {
   private val logger = Logger("Debloating")
   def go(problem: Problem, staticConfigRelations: Set[Relation], repeats: Int = 1): Unit = {
     for (i <- 1 to repeats) {

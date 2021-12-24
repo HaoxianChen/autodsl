@@ -6,7 +6,8 @@ import synthesis.{Problem, Program, Relation}
 
 import scala.util.Random
 
-class ActiveLearningExperiment(maxExamples: Int = 400, outDir: String = "results/active-learning") extends Experiment {
+class ActiveLearningExperiment(maxExamples: Int = 400, outDir: String = "results/active-learning")
+    extends Experiment(outDir) {
   private val logger = Logger("Experiment")
 
   def go(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int ,repeats: Int = 1): Unit = {

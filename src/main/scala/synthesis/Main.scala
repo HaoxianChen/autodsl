@@ -1,7 +1,7 @@
 package synthesis
 
 import synthesis.activelearning.ActiveLearning
-import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, DebloatingExperiment, FaconExperiment, SynthesisExperiment}
+import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, DebloatingExperiment, Experiment, FaconExperiment, SynthesisExperiment}
 
 import java.nio.file.Paths
 import synthesis.search.{FaconSynthesizer, Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
@@ -116,7 +116,7 @@ object Main extends App {
 
   else if (args(0)== "regression-test") {
     val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
-    val allProblems = SynthesisExperiment.regressionTests.map(s => Paths.get(benchmarkDir, s))
+    val allProblems = Experiment.regressionTests.map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- allProblems) {
       println(problemFile)
       val problem = Misc.readProblem(problemFile.toString)
