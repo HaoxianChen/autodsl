@@ -3,6 +3,7 @@ package synthesis.experiment
 import com.typesafe.scalalogging.Logger
 import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
+import synthesis.experiment.Experiment.{checkSolution, getSolution}
 import synthesis.util.Misc
 import synthesis.{Problem, Program, Relation, Tuple}
 
@@ -24,6 +25,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       val problem = Misc.readProblem(problemFile.toString)
       val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
       if (rc < repeats) {
+        logger.info(s"${problem.name}.")
         val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
         go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
       }
@@ -74,7 +76,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
     val t1 = System.nanoTime
     val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples)
-    val (program, nQueries) = learner.go()
+    val (program, nQueries, correctness) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")
@@ -85,7 +87,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       "numQuereis" -> nQueries,
       "time"->duration,
       "sig"->getProblemSignature(problem),
-      // "timestamp"->Misc.getTimeStamp,
+      "correctness"->correctness,
     ),
       program
     )

@@ -1,7 +1,7 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.experiment.Experiment.{allProblemDirStr, checkSolution}
+import synthesis.experiment.Experiment.{allProblemDirStr, checkSolution, getSolution}
 import synthesis.{Evaluator, Problem, Program, Relation, Rule}
 import synthesis.search.{FaconSynthesizer, Synthesis}
 import synthesis.util.Misc
@@ -41,14 +41,6 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthe
     }
     generateTable()
     // checkResultCorrectness()
-  }
-
-  def getSolution(programs: Map[Relation, List[Program]]): Program = {
-    var _rules: Set[Rule] = Set()
-    for ((rel,ps)<-programs) {
-      _rules ++= ps.head.rules
-    }
-    Program(_rules)
   }
 
   def generateTable(): Unit = {

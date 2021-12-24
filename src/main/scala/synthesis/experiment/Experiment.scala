@@ -1,6 +1,6 @@
 package synthesis.experiment
 
-import synthesis.{Problem, Program, Relation}
+import synthesis.{Problem, Program, Relation, Rule}
 import synthesis.activelearning.ActiveLearning
 import synthesis.util.Misc
 
@@ -169,10 +169,10 @@ object Experiment {
     // "sensor/temperature-report",
     // Wireless
     "wireless/aodv/aodv-route",
-    "wireless/aodv/aodv-route-source",
+    // "wireless/aodv/aodv-route-source",
     "wireless/aodv/aodv-rrep",
     "wireless/aodv/aodv-rreq",
-    "wireless/aodv/aodv-seq",
+    // "wireless/aodv/aodv-seq",
     // "wireless/dsdv",
     // "wireless/dsr"
   )
@@ -185,4 +185,13 @@ object Experiment {
     val learner = new ActiveLearning(problem, staticConfigRelations, numNewExamples = 400)
     learner.differentiateFromOracle(solution)
   }
+
+  def getSolution(programs: Map[Relation, List[Program]]): Program = {
+    var _rules: Set[Rule] = Set()
+    for ((rel,ps)<-programs) {
+      _rules ++= ps.head.rules
+    }
+    Program(_rules)
+  }
+
 }

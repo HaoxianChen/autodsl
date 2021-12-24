@@ -86,7 +86,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   private val oracle = p0.oracleSpec.get
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
-  def go(): (Program, Int) = {
+  def go(): (Program, Int, Boolean) = {
     /** Handle one output relation at a time */
     var solutions: Set[Program] = Set()
     var problem: Problem = p0
@@ -99,7 +99,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
     /** Merge solutions altogether */
     val finalSolution = solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
-    (finalSolution, nQueries)
+    (finalSolution, nQueries, differentiateFromOracle(finalSolution))
   }
 
   def interactiveLearning(outRel: Relation, initProblem: Problem): (Program, Set[ExampleInstance]) = {
