@@ -9,6 +9,8 @@ import synthesis.util.{ExampleConvertor, Misc}
 
 object Main extends App {
 
+  val benchmarkDir: String = s"/Users/hxc/projects/autodsl-bench"
+
   def displayResults(problem: Problem, programs: Map[Relation, List[Program]]) = {
 
     /*** Gather problem specs */
@@ -60,12 +62,16 @@ object Main extends App {
     displayResults(problem, programs)
   }
   else if (args(0) == "synth") {
-    val experiment = new SynthesisExperiment()
+    val experiment = new SynthesisExperiment(benchmarkDir)
     experiment.run(update=args(1).toBoolean)
   }
   else if (args(0) == "tab1") {
-    val experiment = new AllSynthesisExperiments()
+    val experiment = new AllSynthesisExperiments(benchmarkDir)
     experiment.run()
+  }
+  else if (args(0) == "tab2") {
+    val experiment = new ActiveLearningExperiment(benchmarkDir)
+    experiment.runAll(repeats = 1)
   }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
@@ -83,7 +89,8 @@ object Main extends App {
     val nDrop: Int = args(2).toInt
     val repeats: Int = args(3).toInt
     require(repeats <= 10)
-    val experiment = new ActiveLearningExperiment()
+    val benchmarkDir: String = s""
+    val experiment = new ActiveLearningExperiment(benchmarkDir)
     experiment.go(problem, staticConfigRelations, nDrop=nDrop, repeats=repeats)
   }
   else if (args(0) == "debloat") {
@@ -95,7 +102,7 @@ object Main extends App {
     experiment.go(problem, staticConfigRelations, repeats=repeats)
   }
   else if (args(0) == "facon") {
-    val experiment = new FaconExperiment()
+    val experiment = new FaconExperiment(benchmarkDir)
     experiment.run(update=false)
   }
   else if (args(0) == "foil") {

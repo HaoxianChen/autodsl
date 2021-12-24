@@ -14,6 +14,7 @@ object TupleInstance {
 case class ExampleInstance(input: Set[Tuple], output: Set[Tuple], instanceId: Int) {
   def nonEmpty: Boolean = input.nonEmpty
   def getConstants: Set[Constant] = (input++output).flatMap(_.fields)
+  def outRels: Set[Relation] = output.map(_.relation)
 }
 object ExampleInstance{
   def apply(instanceId: Int): ExampleInstance = new ExampleInstance(Set(), Set(), instanceId)

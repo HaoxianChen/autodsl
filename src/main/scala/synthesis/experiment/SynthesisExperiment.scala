@@ -10,8 +10,7 @@ import java.nio.file.{Path, Paths}
 import scala.io.Source
 
 
-class SynthesisExperiment(benchmarkDir: String = "/Users/hxc/projects/autodsl-bench",
-                          outDir: String = "results/synthesis",
+class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthesis",
                          ) extends Experiment(outDir) {
   private val logger = Logger("Synthesis")
   def getBenchmarkDir = benchmarkDir
@@ -52,25 +51,6 @@ class SynthesisExperiment(benchmarkDir: String = "/Users/hxc/projects/autodsl-be
     val fileStr = stats.mkString("\n") + "\n"
     val outFile: Path = Paths.get(outDir, s"all.log")
     Misc.writeFile(fileStr, outFile)
-  }
-
-  def isResultExist(problem: Problem): Boolean = {
-    val outFile: Path = getOutFile(problem)
-    if (outFile.toFile.exists()) {
-      // Read and compare the problem signature
-      val sigLines  = Source.fromFile(outFile.toFile).getLines().filter(_.startsWith(s"sig:")).toList
-      if (sigLines.nonEmpty) {
-        assert(sigLines.size==1)
-        val sig = sigLines.head.split(s":")(1).trim().toInt
-        sig == getProblemSignature(problem)
-      }
-      else {
-        false
-      }
-    }
-    else {
-      false
-    }
   }
 
   def writeResults(problem: Problem, programs: Map[Relation, List[Program]], duration: Int): Unit = {
@@ -122,8 +102,8 @@ class SynthesisExperiment(benchmarkDir: String = "/Users/hxc/projects/autodsl-be
   }
 }
 
-class FaconExperiment(outDir: String = "results/facon") extends SynthesisExperiment(outDir=outDir) {
-  private val benchmarkDir = "/Users/hxc/projects/autodsl-bench"
+class FaconExperiment(benchmarkDir: String, outDir: String = "results/facon")
+    extends SynthesisExperiment(benchmarkDir,outDir=outDir) {
 
   override def getSynthesizer(p: Problem): Synthesis = new FaconSynthesizer(p)
   override def allProblems: List[Path] = List(
@@ -149,9 +129,9 @@ class FaconExperiment(outDir: String = "results/facon") extends SynthesisExperim
   ).map(s => Paths.get(benchmarkDir, s))
 }
 
-class AllSynthesisExperiments() {
-  val netspec = new SynthesisExperiment()
-  val facon = new FaconExperiment()
+class AllSynthesisExperiments(benchmarkDir: String) {
+  val netspec = new SynthesisExperiment(benchmarkDir)
+  val facon = new FaconExperiment(benchmarkDir)
   val allProblems = netspec.allProblems
 
   val recursion = Set(
