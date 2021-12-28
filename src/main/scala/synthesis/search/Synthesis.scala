@@ -1,7 +1,8 @@
 package synthesis.search
 
+import synthesis.activelearning.ActiveLearning
 import synthesis.rulebuilder.{AggCount, AggMax, InputAggregator}
-import synthesis.{Problem, Program, Relation, Tuple}
+import synthesis.{Problem, Program, Relation, Rule, Tuple}
 
 
 abstract class Synthesis(problem: Problem) {
@@ -50,4 +51,19 @@ object Synthesis {
     }
     case _ => Set()
   }
+}
+
+case class SolutionChecker(problem: Problem, staticConfigs: Set[Relation]) {
+  private val activeLearner = new ActiveLearning(problem, staticConfigs, numNewExamples = 400)
+  def check(allPrograms: Map[Relation, List[Program]]): Boolean = {
+    var correct: Boolean = true
+    for ((rel,ps) <- allPrograms) {
+      if (!activeLearner.differentiateFromOracle(ps.head, outRels=Set(rel))) {
+        println(s"Incorrect solution $rel.")
+        correct = false
+      }
+    }
+    correct
+  }
+  def check(program: Program): Boolean = activeLearner.differentiateFromOracle(program)
 }

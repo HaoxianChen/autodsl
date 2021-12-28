@@ -131,20 +131,9 @@ object Experiment {
   )
 
   val activelearningProblems :List[String] = List(
-    // Network analysis
-    // "nib/reachable",
-    // "nib/path",
-    // "nib/path-cost",
-    // "aws/publicIP",
-    // "aws/subnet",
-    // "aws/sshTunnel",
-    // "nod/protection",
-    // "nod/locality",
     // SDN
-    // "forwarding/learning-switch",
     // "forwarding/l2-pairs",
-    // "firewall/stateless-firewall",
-    "firewall/stateful-firewall",
+    // "firewall/stateful-firewall",
     // "firewall/l3-firewall",
     "firewall/l3-stateful-firewall",
     // consensus
@@ -168,16 +157,18 @@ object Experiment {
     // "sensor/store",
     // "sensor/temperature-report",
     // Wireless
-    "wireless/aodv/aodv-route",
+    // "wireless/aodv/aodv-route",
     // "wireless/aodv/aodv-route-source",
-    "wireless/aodv/aodv-rrep",
-    "wireless/aodv/aodv-rreq",
+    // "wireless/aodv/aodv-rrep",
+    // "wireless/aodv/aodv-rreq",
     // "wireless/aodv/aodv-seq",
     // "wireless/dsdv",
     // "wireless/dsr"
   )
 
-  val randomDropExperiments: List[String] = List()
+  val randomDropExperiments: List[String] = List(
+    "firewall/l3-stateful-firewall",
+  )
 
   def checkSolution(problemDir: String, solution: Program): Boolean = {
     val problem = Misc.readProblem(problemDir)

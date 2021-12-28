@@ -4,7 +4,7 @@ import synthesis.activelearning.ActiveLearning
 import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, DebloatingExperiment, Experiment, FaconExperiment, SynthesisExperiment}
 
 import java.nio.file.Paths
-import synthesis.search.{FaconSynthesizer, Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
+import synthesis.search.{FaconSynthesizer, SolutionChecker, Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
 import synthesis.util.{ExampleConvertor, Misc}
 
 object Main extends App {
@@ -51,14 +51,19 @@ object Main extends App {
   }
   else if (args(0)== "learn") {
     val problem = Misc.readProblem(args(1))
+    val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
 
     val t1 = System.nanoTime
 
     val synthesizer = Synthesis(problem)
     val programs = synthesizer.go()
-
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s")
+
+    val checker = SolutionChecker(problem,staticConfigRelations)
+    if (!checker.check(programs)) {
+      println(s"Incorrect solution.")
+    }
     displayResults(problem, programs)
   }
   else if (args(0) == "synth") {
@@ -71,7 +76,14 @@ object Main extends App {
   }
   else if (args(0) == "tab2") {
     val experiment = new ActiveLearningExperiment(benchmarkDir)
-    experiment.runAll(repeats = 1)
+    val repeats = args(1).toInt
+    experiment.runAll(repeats = repeats)
+  }
+  else if (args(0) == "tab3") {
+    val experiment = new ActiveLearningExperiment(benchmarkDir)
+    val repeats = args(1).toInt
+    val nDrops = List(1,3,5,7,9)
+    experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
   }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))

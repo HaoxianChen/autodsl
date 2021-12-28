@@ -109,7 +109,13 @@ object Misc {
     }
   }
 
-  def getTimeStamp: String = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm:ss").format(LocalDateTime.now)
+  def getTimeStamp(sep: String = ":"): String = {
+    val pattern = sep match {
+      case ":" => "yyyy-MM-dd_HH:mm:ss"
+      case "-" => "yyyy-MM-dd_HH-mm-ss"
+    }
+    DateTimeFormatter.ofPattern(pattern).format(LocalDateTime.now)
+  }
 
   def writeFile(string: String, path: Path): Any = {
     val bw = new BufferedWriter(new FileWriter(path.toFile))

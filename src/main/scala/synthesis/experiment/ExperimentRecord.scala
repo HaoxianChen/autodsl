@@ -12,13 +12,18 @@ case class ExperimentRecord(results: Map[String, Any], program: Program) {
   require(results.contains("exp_name"))
   require(results.contains("problem"))
 
+  for ((k,v) <- results) {
+    require(!k.contains(":"), k)
+    require(!v.toString.contains(":"), v.toString)
+  }
+
   def dump(outDir: String = "results"): Unit = {
     val s = JSONObject(results).toString().replace(",",",\n")
 
     val problemDir = Paths.get(outDir, results("problem").toString)
     Misc.makeDir(problemDir)
 
-    val timestamp: String = Misc.getTimeStamp
+    val timestamp: String = Misc.getTimeStamp()
 
     val filename: String = s"${results("exp_name")}_result[$timestamp].log"
     val file = Paths.get(problemDir.toString, filename)

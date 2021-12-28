@@ -3,8 +3,10 @@ package synthesis.activelearning
 import com.typesafe.scalalogging.Logger
 import synthesis._
 import synthesis.rulebuilder.InputAggregator
-import synthesis.search.{Synthesis, SynthesisAllPrograms, SynthesisConfigSpace}
+import synthesis.search.{Synthesis, SynthesisConfigSpace}
+import synthesis.util.Misc
 
+import java.nio.file.{Path, Paths}
 import scala.math.log
 
 case class TupleInstance(tuples: Set[Tuple], instanceId: Int)
@@ -75,13 +77,17 @@ case class EvaluatorWrapper (problem: Problem)  {
   def eval(programSpec: String, outRels: Set[Relation]): Set[Tuple] = evaluator.eval(programSpec, outRels)
 }
 
-class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20) {
+class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20,
+                     logDir: String = s"/var/tmp/netspec") {
   private val logger = Logger("Active-learning")
+  private val logRootDir: Path = Paths.get(logDir)
+  Misc.makeDir(logRootDir)
 
   private val exampleTranslator = new ExampleTranslator(p0.inputRels, p0.outputRels)
 
   private val exampleGenerator = new ExampleGenerator(p0.inputRels, staticConfigRelations, p0.edb, p0.idb)
   private val edbPool: ExamplePool = exampleGenerator.generateRandomInputs(numNewExamples)
+  logger.info(s"Example pool size: ${edbPool.instances.size}.")
 
   private val oracle = p0.oracleSpec.get
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
@@ -120,6 +126,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         newExamples += nextExample.get
       }
 
+      logProblem(problem)
       candidates = synthesize(problem, outRel, candidates)
       logger.debug(s"${candidates.size} candidate programs")
 
@@ -136,7 +143,17 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     (bestProgram, newExamples)
   }
 
-  def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 20): List[Program] = {
+  def logProblem(problem: Problem): Path = {
+    val evaluator = Evaluator(problem)
+    val timestamp = Misc.getTimeStamp()
+    val _logDir: Path = Paths.get(logRootDir.toString, timestamp)
+    Misc.makeDir(_logDir)
+    evaluator.dumpProgram(problem.oracleSpec.get, _logDir)
+    logger.info(s"Problem log at ${_logDir}")
+    _logDir
+  }
+
+  def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 50): List[Program] = {
     val evaluator = EvaluatorWrapper(problem)
 
     def isProgramValid(program: Program, problem: Problem): Boolean = {
@@ -162,18 +179,36 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
       val newCandidates = synthesizer.go()(outRel)
       configSpace = synthesizer.getConfigSpace
       require(newCandidates.forall(p=>isProgramValid(p, problem)))
-      newCandidates
+      validCandidates ++ newCandidates
     }
     else {
       validCandidates
     }
   }
 
-  def differentiateFromOracle(solution: Program): Boolean = {
+  def differentiateFromOracle(solution: Program, outRels: Set[Relation]= p0.outputRels): Boolean = {
     val newProblem = p0.copy(edb = edbPool.toExampleMap, idb=Examples())
     val evaluator = EvaluatorWrapper(newProblem)
-    val idb = evaluator.eval(solution, newProblem.outputRels)
-    val refIdb = evaluator.eval(oracle, newProblem.outputRels)
+    val idb = evaluator.eval(solution, outRels)
+    val refIdb = evaluator.eval(oracle, outRels)
+
+    /** The differentiating examples */
+    if (idb!=refIdb) {
+      logger.debug(s"Static relations: $staticConfigRelations.")
+      val idbById: Map[Int,Set[Tuple]] = idb.groupBy(_.fields.last.name.toInt)
+      val refById: Map[Int,Set[Tuple]] = refIdb.groupBy(_.fields.last.name.toInt)
+      val edbById: Map[Int,Set[Tuple]] = newProblem.edb.toTuples().groupBy(_.fields.last.name.toInt)
+      for ((i,out) <- idb.diff(refIdb).groupBy(_.fields.last.name.toInt) ) {
+        val ref = refById.getOrElse(i, Set())
+        val in = edbById.get(i)
+        logger.debug(s"Differentiating example: $in, $ref, $out.")
+      }
+      for ((i,ref) <- refIdb.diff(idb).groupBy(_.fields.last.name.toInt) ) {
+        val out = idbById.getOrElse(i, Set())
+        val in = edbById.get(i)
+        logger.debug(s"Differentiating example: $in, $ref, $out.")
+      }
+    }
     idb==refIdb
   }
 
@@ -248,3 +283,4 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   }
 
 }
+
