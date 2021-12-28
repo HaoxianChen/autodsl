@@ -1,17 +1,17 @@
 package synthesis.search
 
 import com.typesafe.scalalogging.Logger
+import synthesis.activelearning.ExampleInstance
+import synthesis.search.SynthesisAllPrograms.sample
 import synthesis.util.Misc
 import synthesis.{Literal, Problem, Program, Relation, Rule, Tuple}
 
-import scala.collection.{MapView, mutable}
-import scala.math.abs
+import scala.util.Random
 
 case class SynthesisAllPrograms(problem: Problem,
                                 maxIters: Int = 20,
-                                // maxRefineIters: Int = 100,
                                 maxRefineIters: Int = 3000,
-                                maxRules: Int = 5,
+                                maxRules: Int = 10,
                                 initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
                                ) extends Synthesis(problem) {
 
@@ -23,6 +23,7 @@ case class SynthesisAllPrograms(problem: Problem,
   }
 
   private val syntaxConstraint = SyntaxConstraint()
+  private val exampleInstances: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
 
   def getConfigSpace: SynthesisConfigSpace = configSpace
 
@@ -153,7 +154,7 @@ case class SynthesisAllPrograms(problem: Problem,
       // val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
       //   config.maxConstants)
       val ruleBuilder = config.get_rule_builder(problem, relevantOutRels = relevantOutRel)
-      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, maxExtraIters = 10,
+      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, _maxExtraIters = 20,
       validCondition = validCondition)
 
       if (ans._2.isEmpty) {
@@ -168,15 +169,18 @@ case class SynthesisAllPrograms(problem: Problem,
                    refineRule: Rule => Set[Rule],
                    validCondition: ScoredRule => Boolean = ScoredRule.isValid,
                    refineCondition: ScoredRule => Boolean = ScoredRule.isTooGeneral,
-                   maxExtraIters: Int = 1): (Set[Tuple], Set[Rule], Set[Rule]) = {
+                   _maxExtraIters: Int = 20,
+                   disambiguate: Boolean = true): (Set[Tuple], Set[Rule], Set[Rule]) = {
     var iters: Int = 0
     var extraIters: Int = 0
+    var maxExtraIters = 0
+    logger.info(s"max extra iterations: ${_maxExtraIters}.")
 
+    /*** Keep the maximum number of candidate programs to be evaluated at one iteration.
+    * So that each iteration is not too long. */
     val maxBranching: Int = 50
-    /** Discount the score of staled rules, and similar ones. */
-    val staleDiscount: Double = 0.1
 
-    // score the rules based on current idb set
+    /** score the rules based on current idb set */
     val generalRules = if (generalSimpleRules.nonEmpty) {
       _getRelevantScoredRules(idb, generalSimpleRules, learnedRules)
     }
@@ -184,80 +188,90 @@ case class SynthesisAllPrograms(problem: Problem,
       _getRelevantScoredRules(idb, getMostGenearlRules(), learnedRules)
     }
 
-    // var forbiddenRules: Set[ScoredRule] = Set()
-    var exploredRules: Set[Rule] = Set()
-
-    // Remember the literals that cause the rule search to stale
-    var staledRules: Set[Rule] = Set()
-    var forbiddenLiterals: Set[Literal] = Set()
-    def toDiscount(sr:ScoredRule): Boolean = sr.rule.maskUngroundVars().negations.intersect(forbiddenLiterals).nonEmpty
+    /** Remember rules that have been evaluated, so do not evaluate them twice. */
+    var evaluated: Set[Rule] = generalRules.map(_.rule)
+    /** Remember rules whose offspring have been explored. */
+    var expanded: Set[Rule] = Set()
+    var expandedValidRules: Set[ScoredRule] = Set()
+    val maxExpandedValidRules: Int = 5
 
     // Set up the pool of rules to be refine
-    var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
+    // var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
+    var rulePool: Set[ScoredRule] = Set()
     rulePool ++= generalRules.filter(r => validCondition(r) || refineCondition(r))
+    var next: ScoredRule = sample(rulePool)
 
     var validRules: Set[ScoredRule] = generalRules.filter(validCondition)
 
-    while (iters < maxRefineIters && extraIters < maxExtraIters && rulePool.nonEmpty && validRules.size < maxRules) {
+    while (iters < maxRefineIters && extraIters <= maxExtraIters && rulePool.nonEmpty && validRules.size < maxRules) {
       if (iters % 20 == 0) logger.info(s"iteration $iters")
 
       // pop highest scored rule from pool
-      val baseRule = rulePool.dequeue()
+      // val baseRule = rulePool.dequeue()
+      val baseRule = next
 
-      // refine the rules
-      val allRefinedRules = refineRule(baseRule.rule).diff(exploredRules)
-      val refinedRules = if (allRefinedRules.size > maxBranching) {
-        Misc.sampleSet(allRefinedRules, maxBranching)
+      /** Expand the current rule */
+      val allRefinedRules = refineRule(baseRule.rule).diff(evaluated)
+      val (refinedRules,exhaustedBaseRule) = if (allRefinedRules.size > maxBranching) {
+        (Misc.sampleSet(allRefinedRules, maxBranching), false)
       }
-      else allRefinedRules
-
+      else (allRefinedRules, true)
       require(refinedRules.size <= maxBranching)
+      /** Drop baseRule from the pool if all its offspring have been explored */
+      if (exhaustedBaseRule) {
+        // pop the current rule from the rule pool
+        rulePool -= baseRule
+        expanded += baseRule.rule
+        if (validRules.contains(baseRule)) expandedValidRules += baseRule
+      }
+
       val candidateRules: Set[ScoredRule] = refinedRules
           .filter(syntaxConstraint.filter)
           .map(r => scoreRule(r, idb, learnedRules, Some(baseRule)))
-
-      // Remember the ones that have been explored
-      exploredRules ++= refinedRules
+      /** Remember rules that have been evaluated */
+      evaluated ++= refinedRules
 
       // keep the valid ones
-      validRules ++= candidateRules.filter(validCondition)
-      rulePool ++= candidateRules.filter(validCondition) // see if more specific option is possible
+      val newValidRules = candidateRules.filter(validCondition)
+      validRules ++= newValidRules
 
       // Put the too general ones into the pool, and forbid anything else from exploring again
       val tooGeneral = candidateRules.filter(refineCondition)
 
-
       /** Update rule pool */
-      // If not all branches are exhausted yet
-      if (refinedRules.size < allRefinedRules.size) rulePool += baseRule
+      // Remember the ones that have been explored
+      rulePool ++= (newValidRules ++ tooGeneral)
 
-      // Discount staled rules
-      val staled = tooGeneral.filter(isRuleStaled)
-      staledRules ++= staled.map(_.rule)
-
-      if (staled.nonEmpty) {
-        forbiddenLiterals ++= getForbiddenLiterals(staledRules)
-        val s0 = rulePool.size
-        // rulePool = rulePool.filterNot(toDiscount)
-        rulePool.mapInPlace{
-          r => if(toDiscount(r)) r.discount(staleDiscount) else r
-        }
-        require(rulePool.size == s0)
-
-        val discounted = tooGeneral.map{r =>
-          if (staled.contains(r)) r.discount(staleDiscount)
-          else r
-        }
-        rulePool ++= discounted
+      /** Sample next rule */
+      val higherScore = tooGeneral.filter(_.score > baseRule.score)
+      val unexpandedValidRules = validRules.filterNot(sr => expanded.contains(sr.rule))
+      val toExpandValidRules: Boolean = unexpandedValidRules.nonEmpty && expandedValidRules.size < maxExpandedValidRules
+      next = if (toExpandValidRules) {
+        /** Keep exploring alternative valid rules. */
+        // assert(higherScore.isEmpty, s"${higherScore}")
+        sample(unexpandedValidRules, baseScore = baseRule.score)
+      }
+      else if (higherScore.nonEmpty) {
+      // if (higherScore.nonEmpty) {
+        /** Always go higher score along the current path if such option exists. */
+        sample(higherScore, baseScore = baseRule.score)
       }
       else {
-        rulePool ++= tooGeneral
+        sample(rulePool, baseScore = baseRule.score)
+      }
+      assert(evaluated.contains(next.rule))
+      assert(!expanded.contains(next.rule))
+
+      /** Remember the number of iterations to find a rule.  */
+      if (maxExtraIters==0 && validRules.nonEmpty) {
+        maxExtraIters = if (iters > _maxExtraIters) iters else _maxExtraIters
+        assert(maxExtraIters>0)
+        logger.debug(s"Find first rule after $iters iterations. " +
+          s"Keep exploring for $maxExtraIters iterations.")
       }
 
-      // rulePool ++= tooGeneral.diff(staled)
-
       iters += 1
-      if (validRules.nonEmpty) extraIters += 1
+      if (validRules.nonEmpty && !toExpandValidRules) extraIters += 1
     }
     if (rulePool.isEmpty) logger.info(s"Exhausted all rules")
     if (iters == maxRefineIters) logger.info(s"Hit maximum iterations ${maxExtraIters}")
@@ -266,13 +280,8 @@ case class SynthesisAllPrograms(problem: Problem,
     // require(validRules.nonEmpty, s"Synthesis failed: empty valid rules.")
     logger.info(s"Found ${validRules.size} rules after $iters iterations.\n")
 
-    // val remainingRules: Set[Rule] = {
-    //   val rs = rulePool.toSet
-    //   // rs.map(_.rule)
-    //   /** Do not carry all discounted rule into the next iterations. */
-    //   rs.filterNot(toDiscount).map(_.rule).diff(staledRules)
-    // }
     val remainingRules: Set[Rule] = Set()
+    // val remainingRules = rulePool.map(_.rule)
     val newLearnedRules: Set[Rule] = validRules.map(_.rule)
     val newIdb = if(newLearnedRules.nonEmpty) {
       evaluator.evalRules(newLearnedRules, learnedRules, this.getConfigSpace.get_config().recursion)
@@ -282,28 +291,6 @@ case class SynthesisAllPrograms(problem: Problem,
     (newIdb, newLearnedRules, remainingRules)
   }
 
-  def isRuleStaled(rule: ScoredRule): Boolean = {
-    if (rule.score_history.size == ScoredRule.maxHistSize) {
-      rule.diff().map(d=>abs(d)).max < 1e-3
-    }
-    else {
-      false
-    }
-  }
-
-  val maxStaledNegLiterals: Int = 10
-  def countFreq[T](l: List[T]): MapView[T, Int] = l.groupBy(x=>x).mapValues(_.size)
-  def getForbiddenLiterals(staledRules: Set[Rule]): Set[Literal] = {
-    val allNegLitsStaled: List[Literal] = staledRules.toList.flatMap {
-      r => r.maskUngroundVars().negations.filter(lit => problem.inputRels.contains(lit.relation))
-    }
-    val freq1 = countFreq(allNegLitsStaled)
-
-    val ret = freq1.flatMap {
-      case (lit, c) => if (c>maxStaledNegLiterals) Some(lit) else None
-    }.toSet
-    ret
-  }
 
   def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule], parentRule: Option[ScoredRule]=None): ScoredRule = {
     val refIdb = evaluator.getRefIdb(rule, allIdb)
@@ -311,6 +298,47 @@ case class SynthesisAllPrograms(problem: Problem,
       this.getConfigSpace.get_config().recursion)
     ScoredRule(rule, refIdb, f_eval, parentRule)
   }
+
+}
+
+object SynthesisAllPrograms {
+  val rnd = new Random()
+  def uniformSample[T](set: Set[T]): T = set.toList(rnd.nextInt(set.size))
+
+  /** T is the temperature function.
+   * Always 1 when e2 > e1
+   * When e2 < e1, T the higher, the acceptanceProbability is higher
+   *  */
+  def acceptanceProbability(e1: Double, e2: Double, T: Double)  :Double = {
+    require(T>0)
+    if (e2 > e1) {
+      1
+    }
+    else {
+      math.pow(math.E,-(e1-e2)/T)
+    }
+  }
+
+  def sample(candidates: Set[ScoredRule], baseScore :Double = 0): ScoredRule = {
+    def temperature(r: Double): Double = {
+      require(r>0 && r<=1)
+      1*r
+    }
+    val K = 20 // Max number of random walks to sample next candidate
+    var i: Int = 0
+    var next: Option[ScoredRule] = None
+    while (next.isEmpty && i<K) {
+      val n = uniformSample(candidates)
+      val T = temperature(1.0  - i.toDouble/K)
+      if (acceptanceProbability(baseScore,n.score,T) > rnd.nextInt(1)) {
+        next = Some(n)
+      }
+      i += 1
+    }
+    assert(next.isDefined, s"Failed to sample next candidate after $K random walks.")
+    next.get
+  }
+
 
 }
 
