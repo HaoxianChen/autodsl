@@ -2,11 +2,8 @@ package synthesis.search
 
 import com.typesafe.scalalogging.Logger
 import synthesis.activelearning.ExampleInstance
-import synthesis.search.SynthesisAllPrograms.sample
 import synthesis.util.Misc
-import synthesis.{Literal, Problem, Program, Relation, Rule, Tuple}
-
-import scala.util.Random
+import synthesis.{Problem, Program, Relation, Rule, Tuple}
 
 case class SynthesisAllPrograms(problem: Problem,
                                 maxIters: Int = 20,
@@ -43,8 +40,14 @@ case class SynthesisAllPrograms(problem: Problem,
     // Init the rule pool with the most general rules
     var generalRules: Set[Rule] = getMostGenearlRules()
 
+    /** The goal of each iteration is to recover one perfect precision rule at a time. */
+    def getScore(sr: ScoredRule): Double = sr.precision * sr.completeness
+    def validCondition(sr: ScoredRule): Boolean = getScore(sr) >= 1.0
+    def refineCondition(sr: ScoredRule): Boolean = getScore(sr) > 0
+
     while (examples.nonEmpty && iters < maxIters ) {
-      val (coveredExamples, newRules, remainingRules) = learnNRules(examples, generalRules, rules)
+      val (coveredExamples, newRules, remainingRules) = learnNRules(examples, generalRules, rules,
+        getScore = getScore, validCondition = validCondition, refineCondition=refineCondition)
       val nextExamples = examples -- coveredExamples
       require(nextExamples.size < examples.size)
       examples = nextExamples
@@ -64,6 +67,21 @@ case class SynthesisAllPrograms(problem: Problem,
      * how to handle recursion? */
 
     val maxPrograms = 10
+
+    def sortScoredRules(a: ScoredRule, b: ScoredRule) :Boolean = {
+      /** rule a is more preferable than rule b if:
+       * 1. rule a produces more idb */
+      if (a.idb.size > b.idb.size) true
+      else if (a.idb.size < b.idb.size) false
+
+      else if (a.rule.body.size < b.rule.body.size) true
+      else if (a.rule.body.size > b.rule.body.size) false
+
+      else if (a.rule.freeVariables().size > b.rule.freeVariables().size) true
+      else if (a.rule.freeVariables().size < b.rule.freeVariables().size) false
+
+      else true
+    }
 
     def _combineRules(learnedRules: List[Rule], remainingRules: List[Rule], remainingIdb: Set[Tuple]): Set[List[Rule]] = {
       if (remainingIdb.isEmpty) {
@@ -120,7 +138,8 @@ case class SynthesisAllPrograms(problem: Problem,
         else {
           // If non-recursive, sort by output size
           val scoredRules: List[ScoredRule] = nonRecursiveRules.map(r => scoreRule(r, idb, Set())).toList
-          val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
+          // val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
+          val ans = scoredRules.sortWith(sortScoredRules).map(_.rule)
           ans
         }
       }
@@ -140,7 +159,10 @@ case class SynthesisAllPrograms(problem: Problem,
   }
 
   def learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
-                  validCondition: ScoredRule => Boolean = ScoredRule.isValid): (Set[Tuple], Set[Rule], Set[Rule]) = {
+                  getScore: ScoredRule => Double,
+                  validCondition: ScoredRule => Boolean,
+                  refineCondition: ScoredRule => Boolean,
+                  ): (Set[Tuple], Set[Rule], Set[Rule]) = {
 
     /** Lookup the configuration for the synthesizer*/
     val relevantOutRel: Set[Relation] = idb.map(_.relation)
@@ -154,8 +176,12 @@ case class SynthesisAllPrograms(problem: Problem,
       // val ruleBuilder = ConstantBuilder(problem.inputRels, relevantOutRel, problem.edb, problem.idb, config.recursion,
       //   config.maxConstants)
       val ruleBuilder = config.get_rule_builder(problem, relevantOutRels = relevantOutRel)
-      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule, _maxExtraIters = 20,
-      validCondition = validCondition)
+      ans = _learnNRules(idb, generalSimpleRules, learnedRules, ruleBuilder.refineRule,
+        getScore = getScore,
+        validCondition = validCondition,
+        refineCondition = refineCondition,
+        _maxExtraIters = 20,
+      )
 
       if (ans._2.isEmpty) {
         config = configSpace.next_config()
@@ -167,8 +193,9 @@ case class SynthesisAllPrograms(problem: Problem,
 
   def _learnNRules(idb: Set[Tuple], generalSimpleRules: Set[Rule], learnedRules: Set[Rule],
                    refineRule: Rule => Set[Rule],
-                   validCondition: ScoredRule => Boolean = ScoredRule.isValid,
-                   refineCondition: ScoredRule => Boolean = ScoredRule.isTooGeneral,
+                   getScore: ScoredRule => Double,
+                   validCondition: ScoredRule => Boolean,
+                   refineCondition: ScoredRule => Boolean,
                    _maxExtraIters: Int = 20,
                    disambiguate: Boolean = true): (Set[Tuple], Set[Rule], Set[Rule]) = {
     var iters: Int = 0
@@ -199,7 +226,8 @@ case class SynthesisAllPrograms(problem: Problem,
     // var rulePool: mutable.PriorityQueue[ScoredRule] = new mutable.PriorityQueue()
     var rulePool: Set[ScoredRule] = Set()
     rulePool ++= generalRules.filter(r => validCondition(r) || refineCondition(r))
-    var next: ScoredRule = sample(rulePool)
+    // var next: ScoredRule = sampleNextCandidate(rulePool)
+    var next: ScoredRule = SimulatedAnnealing.sample(rulePool, getScore)
 
     var validRules: Set[ScoredRule] = generalRules.filter(validCondition)
 
@@ -243,21 +271,26 @@ case class SynthesisAllPrograms(problem: Problem,
       rulePool ++= (newValidRules ++ tooGeneral)
 
       /** Sample next rule */
-      val higherScore = tooGeneral.filter(_.score > baseRule.score)
-      val unexpandedValidRules = validRules.filterNot(sr => expanded.contains(sr.rule))
-      val toExpandValidRules: Boolean = unexpandedValidRules.nonEmpty && expandedValidRules.size < maxExpandedValidRules
+      val baseScore = getScore(baseRule)
+      val higherScore = tooGeneral.filter(sr => getScore(sr)>baseScore)
+      val unexpandedValidRules = validRules.filter(refineCondition)
+        .filterNot(sr => expanded.contains(sr.rule))
+      val toExpandValidRules: Boolean = {
+        unexpandedValidRules.nonEmpty && expandedValidRules.size < maxExpandedValidRules
+      }
       next = if (toExpandValidRules) {
         /** Keep exploring alternative valid rules. */
         // assert(higherScore.isEmpty, s"${higherScore}")
-        sample(unexpandedValidRules, baseScore = baseRule.score)
+        SimulatedAnnealing.sample(unexpandedValidRules, getScore, baseScore = baseScore)
       }
       else if (higherScore.nonEmpty) {
       // if (higherScore.nonEmpty) {
         /** Always go higher score along the current path if such option exists. */
-        sample(higherScore, baseScore = baseRule.score)
+        // sampleNextCandidate(higherScore, baseScore = baseRule.score)
+        SimulatedAnnealing.sample(higherScore, getScore, baseScore=baseScore)
       }
       else {
-        sample(rulePool, baseScore = baseRule.score)
+        SimulatedAnnealing.sample(rulePool, getScore, baseScore=baseScore)
       }
       assert(evaluated.contains(next.rule))
       assert(!expanded.contains(next.rule))
@@ -291,7 +324,6 @@ case class SynthesisAllPrograms(problem: Problem,
     (newIdb, newLearnedRules, remainingRules)
   }
 
-
   def scoreRule(rule: Rule, allIdb: Set[Tuple], learnedRules: Set[Rule], parentRule: Option[ScoredRule]=None): ScoredRule = {
     val refIdb = evaluator.getRefIdb(rule, allIdb)
     def f_eval: Rule => Set[Tuple] = r => evaluator.evalRule(r, learnedRules,
@@ -299,113 +331,4 @@ case class SynthesisAllPrograms(problem: Problem,
     ScoredRule(rule, refIdb, f_eval, parentRule)
   }
 
-}
-
-object SynthesisAllPrograms {
-  val rnd = new Random()
-  def uniformSample[T](set: Set[T]): T = set.toList(rnd.nextInt(set.size))
-
-  /** T is the temperature function.
-   * Always 1 when e2 > e1
-   * When e2 < e1, T the higher, the acceptanceProbability is higher
-   *  */
-  def acceptanceProbability(e1: Double, e2: Double, T: Double)  :Double = {
-    require(T>0)
-    if (e2 > e1) {
-      1
-    }
-    else {
-      math.pow(math.E,-(e1-e2)/T)
-    }
-  }
-
-  def sample(candidates: Set[ScoredRule], baseScore :Double = 0): ScoredRule = {
-    def temperature(r: Double): Double = {
-      require(r>0 && r<=1)
-      1*r
-    }
-    val K = 20 // Max number of random walks to sample next candidate
-    var i: Int = 0
-    var next: Option[ScoredRule] = None
-    while (next.isEmpty && i<K) {
-      val n = uniformSample(candidates)
-      val T = temperature(1.0  - i.toDouble/K)
-      if (acceptanceProbability(baseScore,n.score,T) > rnd.nextInt(1)) {
-        next = Some(n)
-      }
-      i += 1
-    }
-    assert(next.isDefined, s"Failed to sample next candidate after $K random walks.")
-    next.get
-  }
-
-
-}
-
-case class SyntaxConstraint() {
-  def filter(rule: Rule): Boolean = {
-    /** The negated use of != filter is redundant */
-    val negLits: Set[Literal] = rule.negations
-    val hasNegInEq: Boolean = negLits.exists(_.relation.name == s"UnEqual")
-
-    /** Relations reserved for events, i.e., relation name with
-     * prefix 'recv' or 'send', should appear in body once, positively. */
-    def isEventLiteral(lit: Literal): Boolean = {
-      lit.relation.name.startsWith("recv") ||
-        lit.relation.name.contains("packet_in")
-    }
-    val hasNegEventRel: Boolean = negLits.exists(isEventLiteral)
-
-    val redundantEventRel: Boolean = {
-      val eventLits = rule.body.filter(isEventLiteral)
-      eventLits.size > 1
-    }
-
-    val redundantAgg = hasRedundantAggRelations(rule)
-    val unusedAgg = unusedAggOutput(rule)
-    val negatedAgg = negatedAggregate(rule)
-
-    /** Inequal and greater cannot apply to same parameters. */
-    // todo.
-    (!hasNegInEq) && (!hasNegEventRel) && (!redundantEventRel) &&
-      (!redundantAgg) && (!unusedAgg) &&
-      (!negatedAgg)
-  }
-
-  def negatedAggregate(rule: Rule): Boolean = {
-    rule.negations.intersect(aggLits(rule)).nonEmpty
-  }
-
-  val aggSubString: Set[String] = Set("cnt", "max")
-
-  def aggLits(rule: Rule): Set[Literal] = {
-    rule.body.filter(lit => {
-      aggSubString.exists(s => lit.relation.name.contains(s"_${s}"))
-    })
-  }
-
-  def unusedAggOutput(rule: Rule): Boolean = {
-    val ret = aggLits(rule).exists(lit => lit.fields.last.name == "_")
-    ret
-  }
-
-  def hasRedundantAggRelations(rule: Rule): Boolean = {
-    /** Don't have multiple aggregate predicates in the rule */
-    val aggSubString: List[String] = List("cnt", "max")
-
-    // val aggLits: Set[Literal] = rule.body.filter(lit => {
-    //   aggSubString.exists(s => lit.relation.name.contains(s))
-    // })
-
-    val aggRelList = aggLits(rule).toList.map ( lit => {
-      val relName = lit.relation.name
-      aggSubString.flatMap(key => {
-        if (relName.contains(key)) Some(relName.split(key).head)
-        else (None)
-      })
-    })
-    /** Check duplicates in aggregated relations */
-    aggRelList.toSet.size < aggRelList.size
-
-  }
 }
