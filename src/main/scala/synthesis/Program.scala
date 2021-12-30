@@ -74,13 +74,6 @@ case class Tuple(relation: Relation, fields: List[Constant]) {
 
 /* Relations */
 case class Relation(name: String, signature: List[Type]) {
-  def declString: String = {
-    val sig_str: String = {
-      val s: List[String] = for ((t,i) <- signature.zipWithIndex) yield s"x$i: $t"
-      s.mkString(",")
-    }
-    s".decl $name($sig_str)"
-  }
   override def toString: String = {
     val sig_str = signature.map(_.toString).mkString(",")
     s"${name}(${sig_str})"

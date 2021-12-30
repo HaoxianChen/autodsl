@@ -125,20 +125,34 @@ case class Evaluator(problem: Problem) {
     programPath
   }
 
+  def relDeclString(relation: Relation): String = {
+    val sig_str: String = {
+      val s: List[String] = for ((t,i) <- relation.signature.zipWithIndex) yield {
+        t match {
+          case _: NumberType => s"x$i:number"
+          case _: SymbolType => s"x$i:symbol"
+        }
+      }
+      s.mkString(",")
+    }
+    s".decl ${relation.name}($sig_str)"
+  }
+
   def getSpecString(program: Program): String = {
     // type specification
-    val typeSpec = types.map(_.declString).mkString("\n")
+    // val typeSpec = types.map(_.declString).mkString("\n")
 
     // input relation specification
-    val inputRelSpec = inputRels.map(_.declString).mkString("\n")
+    val inputRelSpec = inputRels.map(relDeclString).mkString("\n")
     val inputDecl = inputRels.map(rel => s".input ${rel.name}").mkString("\n")
 
     // output relation specification
     val outRels = getOutRels(program)
-    val outputRelSpec = outRels.map(_.declString).mkString("\n")
+    val outputRelSpec = outRels.map(relDeclString).mkString("\n")
     val outputDecl = outRels.map(rel => s".output ${rel.name}").mkString("\n")
 
-    val programStr = List(typeSpec, inputRelSpec, outputRelSpec, inputDecl, program.toString,
+    // val programStr = List(typeSpec, inputRelSpec, outputRelSpec, inputDecl, program.toString,
+    val programStr = List(inputRelSpec, outputRelSpec, inputDecl, program.toString,
       outputDecl).mkString("\n")
     programStr
   }
