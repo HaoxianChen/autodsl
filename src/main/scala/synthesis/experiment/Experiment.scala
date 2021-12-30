@@ -139,20 +139,20 @@ object Experiment {
     "firewall/stateful-firewall",
     "firewall/l3-stateful-firewall",
     // Consensus
-    // "consensus/2pc-no-timer",
     "consensus/paxos/paxos-proposer",
     // Wireless
-    // "wireless/aodv/aodv-route",
+    "wireless/aodv/aodv-route",
     // "wireless/aodv/aodv-route-source",
-    // "wireless/aodv/aodv-rrep",
-    // "wireless/aodv/aodv-rreq",
+    "wireless/aodv/aodv-rrep",
+    "wireless/aodv/aodv-rreq",
     // "wireless/aodv/aodv-seq",
     "wireless/dsdv",
-    "wireless/dsr"
+    // "wireless/dsr",
+    "consensus/2pc-no-timer",
   )
 
   val randomDropExperiments: List[String] = List(
-    "firewall/l3-stateful-firewall",
+    "firewall/stateful-firewall",
   )
 
   def checkSolution(problemDir: String, solution: Program): Boolean = {
