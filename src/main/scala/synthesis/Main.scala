@@ -61,9 +61,7 @@ object Main extends App {
     println(s"Finished in ${duration}s")
 
     val checker = SolutionChecker(problem,staticConfigRelations)
-    if (!checker.check(programs)) {
-      println(s"Incorrect solution.")
-    }
+    if (checker.check(programs)) println(s"Correct solution.") else println(s"Incorrect solution.")
     displayResults(problem, programs)
   }
   else if (args(0) == "synth") {

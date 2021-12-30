@@ -74,7 +74,7 @@ object Examples {
 
 
   def strToTuple(rel: Relation, str: List[String]): List[Constant] = {
-    require(rel.signature.size == str.size, s"${rel}, ${str}, szie: ${str.size}")
+    require(rel.signature.size == str.size, s"${rel}, ${str}, size: ${str.size}")
     val fields: List[Constant] = for ((_type, s) <- rel.signature zip str) yield Constant(s, _type)
     fields
   }

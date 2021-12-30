@@ -290,7 +290,7 @@ object SimpleRuleBuilder {
     val paramCounts: Map[Type, Int] = getParamCounts(literals)
     val c = paramCounts.getOrElse(_type,0)
     val v = Variable(_type, c)
-    require(!literals.flatMap(_.fields).contains(v))
+    require(!literals.flatMap(_.fields).contains(v), s"$literals, \n$v")
     v
   }
 
