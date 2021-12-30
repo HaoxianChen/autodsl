@@ -24,7 +24,7 @@ class ExampleParser extends JavaTokenParsers {
 
   def tuple: Parser[(String, List[String])] = {
     (ident ~ ("("~> repsep(wholeNumber|stringLiteral,",")<~")")) ^^ {
-      case name ~ fields => (name, fields)
+      case name ~ fields => (name, fields.map(_.replaceAll("^\"|\"$", "")))
     }
   }
   def tupleList: Parser[List[(String, List[String])]] = repsep(tuple, ",")
