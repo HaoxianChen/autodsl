@@ -4,8 +4,7 @@ import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
-import synthesis.{Parser, Problem, Relation}
+import synthesis.{NumberType, Parser, Problem, Relation, SymbolType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -57,7 +56,10 @@ object Misc {
 
     // Read oracle program
     val oracleSpec = readDatalogProgram(dir, problemName)
-    val p1 = if(oracleSpec.isDefined) problem.addOracleSpec(oracleSpec.get) else problem
+    val p1 = if(oracleSpec.isDefined) {
+      val _os = renameTypes(problem,oracleSpec.get)
+      problem.addOracleSpec(_os)
+    } else problem
 
     // Read Input Output examples
     def relToProblem(problem: Problem, relation:Relation): Problem = {
@@ -165,4 +167,26 @@ object Misc {
     }
     (exitcode, stdout.toString(), stderr.toString(), isTimeOut)
   }
+
+  def renameTypes(problem: Problem, _specStr: String): String = {
+    // rename all types to their base type
+    val allLines: Array[String] = _specStr.split("\n")
+    def isTypeDecl(line: String): Boolean = line.startsWith(".type")
+    def isRelDecl(line: String): Boolean = line.startsWith(".decl")
+    val newRelDeclLines: Array[String] = allLines.filter(isRelDecl).map(
+      l => {
+        var newLine = l
+        for (_type <- problem.types) {
+          val baseTypeName = _type match {
+            case _:NumberType => "number"
+            case _:SymbolType => "symbol"
+          }
+          newLine = newLine.replaceAll(s"\\b${_type.name}\\b", baseTypeName)
+        }
+        newLine
+      }
+    )
+    (newRelDeclLines ++ allLines.filterNot(isTypeDecl).filterNot(isRelDecl)).mkString("\n")
+  }
+
 }
