@@ -139,7 +139,7 @@ class FaconExperiment(benchmarkDir: String, outDir: String = "results/facon")
     "forwarding/learning-switch-no-flood",
     // "forwarding/l2-pairs",
     "firewall/stateless-firewall",
-    "firewall/stateful-firewall",
+    // "firewall/stateful-firewall",
     // "firewall/l3-firewall",
     // "firewall/l3-stateful-firewall",
     // Sensor network

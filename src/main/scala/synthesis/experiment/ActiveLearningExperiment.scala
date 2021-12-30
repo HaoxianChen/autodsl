@@ -8,9 +8,9 @@ import synthesis.util.Misc
 import synthesis.{Problem, Program, Relation, Tuple}
 
 import java.nio.file.{Files, Path, Paths}
-import scala.util.Random
+import scala.util.{Random, Try}
 
-class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 2000, outDir: String = "results/active-learning",
+class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
                                _logRootDir: String = "/var/tmp/netspec/")
     extends Experiment(outDir) {
   private val logger = Logger("ActiveLearningExperiment")
@@ -60,15 +60,20 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 2000, ou
 
   def go(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int ,repeats: Int = 1): Unit = {
     logger.info(s"$repeats runs.")
+    val logDir = Paths.get(logRootDir.toString, problem.name)
+    Misc.makeDir(logDir)
     // Randomly drop one example
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
       // randomDrop(problem, nDrop=1)
-      randomDrop(problem, staticConfigRelations, nDrop=nDrop)
+      val ret: Try[Unit] = Try {
+        randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
+      }
+      if (ret.isFailure) logger.warn(s"$ret")
     }
   }
 
-  def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int): (Program, Int, Double) = {
+  def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Program, Int, Double) = {
     logger.info(s"Randomly drop ${nDrop} examples.")
     val examples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
     val n_remains = examples.size - nDrop
@@ -80,8 +85,9 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 2000, ou
     val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
 
     val t1 = System.nanoTime
-    val logDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
-    val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, logDir=logDir.toString)
+    // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
+    val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
+    val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, logDir=logSubDir.toString)
     val (program, nQueries, correctness) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
@@ -94,7 +100,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 2000, ou
       "time"->duration,
       "sig"->getProblemSignature(problem),
       "correctness"->correctness,
-      "logDir"->logDir
+      "logDir"->logSubDir
     ),
       program
     )
