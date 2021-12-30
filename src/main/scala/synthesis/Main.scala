@@ -69,18 +69,25 @@ object Main extends App {
     experiment.run(update=args(1).toBoolean)
   }
   else if (args(0) == "tab1") {
-    val experiment = new AllSynthesisExperiments(benchmarkDir)
+    require(args.size == 2)
+    val _benchmarkDir = args(1)
+    val experiment = new AllSynthesisExperiments(_benchmarkDir)
     experiment.run()
   }
   else if (args(0) == "tab2") {
-    val experiment = new ActiveLearningExperiment(benchmarkDir)
+    require(args.size == 3)
     val repeats = args(1).toInt
+    val _benchmarkDir = args(2)
+    val experiment = new ActiveLearningExperiment(_benchmarkDir)
     experiment.runAll(repeats = repeats)
   }
   else if (args(0) == "tab3") {
-    val experiment = new ActiveLearningExperiment(benchmarkDir)
+    require(args.size == 3)
     val repeats = args(1).toInt
-    val nDrops = List(1,3,5,7,9)
+    val _benchmarkDir = args(2)
+    val experiment = new ActiveLearningExperiment(_benchmarkDir)
+    // val nDrops = List(1,3,5,7,9)
+    val nDrops = List(1,2,3,4,5)
     experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
   }
   else if (args(0) == "active") {
