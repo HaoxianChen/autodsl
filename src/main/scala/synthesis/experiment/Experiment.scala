@@ -80,7 +80,10 @@ object Experiment {
     "wireless/aodv/aodv-rreq",
     "wireless/aodv/aodv-seq",
     "wireless/dsdv",
-    "wireless/dsr"
+    // "wireless/dsr"
+    "wireless/dsr/dsr-rreq",
+    "wireless/dsr/dsr-rreq",
+    "wireless/dsr/dsr-rerr",
   )
 
   val regressionTests :List[String] = List(

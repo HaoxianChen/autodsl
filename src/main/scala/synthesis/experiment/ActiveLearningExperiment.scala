@@ -3,11 +3,14 @@ package synthesis.experiment
 import com.typesafe.scalalogging.Logger
 import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
-import synthesis.experiment.Experiment.{checkSolution, getSolution}
-import synthesis.util.Misc
-import synthesis.{Problem, Program, Relation, Tuple}
 
-import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.ExecutionContext.Implicits.global
+import synthesis.util.Misc
+import synthesis.{Problem, Program, Relation}
+
+import java.nio.file.{Path, Paths}
+import scala.concurrent.duration.{MINUTES}
+import scala.concurrent.{Await, Future, TimeoutException, duration}
 import scala.util.{Random, Try}
 
 class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
@@ -25,16 +28,26 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     /** Run without droping examples */
     val nDrop: Int = 0
     require(repeats >= 1)
-    for (problemFile <- allProblems) {
-      val problem = Misc.readProblem(problemFile.toString)
-      val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
-      if (rc < repeats) {
-        logger.info(s"Run ${problem.name} for ${repeats-rc} times.")
-        val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
-        go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
-      }
-      else {
-        logger.info(s"${problem.name} have $rc results already. Skip.")
+
+    /** Keep looping until all is done. */
+    var areAllResultsReady: Boolean = false
+    var iters: Int = 0
+    while(!areAllResultsReady && iters<10) {
+      areAllResultsReady = true
+      iters += 1
+
+      for (problemFile <- allProblems) {
+        val problem = Misc.readProblem(problemFile.toString)
+        val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
+        if (rc < repeats) {
+          areAllResultsReady = false
+          logger.info(s"Run ${problem.name} for ${repeats-rc} times.")
+          val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
+          go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
+        }
+        else {
+          logger.info(s"${problem.name} have $rc results already. Skip.")
+        }
       }
     }
   }
@@ -66,10 +79,20 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
       // randomDrop(problem, nDrop=1)
-      val ret: Try[Unit] = Try {
+      // val ret: Try[Unit] = Try {
+      //   randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
+      // }
+      val waitTime = duration.Duration(20,MINUTES)
+      val ret = Future {
         randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
       }
-      if (ret.isFailure) logger.warn(s"$ret")
+      try {
+        Await.result(ret, waitTime)
+      }
+      catch {
+        case te: TimeoutException => logger.warn(s"$te")
+        case e: Exception => logger.warn(s"$e")
+      }
     }
   }
 
