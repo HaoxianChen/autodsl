@@ -71,17 +71,19 @@ case class Evaluator(problem: Problem) {
     var success = false
     var idb = Examples()
     while (i < 3 && !success) {
-      runSouffle(problemDir, programPath)
-      val (_idb, _success) = loadOutput(problemDir, outRels)
-      idb = _idb
-      success = _success
+      val runSucess = runSouffle(problemDir, programPath)
+      if (runSucess) {
+        val (_idb, _success) = loadOutput(problemDir, outRels)
+        idb = _idb
+        success = _success
+      }
       i += 1
     }
     if (!success) logger.warn(s"Failed to get results after $i trails: $problemDir")
     idb
   }
 
-  def runSouffle(problemDir: Path, programPath: Path): Unit = {
+  def runSouffle(problemDir: Path, programPath: Path): Boolean = {
     val cmd = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}"
     val timeOut = 100 // timout after 100 milliseconds
     val (exitcode, stdout, stderr, isTimeOut) = Misc.runWithTimeOut(cmd, timeOut)
@@ -92,6 +94,8 @@ case class Evaluator(problem: Problem) {
       require(exitcode == 0, s"Non-zero exit value: ${problemDir}\n$exitcode,\n$stdout,\n$stderr")
     }
     require(!stderr.contains("Error"), s"$programPath, $stderr")
+    val success: Boolean = !isTimeOut && (exitcode==0)
+    success
   }
 
 
@@ -161,7 +165,14 @@ case class Evaluator(problem: Problem) {
       // require(Files.exists(outFile), s"output file not produced ${outFile} after $i trails.")
       if (Files.exists(outFile)) {
         val facts = Misc.readCsv(outFile.toString)
-        val tuples = facts.map(Examples.strToTuple(rel, _)).toSet
+        var tuples: Set[List[Constant]] = Set()
+        try {
+          tuples = facts.map(Examples.strToTuple(rel, _)).toSet
+        }
+        catch {
+          case _: Exception => logger.error(s"failed to load tuples from ${outFile}.")
+            assert(false)
+        }
         idb = idb.addTuples(rel, tuples)
      }
       else {
