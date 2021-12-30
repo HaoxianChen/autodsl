@@ -78,6 +78,7 @@ case class EvaluatorWrapper (problem: Problem)  {
 }
 
 class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20,
+                     maxQueries: Int = 10,
                      logDir: String = s"/var/tmp/netspec") {
   private val logger = Logger("Active-learning")
   private val logRootDir: Path = Paths.get(logDir)
@@ -136,9 +137,10 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         else logger.debug(s"new example: ${nextExample.get}")
       }
     }
-    while (candidates.size > 1 && nextExample.isDefined)
+    while (candidates.size > 1 && nextExample.isDefined && newExamples.size < maxQueries)
 
     val bestProgram = candidates.maxBy(scoreProgram)
+    if (newExamples.size >= maxQueries) logger.warn(s"Stopped at max queries ${maxQueries}.")
     logger.info(s"Solution: $bestProgram")
     (bestProgram, newExamples)
   }
