@@ -17,7 +17,7 @@ class DebloatingExperiment(maxExamples: Int =100, outDir: String = "results/debl
   def debloat(problem: Problem, staticConfigRelations: Set[Relation]): Unit = {
     val t1 = System.nanoTime
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
-    val (program, nQueries, correctness) = learner.go()
+    val (program, nQueries, correctness, isTimeOut) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")

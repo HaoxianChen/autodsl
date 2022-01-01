@@ -15,6 +15,9 @@ import scala.concurrent.{Await, Future, TimeoutException, duration}
 import scala.util.{Random, Try}
 
 class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
+                               /** timeout in seconds */
+                               timeout: Int= 20,
+                               // timeout: Int= 60 * 60,
                                _logRootDir: String = "/var/tmp/netspec/")
     extends Experiment(outDir) {
   private val logger = Logger("ActiveLearningExperiment")
@@ -25,7 +28,9 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
   def allProblems: List[Path] = Experiment.activelearningProblems.map(s => Paths.get(benchmarkDir, s))
   def randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
 
-  def runAll(repeats: Int) :Unit = {
+  def runAll(repeats: Int) :Unit = run(allProblems, repeats)
+
+  def run(problemPaths: List[Path], repeats: Int) :Unit = {
     /** Run without droping examples */
     val nDrop: Int = 0
     require(repeats >= 1)
@@ -37,7 +42,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       areAllResultsReady = true
       iters += 1
 
-      for (problemFile <- allProblems) {
+      for (problemFile <- problemPaths) {
         val problem = Misc.readProblem(problemFile.toString)
         val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
         if (rc < repeats) {
@@ -79,21 +84,24 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     // Randomly drop one example
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
-      // randomDrop(problem, nDrop=1)
-      // val ret: Try[Unit] = Try {
+      randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
+      // try {
       //   randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
       // }
-      val waitTime = duration.Duration(20,MINUTES)
-      val ret = Future {
-        randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
-      }
-      try {
-        Await.result(ret, waitTime)
-      }
-      catch {
-        case te: TimeoutException => logger.warn(s"$te")
-        case e: Exception => logger.warn(s"$e")
-      }
+      // catch {
+      //   case e: Exception => logger.error(s"$e")
+      // }
+      // val waitTime = duration.Duration(60,MINUTES)
+      // val ret = Future {
+      //   randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
+      // }
+      // try {
+      //   Await.result(ret, waitTime)
+      // }
+      // catch {
+      //   case te: TimeoutException => logger.warn(s"$te")
+      //   case e: Exception => logger.warn(s"$e")
+      // }
     }
   }
 
@@ -111,8 +119,9 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     val t1 = System.nanoTime
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
-    val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, logDir=logSubDir.toString)
-    val (program, nQueries, correctness) = learner.go()
+    val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, timeout=timeout,
+      logDir=logSubDir.toString)
+    val (program, nQueries, correctness, isTimeOut) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")
@@ -124,7 +133,9 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       "time"->duration,
       "sig"->getProblemSignature(problem),
       "correctness"->correctness,
-      "logDir"->logSubDir
+      "logDir"->logSubDir,
+      "isTimeOut"->isTimeOut,
+      "timeout"->timeout
     ),
       program
     )

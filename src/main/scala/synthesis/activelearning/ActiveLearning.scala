@@ -6,8 +6,12 @@ import synthesis.rulebuilder.InputAggregator
 import synthesis.search.{Synthesis, SynthesisConfigSpace}
 import synthesis.util.Misc
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.nio.file.{Path, Paths}
+import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.{Await, Future, TimeoutException}
 import scala.math.log
+import scala.util.{Failure, Success}
 
 case class TupleInstance(tuples: Set[Tuple], instanceId: Int)
 object TupleInstance {
@@ -79,6 +83,9 @@ case class EvaluatorWrapper (problem: Problem)  {
 
 class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20,
                      maxQueries: Int = 10,
+                     /** timeout in seconds */
+                     //timeout: Int = 60*60),
+                     timeout: Int = 1*60,
                      logDir: String = s"/var/tmp/netspec") {
   private val logger = Logger("Active-learning")
   private val logRootDir: Path = Paths.get(logDir)
@@ -93,23 +100,28 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   private val oracle = p0.oracleSpec.get
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
-  def go(): (Program, Int, Boolean) = {
+  def go(): (Program, Int, Boolean, Boolean) = {
     /** Handle one output relation at a time */
     var solutions: Set[Program] = Set()
     var problem: Problem = p0
     var nQueries: Int = 0
+    var isTimeOut: Boolean = false
     for (rel <- p0.outputRels) {
-      val (sol, newExamples) = interactiveLearning(rel, problem)
+      val (sol, newExamples, _to) = interactiveLearning(rel, problem)
+      if (_to) isTimeOut = true
       solutions += sol
       problem = newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
       nQueries += newExamples.size
     }
     /** Merge solutions altogether */
+    assert(solutions.nonEmpty)
     val finalSolution = solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
-    (finalSolution, nQueries, differentiateFromOracle(finalSolution))
+    (finalSolution, nQueries, differentiateFromOracle(finalSolution), isTimeOut)
   }
 
-  def interactiveLearning(outRel: Relation, initProblem: Problem): (Program, Set[ExampleInstance]) = {
+  def interactiveLearning(outRel: Relation, initProblem: Problem,
+                         ):
+                         (Program, Set[ExampleInstance], Boolean) = {
     require(initProblem.outputRels.contains(outRel))
     logger.info(s"Solve ${outRel}")
     /** Only do synthesis on one output relation. */
@@ -120,6 +132,10 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     var nextExample: Option[ExampleInstance] = None
     var newExamples: Set[ExampleInstance] = Set()
 
+    var remainingTime: Int = timeout
+    var isTimeOut: Boolean = false
+    logger.info(s"Timeout in $remainingTime seconds.")
+
     do {
       // add new examples
       if (nextExample.isDefined) {
@@ -128,8 +144,31 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
       }
 
       logProblem(problem)
-      candidates = synthesize(problem, outRel, candidates)
-      logger.debug(s"${candidates.size} candidate programs")
+      val start = System.nanoTime()
+      val candidatesFuture = Future {
+        synthesize(problem, outRel, candidates)
+      }
+      try {
+        Await.result(candidatesFuture, Duration(remainingTime,SECONDS))
+      }
+      catch {
+        case te: TimeoutException => {
+          logger.warn(s"$te")
+          isTimeOut = true
+        }
+        case e: Exception => logger.warn(s"$e")
+      }
+      // candidates = synthesize(problem, outRel, candidates)
+      candidatesFuture onComplete {
+        case Success(value) => {
+          candidates = value
+          logger.debug(s"${candidates.size} candidate programs")
+        }
+        case Failure(exception) => logger.error(s"$exception")
+      }
+      val duration: Int = ((System.nanoTime()- start) / 1e9).toInt
+      logger.debug(s"Last iteration lasted $duration s.")
+      remainingTime -= duration
 
       if (candidates.size > 1) {
         nextExample = disambiguate(candidates, outRel)
@@ -137,12 +176,21 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         else logger.debug(s"new example: ${nextExample.get}")
       }
     }
-    while (candidates.size > 1 && nextExample.isDefined && newExamples.size < maxQueries)
+    while (candidates.size > 1 && nextExample.isDefined && newExamples.size < maxQueries &&
+        remainingTime > 10)
 
-    val bestProgram = candidates.maxBy(scoreProgram)
     if (newExamples.size >= maxQueries) logger.warn(s"Stopped at max queries ${maxQueries}.")
-    logger.info(s"Solution: $bestProgram")
-    (bestProgram, newExamples)
+    if (isTimeOut) logger.warn(s"Timeout after $timeout seconds.")
+
+    if (candidates.nonEmpty) {
+      val bestProgram = candidates.maxBy(scoreProgram)
+      logger.info(s"Solution: $bestProgram")
+      (bestProgram, newExamples,isTimeOut)
+    }
+    else {
+      logger.warn(s"No solution found.")
+      (Program(), newExamples, isTimeOut)
+    }
   }
 
   def logProblem(problem: Problem): Path = {
