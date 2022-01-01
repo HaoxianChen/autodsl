@@ -5,19 +5,15 @@ import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
 import synthesis.experiment.ExperimentRecord.fromFile
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import synthesis.util.Misc
 import synthesis.{Problem, Program, Relation}
 
 import java.nio.file.{Path, Paths}
-import scala.concurrent.duration.MINUTES
-import scala.concurrent.{Await, Future, TimeoutException, duration}
 import scala.util.{Random, Try}
 
 class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
                                /** timeout in seconds */
-                               timeout: Int= 20,
-                               // timeout: Int= 60 * 60,
+                               timeout: Int= 60 * 60,
                                _logRootDir: String = "/var/tmp/netspec/")
     extends Experiment(outDir) {
   private val logger = Logger("ActiveLearningExperiment")

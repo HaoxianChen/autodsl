@@ -84,8 +84,7 @@ case class EvaluatorWrapper (problem: Problem)  {
 class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20,
                      maxQueries: Int = 10,
                      /** timeout in seconds */
-                     //timeout: Int = 60*60),
-                     timeout: Int = 1*60,
+                     timeout: Int = 60*60,
                      logDir: String = s"/var/tmp/netspec") {
   private val logger = Logger("Active-learning")
   private val logRootDir: Path = Paths.get(logDir)
