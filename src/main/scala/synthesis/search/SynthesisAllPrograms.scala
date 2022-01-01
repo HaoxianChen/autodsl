@@ -227,16 +227,20 @@ case class SynthesisAllPrograms(problem: Problem,
     var rulePool: Set[ScoredRule] = Set()
     rulePool ++= generalRules.filter(r => validCondition(r) || refineCondition(r))
     // var next: ScoredRule = sampleNextCandidate(rulePool)
-    var next: ScoredRule = SimulatedAnnealing.sample(rulePool, getScore)
+    var next: Option[ScoredRule] = Some(SimulatedAnnealing.sample(rulePool, getScore))
 
     var validRules: Set[ScoredRule] = generalRules.filter(validCondition)
 
-    while (iters < maxRefineIters && extraIters <= maxExtraIters && rulePool.nonEmpty && validRules.size < maxRules) {
+    while (iters < maxRefineIters && extraIters <= maxExtraIters &&
+      // rulePool.nonEmpty &&
+      validRules.size < maxRules && next.isDefined) {
       if (iters % 20 == 0) logger.info(s"iteration $iters")
 
       // pop highest scored rule from pool
       // val baseRule = rulePool.dequeue()
-      val baseRule = next
+      val baseRule = next.get
+      assert(evaluated.contains(baseRule.rule))
+      assert(!expanded.contains(baseRule.rule))
 
       /** Expand the current rule */
       val allRefinedRules = refineRule(baseRule.rule).diff(evaluated)
@@ -281,19 +285,20 @@ case class SynthesisAllPrograms(problem: Problem,
       next = if (toExpandValidRules) {
         /** Keep exploring alternative valid rules. */
         // assert(higherScore.isEmpty, s"${higherScore}")
-        SimulatedAnnealing.sample(unexpandedValidRules, getScore, baseScore = baseScore)
+        Some(SimulatedAnnealing.sample(unexpandedValidRules, getScore, baseScore = baseScore))
       }
       else if (higherScore.nonEmpty) {
       // if (higherScore.nonEmpty) {
         /** Always go higher score along the current path if such option exists. */
         // sampleNextCandidate(higherScore, baseScore = baseRule.score)
-        SimulatedAnnealing.sample(higherScore, getScore, baseScore=baseScore)
+        Some(SimulatedAnnealing.sample(higherScore, getScore, baseScore=baseScore))
+      }
+      else if (rulePool.nonEmpty){
+        Some(SimulatedAnnealing.sample(rulePool, getScore, baseScore=baseScore))
       }
       else {
-        SimulatedAnnealing.sample(rulePool, getScore, baseScore=baseScore)
+        None
       }
-      assert(evaluated.contains(next.rule))
-      assert(!expanded.contains(next.rule))
 
       /** Remember the number of iterations to find a rule.  */
       if (maxExtraIters==0 && validRules.nonEmpty) {

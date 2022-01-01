@@ -3,13 +3,14 @@ package synthesis.experiment
 import com.typesafe.scalalogging.Logger
 import synthesis.activelearning.{ActiveLearning, ExampleInstance}
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
+import synthesis.experiment.ExperimentRecord.fromFile
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import synthesis.util.Misc
 import synthesis.{Problem, Program, Relation}
 
 import java.nio.file.{Path, Paths}
-import scala.concurrent.duration.{MINUTES}
+import scala.concurrent.duration.MINUTES
 import scala.concurrent.{Await, Future, TimeoutException, duration}
 import scala.util.{Random, Try}
 
@@ -173,6 +174,61 @@ object ActiveLearningExperiment {
     // todo: control the seed to random object
     val rnd = new Random()
     rnd.shuffle(set.toList).take(n).toSet
+  }
+
+  def makeTable(benchmarkDir: String, problemDirs: List[String], resultRootDir: String, outFileName: String): Unit = {
+    // var allRecords: List[List[String]] = List()
+    var allRecords: List[Map[String,String]] = List()
+    val allProblems = problemDirs.map(f=>Paths.get(benchmarkDir,f))
+    for (problemFile <- allProblems) {
+      val problem = Misc.readProblem(problemFile.toString)
+      val resultDir = Paths.get(resultRootDir, problem.name)
+      val allFiles: List[String] = Misc.getListOfFiles(resultDir.toString)
+      val logFiles: List[String] = allFiles.filter(_.contains("result"))
+      val records: List[Map[String,String]] = logFiles.map(f => Paths.get(resultDir.toString,f).toString).
+        map(fromFile)
+      allRecords ++=  records
+    }
+
+    def _strToInt(_s: String): Int = _s match {
+      case "true" => 1
+      case "false" => 0
+      case _ => {
+        assert(false)
+        -1
+      }
+    }
+
+    val statLines = allRecords.map { rc =>
+      val correctness = _strToInt(rc("correctness") )
+      List(rc("problem"), rc("numDrop"), rc("numQuereis"), rc("time"), correctness)
+    }.toList
+
+    val aggLines = allRecords.groupBy(rc => (rc("problem"), rc("numDrop"))).map {
+      case (k,group) => {
+        val N = group.size
+        val avgQueries: Double = group.map(_("numQuereis")).map(_.toInt).sum.toDouble / N
+        val avgTime: Double = group.map(_("time")).map(_.toDouble).sum.toDouble / N
+        val correctRatio: Double = group.map(_("correctness")).map(_strToInt).sum.toDouble / N
+        List(k._1, k._2, avgQueries, avgTime, correctRatio, N)
+      }
+    }.toList
+
+    val rawHeader = List("spec", "numDropExamples", "numQueries", "time", "validated")
+    val aggHeader = rawHeader :+ "count"
+
+    val rawFile = Paths.get(resultRootDir, s"${outFileName}_raw.csv")
+    Misc.writeFile((rawHeader +: statLines).map(_.mkString("\t")).mkString("\n"), rawFile)
+    val aggFile = Paths.get(resultRootDir, s"${outFileName}_agg.csv")
+    Misc.writeFile((aggHeader +: aggLines).map(_.mkString("\t")).mkString("\n"), aggFile)
+  }
+
+  def makeAllTables(benchmarkDir: String, resultRootDir: String): Unit = {
+
+    makeTable(benchmarkDir,Experiment.activelearningProblems, resultRootDir, "active_learning")
+
+    makeTable(benchmarkDir,Experiment.randomDropExperiments, resultRootDir, "drop_examples")
+
   }
 }
 

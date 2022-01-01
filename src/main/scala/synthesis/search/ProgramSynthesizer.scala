@@ -43,13 +43,16 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     var extraIters: Int = 0
     val maxExtraIters: Int = 10
     val maxSolutionSize: Int = 10
+    var iters: Int = 0
     // while (validPrograms.isEmpty) {
     assert(programPool.nonEmpty, s"$idb")
-    var next: ScoredProgram = sampleNextCandidateProgram(programPool, baseScore = 0)
-    while (programPool.nonEmpty && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
+    var next: Option[ScoredProgram] = Some(sampleNextCandidateProgram(programPool, baseScore = 0))
+    // while (programPool.nonEmpty && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
+    while (next.isDefined && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
       // val baseProgram: ScoredProgram = programPool.dequeue()
-      val baseProgram: ScoredProgram = next
+      val baseProgram: ScoredProgram = next.get
       assert(evaluatedPrograms.contains(baseProgram.program))
+      assert(!expandedPrograms.contains(baseProgram.program))
 
       val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, idb).diff(evaluatedPrograms)
       val (refinedPrograms, isBaseProgramExhausted) = if (allRefinedPrograms.size > maxBranching) {
@@ -74,36 +77,44 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
 
       /** Sample next candidate program to explore */
       val higherScore: Set[ScoredProgram] = pnext.filter(_.score>baseProgram.score)
-      val perfectRecall: Set[ScoredProgram] = programPool.filter(p => p.recall >= 1.0 && p.completeness >= 1.0)
+      // val perfectRecall: Set[ScoredProgram] = programPool.filter(p => p.recall >= 1.0 && p.completeness >= 1.0)
+      val maxExpandedValidPrograms: Int = 5
+      val unexpandedValidPrograms: Set[ScoredProgram] = validPrograms.filterNot(sp=>expandedPrograms.contains(sp.program))
+      val toExpandValidPrograms: Boolean = {
+        val expandedValidPrograms: Set[Program] = expandedPrograms.intersect(validPrograms.map(_.program))
+        unexpandedValidPrograms.nonEmpty && expandedValidPrograms.size < maxExpandedValidPrograms
+      }
       next =
       // if (perfectRecall.nonEmpty) {
       //   sampleNextCandidateProgram(perfectRecall, baseProgram.score)
       // }
       // else if(higherScore.nonEmpty) {
-      if(higherScore.nonEmpty) {
+        if (toExpandValidPrograms) {
+          def _getScore(sp: ScoredProgram): Double = sp.score
+          Some(SimulatedAnnealing.sample(unexpandedValidPrograms, _getScore, _getScore(baseProgram)))
+        }
+        else if(higherScore.nonEmpty) {
         /** Always go along the current path if higher score available */
         // sampleNextCandidateProgram(higherScore, baseProgram.score)
         def _getScore(sp: ScoredProgram): Double = sp.score
-        SimulatedAnnealing.sample(higherScore, _getScore, _getScore(baseProgram))
+        Some(SimulatedAnnealing.sample(higherScore, _getScore, _getScore(baseProgram)))
       }
       else {
         /**  */
         def _getScore(sp: ScoredProgram): Double = sp.completeness * sp.recall
-        SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram))
+        Some(SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram)))
       }
-      assert(evaluatedPrograms.contains(next.program))
-      assert(!expandedPrograms.contains(next.program), s"${next}")
 
       // if (refinedPrograms.size < allRefinedPrograms.size) programPool += baseProgram
-      if (validPrograms.nonEmpty) {
+      iters += 1
+      if (validPrograms.nonEmpty && !toExpandValidPrograms) {
         extraIters += 1
       }
     }
 
     if (programPool.isEmpty) logger.debug(s"Runs out of candidate programs. Explored ${evaluatedPrograms.size}.")
+    logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
     assert(validPrograms.nonEmpty)
-    /** todo: better order the valid programs */
-    // validPrograms.toList.map(_.program).sortBy(_.rules.size)
     validPrograms.toList.map(_.program).sortWith(_<_)
   }
 
@@ -115,12 +126,13 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
 
   def refineProgram(scoredProgram: ScoredProgram, idb: Set[Tuple]): Set[Program] = {
     val program = scoredProgram.program
-    val refinedPrograms: Set[Program] = if (scoredProgram.precision < 1.0 || scoredProgram.completeness <1.0) {
-      programBuilder.refine(program)
-    }
-    else {
-      Set()
-    }
+    val refinedPrograms: Set[Program] = programBuilder.refine(program)
+    // val refinedPrograms: Set[Program] = if (scoredProgram.precision < 1.0 || scoredProgram.completeness <1.0) {
+    //   programBuilder.refine(program)
+    // }
+    // else {
+    //   Set()
+    // }
 
     // if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program) && !isRecursive(program)) {
     if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {

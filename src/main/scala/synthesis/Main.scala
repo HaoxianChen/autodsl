@@ -90,6 +90,12 @@ object Main extends App {
     val nDrops = List(1,2,3,4,5)
     experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
   }
+  else if (args(0) == "maketable") {
+    require(args.size == 3)
+    val _benchmarkDir = args(1)
+    val _resultDir = args(2)
+    ActiveLearningExperiment.makeAllTables(_benchmarkDir,_resultDir)
+  }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
