@@ -170,23 +170,20 @@ object Misc {
 
   def renameTypes(problem: Problem, _specStr: String): String = {
     // rename all types to their base type
-    val allLines: Array[String] = _specStr.split("\n")
-    def isTypeDecl(line: String): Boolean = line.startsWith(".type")
-    def isRelDecl(line: String): Boolean = line.startsWith(".decl")
-    val newRelDeclLines: Array[String] = allLines.filter(isRelDecl).map(
-      l => {
-        var newLine = l
-        for (_type <- problem.types) {
-          val baseTypeName = _type match {
-            case _:NumberType => "number"
-            case _:SymbolType => "symbol"
-          }
-          newLine = newLine.replaceAll(s"\\b${_type.name}\\b", baseTypeName)
+    val renamed: String = {
+      var _s: String = _specStr
+      for (_type <- problem.types) {
+        val baseTypeName = _type match {
+          case _:NumberType => "number"
+          case _:SymbolType => "symbol"
         }
-        newLine
+        _s = _s.replaceAll(s"\\b${_type.name}\\b", baseTypeName)
       }
-    )
-    (newRelDeclLines ++ allLines.filterNot(isTypeDecl).filterNot(isRelDecl)).mkString("\n")
+      _s
+    }
+    val allLines: Array[String] = renamed.split("\n")
+    def isTypeDecl(line: String): Boolean = line.startsWith(".type")
+    allLines.filterNot(isTypeDecl).mkString("\n")
   }
 
 }
