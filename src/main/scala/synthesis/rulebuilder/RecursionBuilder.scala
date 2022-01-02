@@ -182,7 +182,7 @@ object FunctorBuilder {
             maxConstants: Int,
            inputAggregators: Set[InputAggregator],
             // maxConstantPoolSize: Int=5
-            maxConstantPoolSize: Int=3
+            maxConstantPoolSize: Int=4
   ): FunctorBuilder = {
     val functors = getFunctors(abstractFunctorSpecs)
     val filters = getFfilters(abstractFunctorSpecs)
