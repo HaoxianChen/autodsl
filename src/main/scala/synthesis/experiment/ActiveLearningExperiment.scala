@@ -115,26 +115,27 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
     val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, timeout=timeout,
       logDir=logSubDir.toString)
-    val (program, nQueries, correctness, isTimeOut) = learner.go()
+    val (program, nQueries, correctness, isTimeOut, hasError) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")
 
-    val record = ExperimentRecord(Map("problem"->problem.name,
-      "exp_name" -> s"drop_${nDrop}_example",
-      "numDrop" -> nDrop,
-      "numQuereis" -> nQueries,
-      "time"->duration,
-      "sig"->getProblemSignature(problem),
-      "correctness"->correctness,
-      "logDir"->logSubDir,
-      "isTimeOut"->isTimeOut,
-      "timeout"->timeout
-    ),
-      program
-    )
-    record.dump(outDir)
-
+    if (!hasError) {
+      val record = ExperimentRecord(Map("problem"->problem.name,
+        "exp_name" -> s"drop_${nDrop}_example",
+        "numDrop" -> nDrop,
+        "numQuereis" -> nQueries,
+        "time"->duration,
+        "sig"->getProblemSignature(problem),
+        "correctness"->correctness,
+        "logDir"->logSubDir,
+        "isTimeOut"->isTimeOut,
+        "timeout"->timeout
+      ),
+        program
+      )
+      record.dump(outDir)
+    }
     (program, nQueries, duration)
   }
 

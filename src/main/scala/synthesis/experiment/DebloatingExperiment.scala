@@ -17,23 +17,25 @@ class DebloatingExperiment(maxExamples: Int =100, outDir: String = "results/debl
   def debloat(problem: Problem, staticConfigRelations: Set[Relation]): Unit = {
     val t1 = System.nanoTime
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
-    val (program, nQueries, correctness, isTimeOut) = learner.go()
+    val (program, nQueries, correctness, isTimeOut, hasError) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")
 
     val exampleInstances = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
 
-    val record = ExperimentRecord(Map("problem"->problem.name,
-      "exp_name" -> s"random_trace",
-      "trace_length" -> exampleInstances.size,
-      "numQuereis" -> nQueries,
-      "time"->duration,
-      "correctness"->correctness),
-      program
-    )
-    record.dump(outDir)
-    logger.info(s"Finished in ${duration}s, trace length ${exampleInstances.size}, ${nQueries} queries.")
+    if (!hasError) {
+      val record = ExperimentRecord(Map("problem"->problem.name,
+        "exp_name" -> s"random_trace",
+        "trace_length" -> exampleInstances.size,
+        "numQuereis" -> nQueries,
+        "time"->duration,
+        "correctness"->correctness),
+        program
+      )
+      record.dump(outDir)
+      logger.info(s"Finished in ${duration}s, trace length ${exampleInstances.size}, ${nQueries} queries.")
+    }
   }
 
 }

@@ -99,28 +99,33 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   private val oracle = p0.oracleSpec.get
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
-  def go(): (Program, Int, Boolean, Boolean) = {
+  def go(): (Program, Int, Boolean, Boolean, Boolean) = {
     /** Handle one output relation at a time */
     var solutions: Set[Program] = Set()
     var problem: Problem = p0
     var nQueries: Int = 0
     var isTimeOut: Boolean = false
+    var hasError: Boolean = false
+
     for (rel <- p0.outputRels) {
-      val (sol, newExamples, _to) = interactiveLearning(rel, problem)
-      if (_to) isTimeOut = true
-      solutions += sol
-      problem = newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
-      nQueries += newExamples.size
+      if (!hasError) {
+        val (sol, newExamples, _to, _err) = interactiveLearning(rel, problem)
+        if (_to) isTimeOut = true
+        if (_err) hasError = true
+        solutions += sol
+        problem = newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
+        nQueries += newExamples.size
+      }
     }
     /** Merge solutions altogether */
     assert(solutions.nonEmpty)
     val finalSolution = solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
-    (finalSolution, nQueries, differentiateFromOracle(finalSolution), isTimeOut)
+    (finalSolution, nQueries, differentiateFromOracle(finalSolution), isTimeOut, hasError)
   }
 
   def interactiveLearning(outRel: Relation, initProblem: Problem,
                          ):
-                         (Program, Set[ExampleInstance], Boolean) = {
+                         (Program, Set[ExampleInstance], Boolean, Boolean) = {
     require(initProblem.outputRels.contains(outRel))
     logger.info(s"Solve ${outRel}")
     /** Only do synthesis on one output relation. */
@@ -133,6 +138,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
 
     var remainingTime: Int = timeout
     var isTimeOut: Boolean = false
+    var hasError: Boolean = false
     logger.info(s"Timeout in $remainingTime seconds.")
 
     do {
@@ -163,7 +169,10 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
           candidates = value
           logger.debug(s"${candidates.size} candidate programs")
         }
-        case Failure(exception) => logger.error(s"$exception")
+        case Failure(exception) => {
+          hasError = true
+          logger.error(s"$exception")
+        }
       }
       val duration: Int = ((System.nanoTime()- start) / 1e9).toInt
       logger.debug(s"Last iteration lasted $duration s.")
@@ -176,19 +185,19 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
       }
     }
     while (candidates.size > 1 && nextExample.isDefined && newExamples.size < maxQueries &&
-        remainingTime > 10)
+        remainingTime > 10 && !hasError)
 
     if (newExamples.size >= maxQueries) logger.warn(s"Stopped at max queries ${maxQueries}.")
     if (isTimeOut) logger.warn(s"Timeout after $timeout seconds.")
 
-    if (candidates.nonEmpty) {
+    if (candidates.nonEmpty && !hasError) {
       val bestProgram = candidates.maxBy(scoreProgram)
       logger.info(s"Solution: $bestProgram")
-      (bestProgram, newExamples,isTimeOut)
+      (bestProgram, newExamples,isTimeOut, hasError)
     }
     else {
       logger.warn(s"No solution found.")
-      (Program(), newExamples, isTimeOut)
+      (Program(), newExamples, isTimeOut, hasError)
     }
   }
 
