@@ -118,12 +118,17 @@ object Main extends App {
     experiment.go(problem, staticConfigRelations, nDrop=nDrop, repeats=repeats)
   }
   else if (args(0) == "debloat") {
-    val problem = Misc.readProblem(args(1))
-    val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
-    val repeats: Int = args(2).toInt
-    require(repeats <= 10)
-    val experiment = new DebloatingExperiment()
-    experiment.go(problem, staticConfigRelations, repeats=repeats)
+    require(args.size == 3)
+    val repeats = args(1).toInt
+    val _benchmarkDir = args(2)
+    val experiment = new ActiveLearningExperiment(_benchmarkDir, outDir="results/debloat")
+    experiment.run(Experiment.debloatingExperiments,repeats = repeats)
+    // val problem = Misc.readProblem(args(1))
+    // val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
+    // val repeats: Int = args(2).toInt
+    // require(repeats <= 10)
+    // val experiment = new DebloatingExperiment()
+    // experiment.go(problem, staticConfigRelations, repeats=repeats)
   }
   else if (args(0) == "facon") {
     val experiment = new FaconExperiment(benchmarkDir)

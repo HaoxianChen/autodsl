@@ -180,7 +180,9 @@ object FunctorBuilder {
             abstractFunctorSpecs: Set[AbstractFunctorSpec],
             edb: Examples, idb: Examples,
             maxConstants: Int,
-           inputAggregators: Set[InputAggregator], maxConstantPoolSize: Int=5
+           inputAggregators: Set[InputAggregator],
+            // maxConstantPoolSize: Int=5
+            maxConstantPoolSize: Int=3
   ): FunctorBuilder = {
     val functors = getFunctors(abstractFunctorSpecs)
     val filters = getFfilters(abstractFunctorSpecs)

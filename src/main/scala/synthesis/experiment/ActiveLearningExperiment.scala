@@ -21,12 +21,9 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
   private val logRootDir = Paths.get(_logRootDir)
   Misc.makeDir(logRootDir)
 
-  def allProblems: List[Path] = Experiment.activelearningProblems.map(s => Paths.get(benchmarkDir, s))
-  def randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
+  def runAll(repeats: Int) :Unit = run(Experiment.activelearningProblems, repeats)
 
-  def runAll(repeats: Int) :Unit = run(allProblems, repeats)
-
-  def run(problemPaths: List[Path], repeats: Int) :Unit = {
+  def run(problemPaths: List[String], repeats: Int) :Unit = {
     /** Run without droping examples */
     val nDrop: Int = 0
     require(repeats >= 1)
@@ -38,7 +35,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       areAllResultsReady = true
       iters += 1
 
-      for (problemFile <- problemPaths) {
+      for (problemFile <- problemPaths.map(s => Paths.get(benchmarkDir, s))) {
         val problem = Misc.readProblem(problemFile.toString)
         val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
         if (rc < repeats) {
@@ -55,6 +52,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
   }
 
   def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
+    val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
     for (problemFile <- randomDropProblems) {
       val problem = Misc.readProblem(problemFile.toString)
       val sig = getProblemSignature(problem)

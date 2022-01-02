@@ -152,7 +152,17 @@ object Experiment {
   )
 
   val randomDropExperiments: List[String] = List(
-    "firewall/stateful-firewall",
+    "aws/subnet",
+    "firewall/l3-firewall",
+    "sensor/temperature-report",
+  )
+
+  val debloatingExperiments: List[String] = List(
+    "forwarding/random-traces/pox-l2-pairs",
+    "firewall/random-traces/floodlight-firewall",
+    "firewall/random-traces/floodlight-stateful-firewall",
+    "firewall/random-traces/pox-l3-firewall",
+    "firewall/random-traces/pox-l3-stateful-firewall"
   )
 
   def checkSolution(problemDir: String, solution: Program): Boolean = {

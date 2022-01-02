@@ -48,7 +48,10 @@ object ConstantBuilder {
             maxRelCount: Int,
             edb: Examples, idb: Examples,
             recursion: Boolean = true,
-            maxConstants: Int = 2, maxConstantPoolSize: Int=5): ConstantBuilder = {
+            maxConstants: Int = 2,
+            // maxConstantPoolSize: Int=5
+            maxConstantPoolSize: Int=3
+           ): ConstantBuilder = {
     val constantPool = getConstantPool(edb, idb, maxConstantPoolSize)
     new ConstantBuilder(inputRels, outputRels, maxRelCount, constantPool, recursion, maxConstants)
   }
