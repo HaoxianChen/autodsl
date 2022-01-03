@@ -80,11 +80,6 @@ object ScoredProgram {
           // completeTuples.size + partialTuples.diff(_partialIdb).size * completeness
           val _allCoveredSize: Double = covered.size + partialCovered.size * completeness
           val _allTupleSize: Double = completeTuples.size + partialTuples.size * completeness
-          if (_allTupleSize < _allCoveredSize) {
-            assert(false)
-          }
-          assert(_allTupleSize >= _allCoveredSize, s"$idb:{idb}\n${partialCovered}")
-          assert(partialCovered.intersect(covered).isEmpty)
           _allCoveredSize / _allTupleSize
         }
         (_nCovered, precision)
@@ -126,11 +121,17 @@ class PartialProgramEvaluator(problem: Problem) {
 
   def evalAndPartialRelations(p0: Program): (Set[Tuple], Map[Relation, PartialRelation]) = {
     val idb = eval(p0)
-    val partialRelations = p0.rules.map(getPartialRelation)
-    /** This map is from the original relation object to the PartialRelation Object */
-    val partialRelationMap: Map[Relation, PartialRelation] = partialRelations.map(pr => pr.refRel -> pr).toMap
-    // require(idb.map(_.relation).subsetOf(partialRelationMap.keySet))
-    (idb, partialRelationMap)
+    if (p0.isComplete) {
+      (idb, Map())
+    }
+    else {
+      require(p0.incompleteRules.size==1)
+      val r0 = p0.incompleteRules.head
+      val partialRelation = getPartialRelation(r0)
+      /** This map is from the original relation object to the PartialRelation Object */
+      val partialRelationMap = Map(partialRelation.refRel -> partialRelation)
+      (idb, partialRelationMap)
+    }
   }
 }
 
