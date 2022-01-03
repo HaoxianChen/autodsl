@@ -5,9 +5,6 @@ import synthesis._
 import synthesis.rulebuilder.AggregateLiteral
 import synthesis.util.Misc
 
-import scala.collection.mutable
-import scala.math.abs
-
 class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   /** Synthesize program on a program basis */
 
@@ -64,7 +61,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       }
 
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
-        map(p => evalProgram(p, idb, Some(baseProgram)))
+        map(p => evalProgram(p, idb))
 
       evaluatedPrograms ++= refinedPrograms
       validPrograms ++= candidatePrograms.filter(isProgramValid)
@@ -77,6 +74,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
 
       /** Sample next candidate program to explore */
       val higherScore: Set[ScoredProgram] = pnext.filter(_.score>baseProgram.score)
+      val higherRecall = pnext.filter(_.recall > baseProgram.recall)
       // val perfectRecall: Set[ScoredProgram] = programPool.filter(p => p.recall >= 1.0 && p.completeness >= 1.0)
       val maxExpandedValidPrograms: Int = 5
       val unexpandedValidPrograms: Set[ScoredProgram] = validPrograms.filterNot(sp=>expandedPrograms.contains(sp.program))
@@ -99,14 +97,18 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
         def _getScore(sp: ScoredProgram): Double = sp.score
         Some(SimulatedAnnealing.sample(higherScore, _getScore, _getScore(baseProgram)))
       }
+      else if (higherRecall.nonEmpty) {
+          def _getScore(sp: ScoredProgram): Double = sp.recall
+          Some(SimulatedAnnealing.sample(higherRecall, _getScore, _getScore(baseProgram)))
+      }
       else {
-        /**  */
-        def _getScore(sp: ScoredProgram): Double = sp.completeness * sp.recall
+        def _getScore(sp: ScoredProgram): Double = sp.score
         Some(SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram)))
       }
 
       // if (refinedPrograms.size < allRefinedPrograms.size) programPool += baseProgram
       iters += 1
+      if (iters % 20 == 0) logger.info(s"iteration $iters")
       if (validPrograms.nonEmpty && !toExpandValidPrograms) {
         extraIters += 1
       }
@@ -127,12 +129,6 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   def refineProgram(scoredProgram: ScoredProgram, idb: Set[Tuple]): Set[Program] = {
     val program = scoredProgram.program
     val refinedPrograms: Set[Program] = programBuilder.refine(program)
-    // val refinedPrograms: Set[Program] = if (scoredProgram.precision < 1.0 || scoredProgram.completeness <1.0) {
-    //   programBuilder.refine(program)
-    // }
-    // else {
-    //   Set()
-    // }
 
     // if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program) && !isRecursive(program)) {
     if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {
@@ -157,43 +153,60 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   }
 
   def addARule(program: Program, idb: Set[Tuple]): Set[Program] = {
-    val generalRules: Set[Rule] = ruleLearner.getMostGenearlRules()
-    val coveredIdb: Set[Tuple] = evaluator.eval(program)
-    val remainingIdb = idb.diff(coveredIdb)
-    /** Find a complete rule with non-zero recall. */
-    def _getRuleScore(sr: ScoredRule): Double = sr.completeness * sr.recall * sr.precision
-    def _validCondition(sr: ScoredRule): Boolean = sr.recall > 0 && sr.completeness >= 1.0
-    /** Do not further refine valid rules */
-    def _refineCondition(sr: ScoredRule): Boolean = _getRuleScore(sr) > 0 && !_validCondition(sr)
-    val (_,newRules,_) = ruleLearner.learnNRules(remainingIdb, generalRules, learnedRules=program.rules,
-      getScore = _getRuleScore, validCondition = _validCondition, refineCondition = _refineCondition)
-    newRules.map(r => Program(program.rules+r))
+    val refRel = idb.map(_.relation)
+    val generalPrograms = programBuilder.mostGeneralPrograms().filter(
+      p => p.rules.forall(r => refRel.contains(r.head.relation))
+    )
+    require(generalPrograms.forall(_.rules.size==1))
+    val addedRules = generalPrograms.map(gp=>Program(program.rules+gp.rules.head))
+
+    val addedRulesEvaluated = addedRules.map(p => evalProgram(p,idb))
+    val baseRecall = evalProgram(program, idb).recall
+    val improvedRecalls = addedRulesEvaluated.filter(_.recall > baseRecall)
+    improvedRecalls.map(_.program)
   }
 
-  def isStaled(scoredProgram: ScoredProgram): Boolean = {
-    val isComplete: Boolean = scoredProgram.completeness > 1-1e-3
-    if (scoredProgram.score_history.size == ScoredProgram.maxHistSize && isComplete) {
-      scoredProgram.diff().map(d=>abs(d)).max < 1e-3
+  // def addARule(program: Program, idb: Set[Tuple]): Set[Program] = {
+  //   val generalRules: Set[Rule] = ruleLearner.getMostGenearlRules()
+  //   val coveredIdb: Set[Tuple] = evaluator.eval(program)
+  //   val remainingIdb = idb.diff(coveredIdb)
+  //   /** Find a complete rule with non-zero recall. */
+  //   def _getRuleScore(sr: ScoredRule): Double = sr.completeness * sr.recall * sr.precision
+  //   def _validCondition(sr: ScoredRule): Boolean = sr.recall > 0 && sr.completeness >= 1.0
+  //   /** Do not further refine valid rules */
+  //   def _refineCondition(sr: ScoredRule): Boolean = _getRuleScore(sr) > 0 && !_validCondition(sr)
+  //   val (_,newRules,_) = ruleLearner.learnNRules(remainingIdb, generalRules, learnedRules=program.rules,
+  //     getScore = _getRuleScore, validCondition = _validCondition, refineCondition = _refineCondition)
+  //   newRules.map(r => Program(program.rules+r))
+  // }
+
+  // def isStaled(scoredProgram: ScoredProgram): Boolean = {
+  //   val isComplete: Boolean = scoredProgram.completeness > 1-1e-3
+  //   if (scoredProgram.score_history.size == ScoredProgram.maxHistSize && isComplete) {
+  //     scoredProgram.diff().map(d=>abs(d)).max < 1e-3
+  //   }
+  //   else false
+  // }
+
+  def needsRefinement(scoredProgram: ScoredProgram): Boolean = if (!scoredProgram.program.isComplete) {
+      scoredProgram.recall > scoredProgram.completeRecall
     }
-    else false
-  }
-
-  def needsRefinement(scoredProgram: ScoredProgram): Boolean = {
-    scoredProgram.score > 1e-4
-  }
+    else {
+      scoredProgram.score > 1e-4
+    }
 
   def isComplete(program: Program): Boolean = program.rules.forall(_.isHeadBounded())
 
-  def evalProgram(program: Program, refIdb: Set[Tuple], baseProgram: Option[ScoredProgram]=None): ScoredProgram = {
+  def evalProgram(program: Program, refIdb: Set[Tuple]): ScoredProgram = {
     val (idb0,partialRelationMap)  = evaluator.evalAndPartialRelations(program)
     /** Filter only relevant idb */
     val idb = getRelevantIdb(idb0)
 
-    def getPartialIdb(rel: Relation, tuple: Tuple): Tuple = {
-      val partialRelation: PartialRelation = partialRelationMap(rel)
+    def getPartialTuple(tuple: Tuple): Tuple = {
+      val partialRelation: PartialRelation = partialRelationMap(tuple.relation)
       partialRelation.getPartialIdb(tuple)
     }
-    ScoredProgram(program, idb, refIdb, getPartialIdb, baseProgram)
+    ScoredProgram(program, idb, refIdb, getPartialTuple)
   }
 
   def getRelevantIdb(idb: Set[Tuple]): Set[Tuple] = {
@@ -205,118 +218,4 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   def isProgramValid(program: ScoredProgram): Boolean = program.score >= 1-1e-3
 }
 
-case class ScoredProgram(program: Program, idb: Set[Tuple], precision: Double, recall: Double, completeness: Double,
-                         score_history: List[Double]) extends Ordered[ScoredProgram] {
-  val score = precision * recall * completeness
-  override def compare(that: ScoredProgram): Int = {
-    if (this.completeness < that.completeness) -1
-    else if (this.completeness > that.completeness) 1
-
-    else if (this.recall < that.recall) -1
-    else if (this.recall > that.recall) 1
-
-    else if (this.score < that.score) -1
-    else if (this.score > that.score) 1
-
-    else if (this.program > that.program) -1
-    else if (this.program < that.program) 1
-
-    else 0
-  }
-
-  override def toString(): String = s"${this.score} ${this.program.toString}"
-
-  def diff(): List[Double] = Misc.listDiff(this.score_history)
-
-  def nextScoreHistory(): List[Double] = Misc.slidingWindowUpdate(score_history, score, ScoredProgram.maxHistSize)
-}
-object ScoredProgram {
-  val maxHistSize: Int = 2
-  def apply(program: Program, idb: Set[Tuple], refIdb: Set[Tuple], getPartialIdb: (Relation, Tuple)=>Tuple,
-           parent: Option[ScoredProgram]=None): ScoredProgram = {
-    val (precision, recall) = getScore(idb, refIdb, getPartialIdb)
-
-    val history = if (parent.isDefined) parent.get.nextScoreHistory() else List()
-    ScoredProgram(program, idb, precision, recall, completeness(program), history)
-  }
-
-  def completeness(program: Program): Double = {
-    val ruleCompleteness = program.rules.map(ScoredRule._completenessScore)
-    ruleCompleteness.min
-  }
-
-  def getPrecision(idb: Set[Tuple], refIdb: Set[Tuple]): Double = {
-    val pos = idb.intersect(refIdb)
-    val precision: Double = 1.0 * pos.size / idb.size
-    precision
-  }
-
-  def getScore(idb: Set[Tuple], refIdb: Set[Tuple], getPartialIdb: (Relation, Tuple) => Tuple): (Double, Double) = {
-    /** Return precision and recall */
-    val idbByRel = idb.groupBy(_.relation)
-    assert(idbByRel.keySet.size <= 2, idbByRel.keySet)
-
-    var precision: Double = 1.0
-
-    val refIdbList = refIdb.toList
-    var isCovered: List[Boolean] = List.fill(refIdbList.size)(false)
-
-    for ((rel, tuples) <- idbByRel) {
-      val refPartialIdb: List[Tuple] = refIdbList.map(t => getPartialIdb(rel, t))
-      val _c = refPartialIdb.map(t => tuples.contains(t))
-      isCovered = isCovered.zip(_c).map {case (x,y) => x || y}
-
-      val p = getPrecision(tuples, refPartialIdb.toSet)
-      precision *= p
-    }
-
-    val nCovered = isCovered.count(identity)
-    val recall: Double = 1.0 * nCovered / isCovered.size
-    (precision, recall)
-  }
-}
-
-class PartialProgramEvaluator(problem: Problem) {
-  private val evaluator = Evaluator(problem)
-  private val partialRuleEvaluator = PartialRuleEvaluator(problem)
-
-  def getStrippedProgram(program: Program): (Program, Program) = {
-    val incompleteRules: Set[Rule] = program.rules.filter(r => !r.isHeadBounded())
-    val completeRules = program.rules.diff(incompleteRules)
-    val strippedRules = incompleteRules.map(r => partialRuleEvaluator.getStripedRule(r))
-    (Program(completeRules), Program(completeRules++strippedRules))
-  }
-
-  def eval(p0: Program): Set[Tuple] = {
-    val (_, p_stripped) = getStrippedProgram(p0)
-    evaluator.eval(p_stripped)
-  }
-
-  def getPartialRelation(rule: Rule): PartialRelation = {
-    val newRel = if (rule.isHeadBounded()) rule.head.relation else partialRuleEvaluator._getStrippedRelation(rule)
-    val indices = partialRuleEvaluator._getBoundedIndices(rule)
-    PartialRelation(newRel, rule.head.relation, indices)
-  }
-
-  def evalAndPartialRelations(p0: Program): (Set[Tuple], Map[Relation, PartialRelation]) = {
-    val idb = eval(p0)
-    val partialRelations = p0.rules.map(getPartialRelation)
-    val partialRelationMap: Map[Relation, PartialRelation] = partialRelations.map(pr => pr.relation -> pr).toMap
-    require(idb.map(_.relation).subsetOf(partialRelationMap.keySet))
-    (idb, partialRelationMap)
-  }
-}
-
-case class PartialRelation(relation: Relation, refRel: Relation, indices: List[Int]) {
-  require(indices.forall(i => i>=0 && i < refRel.signature.size))
-  require(indices.toSet.size == indices.size)
-  require(indices.size == relation.signature.size)
-
-  def getPartialIdb(tuple: Tuple): Tuple = {
-    require(tuple.relation == this.refRel, s"${tuple.relation} ${this.refRel}")
-    val newFields = this.indices.map (i => tuple.fields(i))
-    Tuple(relation, newFields)
-  }
-
-}
 

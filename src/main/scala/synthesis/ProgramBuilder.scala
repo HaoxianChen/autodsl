@@ -30,8 +30,19 @@ class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[OutputAggregator
       assert(newPrograms.forall(_.rules.size<=program.rules.size))
       newPrograms
     }
-    val nonAggregateRules = program.rules.filterNot(isAggregateRule)
-    nonAggregateRules.flatMap(r => _refineARule(program,r))
+    // val nonAggregateRules = program.rules.filterNot(isAggregateRule)
+    // nonAggregateRules.flatMap(r => _refineARule(program,r))
+    if (program.isComplete) {
+      /** If the program is complete, refine all non aggregate rules. */
+      val nonAggregateRules = program.rules.filterNot(isAggregateRule)
+      nonAggregateRules.flatMap(r => _refineARule(program,r))
+    }
+    else {
+      /** If rule is incomplete, only refine the incomplete rule. */
+      require(program.incompleteRules.size==1)
+      val incompleteRule = program.incompleteRules.head
+      _refineARule(program,incompleteRule)
+    }
   }
 
   def aggregateOutput(program: Program): Set[Program] = {

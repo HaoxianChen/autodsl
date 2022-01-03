@@ -251,6 +251,8 @@ case class Program(rules: Set[Rule]) extends Ordered[Program] {
   override def toString: String = rules.mkString("\n")
   val literalCounts: Int = rules.toList.map(_.body.size).sum
   val fieldCounts: Int = rules.toList.flatMap(_.body.toList.map(_.fields.size)).sum
+  val incompleteRules: Set[Rule] = rules.filterNot(_.isHeadBounded())
+  val isComplete: Boolean = incompleteRules.isEmpty
   def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
 
   def renameRelation(newRels :Map[Relation, Relation]): Program = Program(rules.map(_.renameRelation(newRels)))
