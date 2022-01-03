@@ -60,7 +60,6 @@ object ScoredProgram {
       val covered = idb.intersect(refIdb)
       val (nCovered, precision): (Double,Double) = if (!program.isComplete) {
         require(program.incompleteRules.size==1)
-        val inCompleteRelation: Relation = program.incompleteRules.head.head.relation
         val completeness: Double = ScoredRule._completenessScore(program.incompleteRules.head)
 
         val _nCovered = {
@@ -76,8 +75,6 @@ object ScoredProgram {
 
           val partialTuples = idb.diff(completeTuples)
           val _partialRefIdb = refIdb.map(getPartialTuple)
-          assert(_partialRefIdb.forall(_.relation == inCompleteRelation),
-            s"Inconsistent partial tuple mapping:\n${_partialRefIdb}\n${program}")
           val partialCovered = idb.intersect(_partialRefIdb)
 
           // completeTuples.size + partialTuples.diff(_partialIdb).size * completeness
@@ -86,6 +83,8 @@ object ScoredProgram {
           if (_allTupleSize < _allCoveredSize) {
             assert(false)
           }
+          assert(_allTupleSize >= _allCoveredSize, s"$idb:{idb}\n${partialCovered}")
+          assert(partialCovered.intersect(covered).isEmpty)
           _allCoveredSize / _allTupleSize
         }
         (_nCovered, precision)
