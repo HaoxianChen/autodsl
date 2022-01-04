@@ -109,7 +109,7 @@ object Main extends App {
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
     val maxExamples: Int = args(2).toInt
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
-    val (program, numRuns, nQueries, durations, correctness, isTimeOut, hasError) = learner.go()
+    val (program, numRuns, nQueries, durations, correctness, isTimeOut, hasError, finalProblem) = learner.go()
     if (correctness) println(s"Correct solution") else println(s"Incorrect solution.")
     println(s"${nQueries} queries.")
     println(program)

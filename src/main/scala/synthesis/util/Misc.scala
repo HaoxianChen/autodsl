@@ -1,5 +1,7 @@
 package synthesis.util
 
+import synthesis.activelearning.ExampleInstance
+
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
 import java.time.LocalDateTime
@@ -62,14 +64,47 @@ object Misc {
     } else problem
 
     // Read Input Output examples
-    def relToProblem(problem: Problem, relation:Relation): Problem = {
-      val isInput: Boolean = problem.inputRels.contains(relation)
+    // def relToProblem(problem: Problem, relation:Relation): Problem = {
+    //   val isInput: Boolean = problem.inputRels.contains(relation)
+    //   val suffix: String = if (isInput) "facts" else "csv"
+    //   val filename = Paths.get(dir, s"${relation.name}.$suffix").toString
+    //   val facts = readCsv(filename)
+    //   if (isInput) problem.addEdb(relation, facts) else problem.addIdb(relation, facts)
+    // }
+    // (problem.inputRels ++ problem.outputRels).foldLeft(p1)(relToProblem)
+    readExamples(p1, dir)
+  }
+
+  def readExamples(problem: Problem, _dir: String): Problem = {
+    def relToProblem(_p0: Problem, _rel:Relation): Problem = {
+      val isInput: Boolean = _p0.inputRels.contains(_rel)
       val suffix: String = if (isInput) "facts" else "csv"
-      val filename = Paths.get(dir, s"${relation.name}.$suffix").toString
+      val filename = Paths.get(_dir, s"${_rel.name}.$suffix").toString
       val facts = readCsv(filename)
-      if (isInput) problem.addEdb(relation, facts) else problem.addIdb(relation, facts)
+      if (isInput) _p0.addEdb(_rel, facts) else _p0.addIdb(_rel, facts)
     }
-    (problem.inputRels ++ problem.outputRels).foldLeft(p1)(relToProblem)
+    (problem.inputRels++problem.outputRels).foldLeft(problem)(relToProblem)
+  }
+
+  def dumpExamples(problem: Problem, outDir: String): Unit = {
+    for (rel <- problem.inputRels) {
+      val str = if (problem.edb.elems.contains(rel)) {
+        problem.edb.toFileStr(rel)
+      }
+      else {
+        s""
+      }
+      Misc.writeFile(str, Paths.get(outDir, s"${rel.name}.facts"))
+    }
+    for (rel <- problem.outputRels) {
+      val str = if (problem.idb.elems.contains(rel)) {
+        problem.idb.toFileStr(rel)
+      }
+      else {
+        s""
+      }
+      Misc.writeFile(str, Paths.get(outDir, s"${rel.name}.csv"))
+    }
   }
 
   def readStaticRelations(dir: String): Set[Relation] = {

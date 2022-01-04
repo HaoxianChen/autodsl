@@ -1,14 +1,15 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.activelearning.{ActiveLearning, ExampleInstance}
+import sun.rmi.log.ReliableLog.LogFile
+import synthesis.activelearning.{ActiveLearning, ExampleInstance, ExampleTranslator}
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
 import synthesis.experiment.ExperimentRecord.fromFile
-
 import synthesis.util.Misc
 import synthesis.{Problem, Program, Relation}
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
+import scala.io.Source
 import scala.util.{Random, Try}
 
 class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
@@ -99,6 +100,68 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     }
   }
 
+  def progressLogFile(problem: Problem): Path = Paths.get(outDir, problem.name, s"progress.log")
+
+  def loadProgressFromCache(problem: Problem, _logFile: Path
+                           ): (Problem, Int, List[Int],List[Int], Boolean) = {
+    def readLogFile(logFile: Path) : (String ,Int, List[Int], List[Int], Boolean) = {
+      val src = Source.fromFile(logFile.toString)
+      val allLines: List[String] = src.getLines().toList
+      src.close()
+      def getField(key: String): String = {
+        val targetLines = allLines.filter(_.startsWith(key))
+        assert(targetLines.size==1)
+        targetLines.head.split(":")(1).trim()
+      }
+      val exampleDir:String = getField("exampleDir")
+      val iter0 = getField("iter").toInt
+      val queries = getField("queries").split(",").toList.map(_.toInt)
+      val durations = getField("durations").split(",").toList.map(_.toInt)
+      val correctness = getField("correctness").toBoolean
+      (exampleDir, iter0, queries, durations, correctness)
+    }
+
+    /** check if progress log exists */
+    if (Files.exists(_logFile)) {
+      /** Load progress from file */
+      val (exampleDir, iter0, queries0, durations0, correctness0) = readLogFile(_logFile)
+      val p0 = Misc.readExamples(problem, exampleDir)
+      logger.info(s"Load progress cache from ${_logFile}")
+      (p0, iter0, queries0, durations0, correctness0)
+    }
+    else {
+      (problem, 0, List(), List(), false)
+    }
+
+  }
+
+  def logProgress(logFile: Path, problem: Problem, lastIter:Int,
+                  queries: List[Int], durations: List[Int], correctness: Boolean): Unit = {
+    if (lastIter > 0) {
+      val timestamp = Misc.getTimeStamp(sep = "-")
+      val _logDir: Path = Paths.get(logRootDir.toString, problem.name, timestamp)
+      Misc.makeDir(_logDir)
+      Misc.dumpExamples(problem, _logDir.toString)
+
+      val qStr = queries.mkString(",")
+      val dStr = durations.mkString(",")
+      val logStr = List(s"exampleDir:${_logDir}",
+        s"iter:$lastIter",
+        s"queries:$qStr",
+        s"durations:$dStr",
+        s"correctness:$correctness").mkString("\n")
+      Misc.writeFile(logStr, logFile)
+      logger.info(s"Log progress at ${logFile}")
+    }
+  }
+
+  def clearProgressLog(logFile: Path): Unit = {
+    if (Files.exists(logFile)) {
+      Files.delete(logFile)
+      logger.info(s"Remove progress cache at $logFile")
+    }
+  }
+
   def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Option[Program], Int, Double) = {
     logger.info(s"Randomly drop ${nDrop} examples.")
     val examples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
@@ -110,12 +173,17 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     val (newEdb, newIdb) = ExampleInstance.toEdbIdb(incompleteExamples)
     val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
 
-    val t1 = System.nanoTime
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
     val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, timeout=timeout,
       logDir=logSubDir.toString)
-    val (program, nRuns, nQueries, _allDurations, correctness, isTimeOut, hasError) = learner.go()
+
+    val progressCache = progressLogFile(problem)
+    val (_p0, _iter, _queries, _durations, _correctness0) = loadProgressFromCache(problem, progressCache)
+
+    val t1 = System.nanoTime
+    val (program, nRuns, nQueries, _allDurations, correctness, isTimeOut, hasError, finalProblem) =
+      learner.go(_p0,_iter, _queries, _durations)
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")
@@ -138,6 +206,12 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
         nQueries,_allDurations
       )
       record.dump(outDir)
+      /** Remove progress log, if any */
+      clearProgressLog(progressCache)
+    }
+    else {
+      /** Dump the progress */
+      logProgress(progressCache, finalProblem, nRuns, nQueries, _allDurations, correctness)
     }
     (program, nQueries.sum, duration)
   }

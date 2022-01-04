@@ -100,24 +100,33 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
   /** Returns: Solution, number of runs, number of queries, validated, timeout, error  */
-  def go(): (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean) = {
-    interactiveLearningWithOracle(p0)
+  def go(initProblem: Problem = p0,
+          lastIters: Int = 0,
+          lastQueries: List[Int] = List(),
+          lastDurations: List[Int] = List(),
+        ): (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean, Problem) = {
+    interactiveLearningWithOracle(initProblem, lastIters, lastQueries, lastDurations)
   }
 
   /** Return: solution, number of runs, number of queries at each run, new examples,
    * validated, timeout, error */
-  def interactiveLearningWithOracle(initProblem: Problem):
-  (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean)= {
+  def interactiveLearningWithOracle(initProblem: Problem,
+                                    lastIters: Int = 0,
+                                    lastQueries: List[Int] = List(),
+                                    lastDurations: List[Int] = List()):
+  (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean, Problem)= {
+    require(lastQueries.forall(_ < maxQueries), s"Query number too big. Check the cache file. ${lastQueries}.")
     var isValidated = false
-    var iters = 0
     val maxIters = 10
     var problem = initProblem
     var hasTimeOut = false
     var hasError = false
     var solution: Option[Program] = None
     var newExamples: Set[ExampleInstance] = Set()
-    var nQueries: List[Int] = List()
-    var durations: List[Int] = List()
+
+    var iters = lastIters
+    var nQueries: List[Int] = lastQueries
+    var durations: List[Int] = lastDurations
 
     while (!isValidated && iters < maxIters && !hasError) {
       assert(nQueries.size==iters)
@@ -140,10 +149,11 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
           newExamples += _optNextExample.get
           problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
         }
+        iters += 1
       }
-      iters += 1
     }
-    (solution, iters, nQueries, durations, isValidated, hasTimeOut, hasError)
+    val latestProblem = newExamples.foldLeft(initProblem)(exampleTranslator.updateProblem)
+    (solution, iters, nQueries, durations, isValidated, hasTimeOut, hasError, latestProblem)
   }
 
   /** Returns: solution, newExamples, timeout, error */
@@ -199,37 +209,17 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         newExamples += nextExample.get
       }
 
-      logProblem(problem)
+      // logProblem(problem)
       val start = System.nanoTime()
-      val candidatesFuture = Future {
-        synthesize(problem, outRel, candidates)
-      }
-      try {
-        Await.result(candidatesFuture, Duration(remainingTime,SECONDS))
-      }
-      catch {
-        case te: TimeoutException => {
-          logger.warn(s"$te")
-          isTimeOut = true
-        }
-        case e: Exception => logger.warn(s"$e")
-      }
-      // candidates = synthesize(problem, outRel, candidates)
-      candidatesFuture onComplete {
-        case Success(value) => {
-          candidates = value
-          logger.debug(s"${candidates.size} candidate programs")
-        }
-        case Failure(exception) => {
-          hasError = true
-          logger.error(s"$exception")
-        }
-      }
+      val (_candidates, _timeout, _error) = trySynthesize(problem, outRel, candidates, remainingTime)
+      candidates = _candidates
+      isTimeOut=_timeout
+      hasError=_error
       val duration: Int = ((System.nanoTime()- start) / 1e9).toInt
       logger.debug(s"Last iteration lasted $duration s.")
       remainingTime -= duration
 
-      if (candidates.size > 1) {
+      if (candidates.size > 1 && !hasError) {
         nextExample = disambiguate(candidates, outRel)
         if (nextExample.isEmpty) logger.debug(s"Failed to differentiate candidate programs.")
         else logger.debug(s"new example: ${nextExample.get}")
@@ -253,14 +243,61 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
   }
 
-  def logProblem(problem: Problem): Path = {
+  def logProblem(problem: Problem, errorMessage: String = s""): Path = {
+  // def logProblem(problem: Problem): Path = {
     val evaluator = Evaluator(problem)
     val timestamp = Misc.getTimeStamp()
     val _logDir: Path = Paths.get(logRootDir.toString, timestamp)
     Misc.makeDir(_logDir)
     evaluator.dumpProgram(problem.oracleSpec.get, _logDir)
+    val errLog = Paths.get(_logDir.toString, s"error.log")
+    Misc.writeFile(errorMessage, errLog)
     logger.info(s"Problem log at ${_logDir}")
     _logDir
+  }
+
+  def trySynthesize(problem: Problem, outRel: Relation, _candidates: List[Program],
+                    timeout: Int,
+                    maxRetries: Int = 3,
+                    ):
+  (List[Program], Boolean, Boolean) = {
+    var candidates: List[Program] = _candidates
+
+    var isTimeOut: Boolean = false
+    var hasError: Boolean = false
+
+    var iters: Int = 0
+
+    do {
+      val candidatesFuture = Future {
+        synthesize(problem, outRel, candidates)
+      }
+      try {
+        Await.result(candidatesFuture, Duration(timeout,SECONDS))
+      }
+      catch {
+        case te: TimeoutException => {
+          logger.warn(s"$te")
+          isTimeOut = true
+        }
+        case e: Exception => logger.warn(s"$e")
+      }
+      // candidates = synthesize(problem, outRel, candidates)
+      candidatesFuture onComplete {
+        case Success(value) => {
+          candidates = value
+          logger.debug(s"${candidates.size} candidate programs")
+        }
+        case Failure(exception) => {
+          hasError = true
+          logger.error(s"$exception")
+          logProblem(problem, exception.toString)
+        }
+      }
+      iters += 1
+    } while (iters<maxRetries && hasError)
+
+    (candidates, isTimeOut, hasError)
   }
 
   def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 50): List[Program] = {
@@ -278,6 +315,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
 
     val validCandidates: List[Program] = candidates.filter(p=>isProgramValid(p, problem))
+    // todo: Why this assertion fails?
     require(validCandidates.size < candidates.size || candidates.isEmpty, s"${validCandidates.size}")
 
     val inValidCandidates = candidates.diff(validCandidates)
