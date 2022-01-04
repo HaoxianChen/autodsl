@@ -99,33 +99,83 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   private val oracle = p0.oracleSpec.get
   private var configSpace = SynthesisConfigSpace.getConfigSpace(p0)
 
-  def go(): (Program, Int, Boolean, Boolean, Boolean) = {
+  /** Returns: Solution, number of runs, number of queries, validated, timeout, error  */
+  def go(): (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean) = {
+    interactiveLearningWithOracle(p0)
+  }
+
+  /** Return: solution, number of runs, number of queries at each run, new examples,
+   * validated, timeout, error */
+  def interactiveLearningWithOracle(initProblem: Problem):
+  (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean)= {
+    var isValidated = false
+    var iters = 0
+    val maxIters = 10
+    var problem = initProblem
+    var hasTimeOut = false
+    var hasError = false
+    var solution: Option[Program] = None
+    var newExamples: Set[ExampleInstance] = Set()
+    var nQueries: List[Int] = List()
+    var durations: List[Int] = List()
+
+    while (!isValidated && iters < maxIters && !hasError) {
+      val (_p, _newExamples, _duration, _timeout, _error) = interactiveLearningAllRels(problem)
+      hasTimeOut = _timeout
+      hasError = _error
+      if (!_error) {
+        problem = _newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
+        solution = Some(_p)
+        newExamples ++= _newExamples
+        nQueries :+= newExamples.size
+        durations :+= _duration
+
+        /** Distinguish from oracle */
+        val (_valid, _optNextExample) = differentiateFromOracle(_p, problem.outputRels)
+        isValidated = _valid
+        if (_optNextExample.isDefined) {
+          newExamples += _optNextExample.get
+          problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
+        }
+      }
+      iters += 1
+    }
+    assert(nQueries.size==iters)
+    assert(durations.size==iters)
+    (solution, iters, nQueries, durations, isValidated, hasTimeOut, hasError)
+  }
+
+  /** Returns: solution, newExamples, timeout, error */
+  def interactiveLearningAllRels(initProblem: Problem): (Program, Set[ExampleInstance], Int, Boolean, Boolean) = {
     /** Handle one output relation at a time */
     var solutions: Set[Program] = Set()
-    var problem: Problem = p0
-    var nQueries: Int = 0
+    var problem: Problem = initProblem
     var isTimeOut: Boolean = false
     var hasError: Boolean = false
+    var newExamples: Set[ExampleInstance] = Set()
+    var duration: Int = 0
 
     for (rel <- p0.outputRels) {
       if (!hasError) {
-        val (sol, newExamples, _to, _err) = interactiveLearning(rel, problem)
+        val (sol, _newExamples, _duration, _to, _err) = interactiveLearning(rel, problem)
         if (_to) isTimeOut = true
         if (_err) hasError = true
         solutions += sol
-        problem = newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
-        nQueries += newExamples.size
+        duration += _duration
+        problem = _newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
+        newExamples ++= _newExamples
       }
     }
     /** Merge solutions altogether */
     assert(solutions.nonEmpty)
     val finalSolution = solutions.foldLeft(Program())((p1,p2)=>Program(p1.rules++p2.rules))
-    (finalSolution, nQueries, differentiateFromOracle(finalSolution), isTimeOut, hasError)
+    (finalSolution, newExamples, duration, isTimeOut, hasError)
   }
+
 
   def interactiveLearning(outRel: Relation, initProblem: Problem,
                          ):
-                         (Program, Set[ExampleInstance], Boolean, Boolean) = {
+                         (Program, Set[ExampleInstance], Int, Boolean, Boolean) = {
     require(initProblem.outputRels.contains(outRel))
     logger.info(s"Solve ${outRel}")
     /** Only do synthesis on one output relation. */
@@ -189,15 +239,16 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
 
     if (newExamples.size >= maxQueries) logger.warn(s"Stopped at max queries ${maxQueries}.")
     if (isTimeOut) logger.warn(s"Timeout after $timeout seconds.")
+    val totalDuration = timeout - remainingTime
 
     if (candidates.nonEmpty && !hasError) {
       val bestProgram = candidates.maxBy(scoreProgram)
       logger.info(s"Solution: $bestProgram")
-      (bestProgram, newExamples,isTimeOut, hasError)
+      (bestProgram, newExamples, totalDuration, isTimeOut, hasError)
     }
     else {
       logger.warn(s"No solution found.")
-      (Program(), newExamples, isTimeOut, hasError)
+      (Program(), newExamples, totalDuration, isTimeOut, hasError)
     }
   }
 
@@ -244,30 +295,39 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
   }
 
-  def differentiateFromOracle(solution: Program, outRels: Set[Relation]= p0.outputRels): Boolean = {
+  def differentiateFromOracle(solution: Program, outRels: Set[Relation]= p0.outputRels):
+      (Boolean, Option[ExampleInstance]) = {
     val newProblem = p0.copy(edb = edbPool.toExampleMap, idb=Examples())
     val evaluator = EvaluatorWrapper(newProblem)
     val idb = evaluator.eval(solution, outRels)
     val refIdb = evaluator.eval(oracle, outRels)
 
-    /** The differentiating examples */
+    var optExample: Option[ExampleInstance] = None
+    /** Find the next differentiating examples */
     if (idb!=refIdb) {
       logger.debug(s"Static relations: $staticConfigRelations.")
       val idbById: Map[Int,Set[Tuple]] = idb.groupBy(_.fields.last.name.toInt)
       val refById: Map[Int,Set[Tuple]] = refIdb.groupBy(_.fields.last.name.toInt)
       val edbById: Map[Int,Set[Tuple]] = newProblem.edb.toTuples().groupBy(_.fields.last.name.toInt)
       for ((i,out) <- idb.diff(refIdb).groupBy(_.fields.last.name.toInt) ) {
-        val ref = refById.getOrElse(i, Set())
-        val in = edbById.get(i)
-        logger.debug(s"Differentiating example: $in, $ref, $out.")
+        if (optExample.isEmpty) {
+          val ref = refById.getOrElse(i, Set())
+          val in = edbById(i)
+          optExample = Some(ExampleInstance(in,ref, i))
+          logger.debug(s"Differentiating example: $in, $ref, $out.")
+        }
       }
       for ((i,ref) <- refIdb.diff(idb).groupBy(_.fields.last.name.toInt) ) {
-        val out = idbById.getOrElse(i, Set())
-        val in = edbById.get(i)
-        logger.debug(s"Differentiating example: $in, $ref, $out.")
+        if (optExample.isEmpty) {
+          val out = idbById.getOrElse(i, Set())
+          val in = edbById(i)
+          optExample = Some(ExampleInstance(in,ref, i))
+          logger.debug(s"Differentiating example: $in, $ref, $out.")
+        }
       }
     }
-    idb==refIdb
+    val validated: Boolean = idb==refIdb
+    (validated, optExample)
   }
 
   def differentiate(candidates: List[Program], outRel: Relation): Option[TupleInstance] = {

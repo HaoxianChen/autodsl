@@ -151,6 +151,25 @@ object Experiment {
     "consensus/2pc-no-timer",
   )
 
+  val activeLearningWithOracle: List[String] = List(
+    // SDN
+    "firewall/l3-stateful-firewall",
+    // Consensus
+    "consensus/paxos/paxos-proposer",
+    // routing
+    "routing/min-admin",
+    // Wireless
+    "wireless/aodv/aodv-route",
+    // "wireless/aodv/aodv-route-source",
+    "wireless/aodv/aodv-rrep",
+    "wireless/aodv/aodv-rreq",
+    // "wireless/aodv/aodv-seq",
+    "wireless/dsdv",
+    // "wireless/dsr",
+    "consensus/2pc-no-timer",
+    "routing/rip",
+  )
+
   val randomDropExperiments: List[String] = List(
     "aws/subnet",
     "firewall/l3-firewall",
@@ -169,7 +188,8 @@ object Experiment {
     val problem = Misc.readProblem(problemDir)
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemDir)
     val learner = new ActiveLearning(problem, staticConfigRelations, numNewExamples = 400)
-    learner.differentiateFromOracle(solution)
+    val (validated, newExample) = learner.differentiateFromOracle(solution)
+    validated
   }
 
   def getSolution(programs: Map[Relation, List[Program]]): Program = {

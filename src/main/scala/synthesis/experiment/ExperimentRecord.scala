@@ -8,7 +8,8 @@ import scala.io.Source
 import scala.util.parsing.json.JSONObject
 
 
-case class ExperimentRecord(results: Map[String, Any], program: Program) {
+case class ExperimentRecord(results: Map[String, Any], program: Program, nQueries: List[Int],
+                            durations: List[Int]) {
   require(results.contains("exp_name"))
   require(results.contains("problem"))
 
@@ -33,6 +34,16 @@ case class ExperimentRecord(results: Map[String, Any], program: Program) {
     val f2 = Paths.get(problemDir.toString, solution)
     Misc.writeFile(program.toString, f2)
 
+    val queryLogs: String = {
+      var _s = s"#numQueries\n"
+      _s += nQueries.mkString(",") + "\n"
+      _s += s"#Durations (s)\n"
+      _s += durations.mkString(",") + "\n"
+      _s
+    }
+    val queryLogFile: String = s"${results("exp_name")}_queries[$timestamp].log"
+    val f3 = Paths.get(problemDir.toString, queryLogFile)
+    Misc.writeFile(queryLogs, f3)
   }
 
 }

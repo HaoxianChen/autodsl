@@ -1,7 +1,7 @@
 package synthesis
 
 import synthesis.activelearning.ActiveLearning
-import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, DebloatingExperiment, Experiment, FaconExperiment, SynthesisExperiment}
+import synthesis.experiment.{ActiveLearningExperiment, AllSynthesisExperiments, Experiment, FaconExperiment, SynthesisExperiment}
 
 import java.nio.file.Paths
 import synthesis.search.{FaconSynthesizer, SolutionChecker, Synthesis, SynthesisAllPrograms, SynthesisConfigSpace, SynthesisConfigs}
@@ -81,6 +81,14 @@ object Main extends App {
     val experiment = new ActiveLearningExperiment(_benchmarkDir)
     experiment.runAll(repeats = repeats)
   }
+  else if (args(0) == "tab2full") {
+    require(args.size == 3)
+    val repeats = args(1).toInt
+    val _benchmarkDir = args(2)
+    val experiment = new ActiveLearningExperiment(_benchmarkDir,
+      outDir = s"results/active-learning-full")
+    experiment.run(Experiment.activeLearningWithOracle ,repeats = repeats)
+  }
   else if (args(0) == "tab3") {
     require(args.size == 3)
     val repeats = args(1).toInt
@@ -101,7 +109,7 @@ object Main extends App {
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
     val maxExamples: Int = args(2).toInt
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
-    val (program, nQueries, correctness, isTimeOut, hasError) = learner.go()
+    val (program, numRuns, nQueries, durations, correctness, isTimeOut, hasError) = learner.go()
     if (correctness) println(s"Correct solution") else println(s"Incorrect solution.")
     println(s"${nQueries} queries.")
     println(program)

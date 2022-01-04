@@ -58,12 +58,16 @@ case class SolutionChecker(problem: Problem, staticConfigs: Set[Relation]) {
   def check(allPrograms: Map[Relation, List[Program]]): Boolean = {
     var correct: Boolean = true
     for ((rel,ps) <- allPrograms) {
-      if (!activeLearner.differentiateFromOracle(ps.head, outRels=Set(rel))) {
+      val (validated, _) = activeLearner.differentiateFromOracle(ps.head, outRels=Set(rel))
+      if (!validated) {
         println(s"Incorrect solution $rel.")
         correct = false
       }
     }
     correct
   }
-  def check(program: Program): Boolean = activeLearner.differentiateFromOracle(program)
+  def check(program: Program): Boolean = {
+    val (validated, _) = activeLearner.differentiateFromOracle(program)
+    validated
+  }
 }

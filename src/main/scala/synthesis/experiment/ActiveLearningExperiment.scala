@@ -99,7 +99,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     }
   }
 
-  def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Program, Int, Double) = {
+  def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Option[Program], Int, Double) = {
     logger.info(s"Randomly drop ${nDrop} examples.")
     val examples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
     val n_remains = examples.size - nDrop
@@ -115,16 +115,18 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
     val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, timeout=timeout,
       logDir=logSubDir.toString)
-    val (program, nQueries, correctness, isTimeOut, hasError) = learner.go()
+    val (program, nRuns, nQueries, _allDurations, correctness, isTimeOut, hasError) = learner.go()
 
     val duration = (System.nanoTime - t1) / 1e9d
     println(s"Finished in ${duration}s, ${nQueries} queries.")
 
     if (!hasError) {
+      assert(program.isDefined)
       val record = ExperimentRecord(Map("problem"->problem.name,
         "exp_name" -> s"drop_${nDrop}_example",
         "numDrop" -> nDrop,
-        "numQuereis" -> nQueries,
+        "numRuns" -> nRuns,
+        "numQuereis" -> nQueries.sum,
         "time"->duration,
         "sig"->getProblemSignature(problem),
         "correctness"->correctness,
@@ -132,11 +134,12 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
         "isTimeOut"->isTimeOut,
         "timeout"->timeout
       ),
-        program
+        program.get,
+        nQueries,_allDurations
       )
       record.dump(outDir)
     }
-    (program, nQueries, duration)
+    (program, nQueries.sum, duration)
   }
 
   // def sampleExamples(examples: Set[ExampleInstance], n_samples: Int, seed: Option[Int]=None): Set[ExampleInstance] = {
