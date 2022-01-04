@@ -120,6 +120,9 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     var durations: List[Int] = List()
 
     while (!isValidated && iters < maxIters && !hasError) {
+      assert(nQueries.size==iters)
+      assert(durations.size==iters)
+
       val (_p, _newExamples, _duration, _timeout, _error) = interactiveLearningAllRels(problem)
       hasTimeOut = _timeout
       hasError = _error
@@ -137,9 +140,6 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
           newExamples += _optNextExample.get
           problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
         }
-
-        assert(nQueries.size==iters)
-        assert(durations.size==iters)
       }
       iters += 1
     }
