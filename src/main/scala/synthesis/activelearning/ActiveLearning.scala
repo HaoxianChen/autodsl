@@ -137,11 +137,12 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
           newExamples += _optNextExample.get
           problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
         }
+
+        assert(nQueries.size==iters)
+        assert(durations.size==iters)
       }
       iters += 1
     }
-    assert(nQueries.size==iters)
-    assert(durations.size==iters)
     (solution, iters, nQueries, durations, isValidated, hasTimeOut, hasError)
   }
 
