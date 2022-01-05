@@ -115,7 +115,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
                                     lastQueries: List[Int] = List(),
                                     lastDurations: List[Int] = List()):
   (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean, Problem)= {
-    require(lastQueries.forall(_ < maxQueries*initProblem.outputRels.size),
+    require(lastQueries.forall(_ <= maxQueries*initProblem.outputRels.size),
       s"Query number too big. Check the cache file. ${lastQueries}.")
     var isValidated = false
     val maxIters = 10
@@ -140,7 +140,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         problem = _newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
         solution = Some(_p)
         newExamples ++= _newExamples
-        nQueries :+= newExamples.size
+        nQueries :+= _newExamples.size
         durations :+= _duration
 
         /** Distinguish from oracle */
@@ -286,7 +286,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
             case _: Exception => {
               hasError = true
               logger.error(s"$exception")
-              logProblem(problem, exception.getStackTrace.toString)
+              logProblem(problem, exception.getStackTrace.mkString("\n"))
             }
           }
         }
