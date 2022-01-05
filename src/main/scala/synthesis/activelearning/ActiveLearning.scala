@@ -280,7 +280,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         case Failure(exception) => {
           hasError = true
           logger.error(s"$exception")
-          logProblem(problem, exception.toString)
+          logProblem(problem, exception.getStackTrace.toString)
         }
       }
       iters += 1

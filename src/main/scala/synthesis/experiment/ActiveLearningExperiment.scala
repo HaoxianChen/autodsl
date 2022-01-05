@@ -179,6 +179,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       logDir=logSubDir.toString)
 
     val progressCache = progressLogFile(problem)
+    Misc.makeDir(progressCache)
     val (_p0, _iter, _queries, _durations, _correctness0) = loadProgressFromCache(problem, progressCache)
 
     val t1 = System.nanoTime
