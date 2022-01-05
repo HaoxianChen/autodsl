@@ -11,7 +11,7 @@ import java.nio.file.{Path, Paths}
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{Await, Future, TimeoutException}
 import scala.math.log
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 case class TupleInstance(tuples: Set[Tuple], instanceId: Int)
 object TupleInstance {
@@ -213,7 +213,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
       val start = System.nanoTime()
       val (_candidates, _timeout, _error) = trySynthesize(problem, outRel, candidates, remainingTime)
       candidates = _candidates
-      isTimeOut=_timeout
+      isTimeOut = _timeout
       hasError=_error
       val duration: Int = ((System.nanoTime()- start) / 1e9).toInt
       logger.debug(s"Last iteration lasted $duration s.")
@@ -272,18 +272,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
       val candidatesFuture = Future {
         synthesize(problem, outRel, candidates)
       }
-      try {
-        Await.result(candidatesFuture, Duration(timeout,SECONDS))
-      }
-      catch {
-        case te: TimeoutException => {
-          logger.warn(s"$te")
-          isTimeOut = true
-        }
-        case e: Exception => logger.warn(s"$e")
-      }
-      // candidates = synthesize(problem, outRel, candidates)
-      candidatesFuture onComplete {
+      Try(Await.result(candidatesFuture, Duration(timeout,SECONDS))) match {
         case Success(value) => {
           candidates = value
           logger.debug(s"${candidates.size} candidate programs")
