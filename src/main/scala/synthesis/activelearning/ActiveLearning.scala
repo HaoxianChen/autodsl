@@ -115,7 +115,8 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
                                     lastQueries: List[Int] = List(),
                                     lastDurations: List[Int] = List()):
   (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean, Problem)= {
-    require(lastQueries.forall(_ < maxQueries), s"Query number too big. Check the cache file. ${lastQueries}.")
+    require(lastQueries.forall(_ < maxQueries*initProblem.outputRels.size),
+      s"Query number too big. Check the cache file. ${lastQueries}.")
     var isValidated = false
     val maxIters = 10
     var problem = initProblem
@@ -278,9 +279,16 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
           logger.debug(s"${candidates.size} candidate programs")
         }
         case Failure(exception) => {
-          hasError = true
-          logger.error(s"$exception")
-          logProblem(problem, exception.getStackTrace.toString)
+          exception match {
+            case _: TimeoutException => {
+              isTimeOut = true
+            }
+            case _: Exception => {
+              hasError = true
+              logger.error(s"$exception")
+              logProblem(problem, exception.getStackTrace.toString)
+            }
+          }
         }
       }
       iters += 1
