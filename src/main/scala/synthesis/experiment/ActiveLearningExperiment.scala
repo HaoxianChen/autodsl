@@ -24,9 +24,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
   def runAll(repeats: Int) :Unit = run(Experiment.activelearningProblems, repeats)
 
-  def run(problemPaths: List[String], repeats: Int) :Unit = {
-    /** Run without droping examples */
-    val nDrop: Int = 0
+  def run(problemPaths: List[String], repeats: Int, numDropExamples: List[Int]=List(0)) :Unit = {
     require(repeats >= 1)
 
     /** Keep looping until all is done. */
@@ -38,39 +36,41 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
       for (problemFile <- problemPaths.map(s => Paths.get(benchmarkDir, s))) {
         val problem = Misc.readProblem(problemFile.toString)
-        val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
-        if (rc < repeats) {
-          areAllResultsReady = false
-          logger.info(s"Run ${problem.name} for ${repeats-rc} times.")
-          val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
-          go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
-        }
-        else {
-          logger.info(s"${problem.name} have $rc results already. Skip.")
+        for (nDrop <- numDropExamples) {
+          val rc = ExperimentRecord.recordCount(outDir, problem, getProblemSignature(problem), nDrop=nDrop)
+          if (rc < repeats) {
+            areAllResultsReady = false
+            logger.info(s"Run ${problem.name} drop ${nDrop} examples for ${repeats-rc} times.")
+            val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
+            go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
+          }
+          else {
+            logger.info(s"${problem.name} drop ${nDrop} examples have $rc results already. Skip.")
+          }
         }
       }
     }
   }
 
-  def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
-    val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
-    for (problemFile <- randomDropProblems) {
-      val problem = Misc.readProblem(problemFile.toString)
-      val sig = getProblemSignature(problem)
-      val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
-      for (nDrop <- nDrops) {
-        /** Execute the remaining runs */
-        val rc = ExperimentRecord.recordCount(outDir, problem, sig, nDrop)
-        if (rc < repeats) {
-          /** Run each dropping point */
-          go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
-        }
-        else {
-          logger.info(s"${problem.name} have $rc results already. Skip.")
-        }
-      }
-    }
-  }
+  // def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
+  //   val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
+  //   for (problemFile <- randomDropProblems) {
+  //     val problem = Misc.readProblem(problemFile.toString)
+  //     val sig = getProblemSignature(problem)
+  //     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
+  //     for (nDrop <- nDrops) {
+  //       /** Execute the remaining runs */
+  //       val rc = ExperimentRecord.recordCount(outDir, problem, sig, nDrop)
+  //       if (rc < repeats) {
+  //         /** Run each dropping point */
+  //         go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
+  //       }
+  //       else {
+  //         logger.info(s"${problem.name} have $rc results already. Skip.")
+  //       }
+  //     }
+  //   }
+  // }
 
   def go(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int ,repeats: Int = 1): Unit = {
     logger.info(s"$repeats runs.")

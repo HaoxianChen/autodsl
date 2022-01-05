@@ -78,8 +78,9 @@ object Main extends App {
     require(args.size == 3)
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
-    val experiment = new ActiveLearningExperiment(_benchmarkDir)
-    experiment.runAll(repeats = repeats)
+    val experiment = new ActiveLearningExperiment(_benchmarkDir,
+      outDir = s"results/active-learning")
+    experiment.run(Experiment.activelearningProblems, repeats)
   }
   else if (args(0) == "tab2full") {
     require(args.size == 3)
@@ -97,7 +98,8 @@ object Main extends App {
       outDir = s"results/active-learning-full")
     // val nDrops = List(1,3,5,7,9)
     val nDrops = List(1,2,3,4,5)
-    experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
+    // experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
+    experiment.run(Experiment.randomDropExperiments, repeats = repeats, numDropExamples=nDrops)
   }
   else if (args(0) == "maketable") {
     require(args.size == 3)
