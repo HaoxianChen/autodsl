@@ -11,39 +11,33 @@ class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[OutputAggregator
     mostGeneralRules.map(r => Program(Set(r)))
   }
 
-  def refine(program: Program): Set[Program] = {
-    val refined = refineARule(program)
-    refined
-  }
+  def refineRule(rule: Rule): Set[Rule] = ruleBuilder.refineRule(rule)
 
-  def addARule(program: Program): Set[Program] = {
-    val newRules = ruleBuilder.mostGeneralRules()
-    newRules.map(r => Program(program.rules+r))
-  }
+  // def refine(program: Program): Set[Program] = {
+  //   val refined = refineARule(program)
+  //   refined
+  // }
 
-  def refineARule(program: Program): Set[Program] = {
-    def _refineARule(program: Program, rule:Rule): Set[Program] = {
-      require(program.rules.contains(rule))
-      val otherRules = program.rules.diff(Set(rule))
-      val newRules = ruleBuilder.refineRule(rule)
-      val newPrograms = newRules.map(r => Program(otherRules+r))
-      assert(newPrograms.forall(_.rules.size<=program.rules.size))
-      newPrograms
-    }
-    // val nonAggregateRules = program.rules.filterNot(isAggregateRule)
-    // nonAggregateRules.flatMap(r => _refineARule(program,r))
-    if (program.isComplete) {
-      /** If the program is complete, refine all non aggregate rules. */
-      val nonAggregateRules = program.rules.filterNot(isAggregateRule)
-      nonAggregateRules.flatMap(r => _refineARule(program,r))
-    }
-    else {
-      /** If rule is incomplete, only refine the incomplete rule. */
-      require(program.incompleteRules.size==1)
-      val incompleteRule = program.incompleteRules.head
-      _refineARule(program,incompleteRule)
-    }
-  }
+  // def addARule(program: Program): Set[Program] = {
+  //   val newRules = ruleBuilder.mostGeneralRules()
+  //   newRules.map(r => Program(program.rules+r))
+  // }
+
+  // def refineARule(program: Program): Set[Program] = {
+  //   // val nonAggregateRules = program.rules.filterNot(isAggregateRule)
+  //   // nonAggregateRules.flatMap(r => _refineARule(program,r))
+  //   if (program.isComplete) {
+  //     /** If the program is complete, refine all non aggregate rules. */
+  //     val nonAggregateRules = program.rules.filterNot(isAggregateRule)
+  //     nonAggregateRules.flatMap(r => _refineARule(program,r))
+  //   }
+  //   else {
+  //     /** If rule is incomplete, only refine the incomplete rule. */
+  //     require(program.incompleteRules.size==1)
+  //     val incompleteRule = program.incompleteRules.head
+  //     _refineARule(program,incompleteRule)
+  //   }
+  // }
 
   def aggregateOutput(program: Program): Set[Program] = {
     // aggregators.map(agg => agg.getAggProgram(program))

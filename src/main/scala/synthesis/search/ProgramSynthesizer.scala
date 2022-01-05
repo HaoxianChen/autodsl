@@ -67,8 +67,6 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       validPrograms ++= candidatePrograms.filter(isProgramValid)
 
       val toRefine = candidatePrograms.filter(needsRefinement)
-      // val staled = toRefine.filter(isStaled)
-      // val pnext = toRefine.diff(staled)
       val pnext = toRefine
       programPool ++= toRefine
 
@@ -126,9 +124,51 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     SimulatedAnnealing.sample(candidates,_getScore,baseScore)
   }
 
+  def refineARule(program: Program, idb: Set[Tuple]): Set[Program] = {
+
+    def _refineARule(program: Program, rule:Rule): Set[Program] = {
+      require(program.rules.contains(rule))
+      val otherRules = program.rules.diff(Set(rule))
+      val newRules = programBuilder.refineRule(rule)
+      val newPrograms = newRules.map(r => Program(otherRules+r))
+      assert(newPrograms.forall(_.rules.size<=program.rules.size))
+
+      def _isValid(p1: Program): Boolean = {
+        val alternativeRules = otherRules.filter(_.head.relation == rule.head.relation)
+        if (alternativeRules.isEmpty) {
+          true
+        }
+        else {
+          val p0 = evalProgram(Program(otherRules), idb)
+          val baseRecall = p0.recall
+          val p1Scored = evalProgram(p1,idb)
+          val newRecall = p1Scored.recall
+          newRecall > baseRecall
+        }
+      }
+
+      val validRefinedPrograms = newPrograms.filter(_isValid)
+      validRefinedPrograms
+    }
+
+    /** Only keep a candididate program it the refined rule produces unique output */
+    if (program.isComplete) {
+      /** If the program is complete, refine all non aggregate rules. */
+      val nonAggregateRules = program.rules.filterNot(programBuilder.isAggregateRule)
+      nonAggregateRules.flatMap(r => _refineARule(program,r))
+    }
+    else {
+      /** If rule is incomplete, only refine the incomplete rule. */
+      require(program.incompleteRules.size==1)
+      val incompleteRule = program.incompleteRules.head
+      _refineARule(program,incompleteRule)
+    }
+  }
+
   def refineProgram(scoredProgram: ScoredProgram, idb: Set[Tuple]): Set[Program] = {
     val program = scoredProgram.program
-    val refinedPrograms: Set[Program] = programBuilder.refine(program)
+    // val refinedPrograms: Set[Program] = programBuilder.refine(program)
+    val refinedPrograms: Set[Program] = refineARule(program, idb)
 
     // if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program) && !isRecursive(program)) {
     if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {
@@ -166,28 +206,6 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     improvedRecalls.map(_.program)
   }
 
-  // def addARule(program: Program, idb: Set[Tuple]): Set[Program] = {
-  //   val generalRules: Set[Rule] = ruleLearner.getMostGenearlRules()
-  //   val coveredIdb: Set[Tuple] = evaluator.eval(program)
-  //   val remainingIdb = idb.diff(coveredIdb)
-  //   /** Find a complete rule with non-zero recall. */
-  //   def _getRuleScore(sr: ScoredRule): Double = sr.completeness * sr.recall * sr.precision
-  //   def _validCondition(sr: ScoredRule): Boolean = sr.recall > 0 && sr.completeness >= 1.0
-  //   /** Do not further refine valid rules */
-  //   def _refineCondition(sr: ScoredRule): Boolean = _getRuleScore(sr) > 0 && !_validCondition(sr)
-  //   val (_,newRules,_) = ruleLearner.learnNRules(remainingIdb, generalRules, learnedRules=program.rules,
-  //     getScore = _getRuleScore, validCondition = _validCondition, refineCondition = _refineCondition)
-  //   newRules.map(r => Program(program.rules+r))
-  // }
-
-  // def isStaled(scoredProgram: ScoredProgram): Boolean = {
-  //   val isComplete: Boolean = scoredProgram.completeness > 1-1e-3
-  //   if (scoredProgram.score_history.size == ScoredProgram.maxHistSize && isComplete) {
-  //     scoredProgram.diff().map(d=>abs(d)).max < 1e-3
-  //   }
-  //   else false
-  // }
-
   def needsRefinement(scoredProgram: ScoredProgram): Boolean = if (!scoredProgram.program.isComplete) {
       scoredProgram.recall > scoredProgram.completeRecall
     }
@@ -198,6 +216,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   def isComplete(program: Program): Boolean = program.rules.forall(_.isHeadBounded())
 
   def evalProgram(program: Program, refIdb: Set[Tuple]): ScoredProgram = {
+    require(program.rules.nonEmpty)
     val (idb0,partialRelationMap)  = evaluator.evalAndPartialRelations(program)
     /** Filter only relevant idb */
     val idb = getRelevantIdb(idb0)
