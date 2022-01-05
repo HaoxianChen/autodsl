@@ -285,7 +285,8 @@ object ActiveLearningExperiment {
 
     val statLines = allRecords.map { rc =>
       val correctness = _strToInt(rc("correctness") )
-      List(rc("problem"), rc("numDrop"), rc("numQuereis"), rc("time"), correctness)
+      val numRuns = rc.getOrElse("numRuns","1")
+      List(rc("problem"), rc("numDrop"), rc("numQuereis"), rc("time"), numRuns, correctness)
     }.toList
 
     val aggLines = allRecords.groupBy(rc => (rc("problem"), rc("numDrop"))).map {
@@ -293,12 +294,14 @@ object ActiveLearningExperiment {
         val N = group.size
         val avgQueries: Double = group.map(_("numQuereis")).map(_.toInt).sum.toDouble / N
         val avgTime: Double = group.map(_("time")).map(_.toDouble).sum.toDouble / N
-        val correctRatio: Double = group.map(_("correctness")).map(_strToInt).sum.toDouble / N
-        List(k._1, k._2, avgQueries, avgTime, correctRatio, N)
+        val numRuns: List[Int] = group.map(_.getOrElse("numRuns","1")).map(_.toInt)
+        val avgRuns: Double = numRuns.sum.toDouble / N
+        val correctRatio: Double = numRuns.count(_==1).toDouble / N
+        List(k._1, k._2, avgQueries, avgTime, correctRatio, avgRuns, N)
       }
     }.toList
 
-    val rawHeader = List("spec", "numDropExamples", "numQueries", "time", "validated")
+    val rawHeader = List("spec", "numDropExamples", "numQueries", "time", "validated", "numRuns")
     val aggHeader = rawHeader :+ "count"
 
     val rawFile = Paths.get(resultRootDir, s"${outFileName}_raw.csv")
@@ -309,9 +312,13 @@ object ActiveLearningExperiment {
 
   def makeAllTables(benchmarkDir: String, resultRootDir: String): Unit = {
 
-    makeTable(benchmarkDir,Experiment.activelearningProblems, resultRootDir, "active_learning")
+    val resultDir = Paths.get(resultRootDir, "active-learning").toString
+    makeTable(benchmarkDir,Experiment.activelearningProblems, resultDir, "active-learning")
 
-    makeTable(benchmarkDir,Experiment.randomDropExperiments, resultRootDir, "drop_examples")
+    // val resultDir2 = Paths.get(resultRootDir, "active-learning-full").toString
+    // makeTable(benchmarkDir,Experiment.activelearningProblems, resultDir2, "active-learning-full")
+
+    makeTable(benchmarkDir,Experiment.randomDropExperiments, resultDir, "drop-examples")
 
   }
 }
