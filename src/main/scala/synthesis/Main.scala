@@ -95,7 +95,7 @@ object Main extends App {
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
-      outDir = s"results/active-learning-full")
+      outDir = s"results/random-drop")
     // val nDrops = List(1,3,5,7,9)
     val nDrops = List(1,2,3,4,5)
     experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
