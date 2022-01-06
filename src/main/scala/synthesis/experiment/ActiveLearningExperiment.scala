@@ -15,7 +15,7 @@ import scala.util.{Random, Try}
 class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
                                /** timeout in seconds */
                                timeout: Int= 60 * 60,
-                               _logRootDir: String = "/var/tmp/netspec/")
+                               _logRootDir: String = "/tmp/netspec/")
     extends Experiment(outDir) {
   private val logger = Logger("ActiveLearningExperiment")
 
