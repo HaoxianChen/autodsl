@@ -6,7 +6,7 @@ import synthesis.activelearning.{ActiveLearning, ExampleInstance, ExampleTransla
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
 import synthesis.experiment.ExperimentRecord.fromFile
 import synthesis.util.Misc
-import synthesis.{Problem, Program, Relation}
+import synthesis.{Examples, Problem, Program, Relation}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
@@ -57,39 +57,56 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     for (problemFile <- randomDropProblems) {
 
       val initProblem = Misc.readProblem(problemFile.toString)
-      val sig = getProblemSignature(initProblem)
 
-      /** Execute the remaining runs */
-      val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrops.last)
-      if (rc < repeats) {
-        logger.info(s"Run ${initProblem.name} for ${repeats-rc} times.")
+      val problemOutDir = Paths.get(outDir, initProblem.name)
+      Misc.makeDir(problemOutDir)
 
-        val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
-        val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
 
-        var iters = 0
+      val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
+      val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
 
-        while (iters < repeats-rc) {
-          var problem = initProblem
-          var examples = initExamples
-          logger.info(s"Drop examples, ${initProblem.name}, iteration ${iters}.")
-          for (nDrop <- nDrops) {
-            val nextExampleSize = initExamples.size - nDrop
-            assert(nextExampleSize < examples.size)
-            assert(nextExampleSize > 0)
-            examples = sampleExamples(examples, nextExampleSize)
-            logger.info(s"Drop $nDrop examples, ${examples.size} remains.")
-            val (newEdb, newIdb) = ExampleInstance.toEdbIdb(examples)
-            problem = problem.copy(edb = newEdb, idb = newIdb)
-            // go(problem, staticConfigRelations, nDrop = nDrop, repeats = 1)
-            val logDir = Paths.get(logRootDir.toString, problem.name)
-            runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString)
-          }
-          iters +=1
+      var problem = initProblem
+      var examples = initExamples
+
+      /** Sample incomplete examples */
+      for (nDrop <- nDrops) {
+        val exampleDir = Paths.get(problemOutDir.toString, s"drop_${nDrop}_examples")
+        if (Files.notExists(exampleDir)) {
+          Misc.makeDir(exampleDir)
+          val nextExampleSize = initExamples.size - nDrop
+          assert(nextExampleSize < examples.size)
+          assert(nextExampleSize > 0)
+          examples = sampleExamples(examples, nextExampleSize)
+          val (newEdb, newIdb) = ExampleInstance.toEdbIdb(examples)
+          problem = problem.copy(edb = newEdb, idb = newIdb)
+          Misc.dumpExamples(problem, exampleDir.toString)
         }
-      }
-      else {
-        logger.info(s"${initProblem.name} have $rc results already. Skip.")
+        else {
+          val p0 = initProblem.copy(edb=Examples(), idb=Examples())
+          problem = Misc.readExamples(p0, exampleDir.toString)
+          val next_examples = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
+          assert(next_examples.size == initExamples.size - nDrop)
+          assert(next_examples.subsetOf(examples))
+          examples = next_examples
+        }
+
+        /** Execute the remaining runs */
+        val sig = getProblemSignature(problem)
+        val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrop)
+        if (rc < repeats) {
+          logger.info(s"Run ${initProblem.name} for ${repeats - rc} times.")
+
+          val logDir = Paths.get(logRootDir.toString, problem.name)
+          var iters = 0
+          while (iters < repeats - rc) {
+            logger.info(s"Iteration ${iters}")
+            runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString)
+            iters += 1
+          }
+        }
+        else {
+          logger.info(s"${initProblem.name} have $rc results already. Skip.")
+        }
       }
     }
   }
