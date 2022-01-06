@@ -62,6 +62,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       /** Execute the remaining runs */
       val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrops.last)
       if (rc < repeats) {
+        logger.info(s"Run ${initProblem.name} for ${repeats-rc} times.")
 
         val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
         val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
