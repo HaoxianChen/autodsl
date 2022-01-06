@@ -85,7 +85,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
                      maxQueries: Int = 10,
                      /** timeout in seconds */
                      timeout: Int = 60*60,
-                     logDir: String = s"/var/netspec") {
+                     logDir: String = s"/tmp/netspec") {
   private val logger = Logger("Active-learning")
   private val logRootDir: Path = Paths.get(logDir)
   Misc.makeDir(logRootDir)
