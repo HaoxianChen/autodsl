@@ -98,8 +98,8 @@ object Main extends App {
       outDir = s"results/active-learning-full")
     // val nDrops = List(1,3,5,7,9)
     val nDrops = List(1,2,3,4,5)
-    // experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
-    experiment.run(Experiment.randomDropExperiments, repeats = repeats, numDropExamples=nDrops)
+    experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
+    // experiment.run(Experiment.randomDropExperiments, repeats = repeats, numDropExamples=nDrops)
   }
   else if (args(0) == "maketable") {
     require(args.size == 3)
