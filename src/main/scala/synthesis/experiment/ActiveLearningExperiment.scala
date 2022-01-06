@@ -52,25 +52,46 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     }
   }
 
-  // def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
-  //   val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
-  //   for (problemFile <- randomDropProblems) {
-  //     val problem = Misc.readProblem(problemFile.toString)
-  //     val sig = getProblemSignature(problem)
-  //     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
-  //     for (nDrop <- nDrops) {
-  //       /** Execute the remaining runs */
-  //       val rc = ExperimentRecord.recordCount(outDir, problem, sig, nDrop)
-  //       if (rc < repeats) {
-  //         /** Run each dropping point */
-  //         go(problem,staticConfigRelations,nDrop = nDrop, repeats=repeats-rc)
-  //       }
-  //       else {
-  //         logger.info(s"${problem.name} have $rc results already. Skip.")
-  //       }
-  //     }
-  //   }
-  // }
+  def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
+    val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
+    for (problemFile <- randomDropProblems) {
+
+      val initProblem = Misc.readProblem(problemFile.toString)
+      val sig = getProblemSignature(initProblem)
+
+      /** Execute the remaining runs */
+      val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrops.last)
+      if (rc < repeats) {
+
+        val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
+        val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
+
+        var problem = initProblem
+        var examples = initExamples
+        var iters = 0
+
+        while (iters < repeats-rc) {
+          logger.info(s"Drop examples, ${initProblem.name}, iteration ${iters}.")
+          for (nDrop <- nDrops) {
+            val nextExampleSize = initExamples.size - nDrop
+            assert(nextExampleSize < examples.size)
+            assert(nextExampleSize > 0)
+            examples = sampleExamples(examples, nextExampleSize)
+            logger.info(s"Drop $nDrop examples, ${examples.size} remains.")
+            val (newEdb, newIdb) = ExampleInstance.toEdbIdb(examples)
+            problem = problem.copy(edb = newEdb, idb = newIdb)
+            // go(problem, staticConfigRelations, nDrop = nDrop, repeats = 1)
+            val logDir = Paths.get(logRootDir.toString, problem.name)
+            runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString)
+          }
+          iters +=1
+        }
+      }
+      else {
+        logger.info(s"${initProblem.name} have $rc results already. Skip.")
+      }
+    }
+  }
 
   def go(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int ,repeats: Int = 1): Unit = {
     logger.info(s"$repeats runs.")
@@ -80,23 +101,6 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     for (i <- 1 to repeats) {
       logger.info(s"iteration $i")
       randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
-      // try {
-      //   randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
-      // }
-      // catch {
-      //   case e: Exception => logger.error(s"$e")
-      // }
-      // val waitTime = duration.Duration(60,MINUTES)
-      // val ret = Future {
-      //   randomDrop(problem, staticConfigRelations, nDrop=nDrop, _logDir = logDir.toString)
-      // }
-      // try {
-      //   Await.result(ret, waitTime)
-      // }
-      // catch {
-      //   case te: TimeoutException => logger.warn(s"$te")
-      //   case e: Exception => logger.warn(s"$e")
-      // }
     }
   }
 
@@ -172,15 +176,20 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     logger.info(s"${incompleteExamples.size} examples left.")
     val (newEdb, newIdb) = ExampleInstance.toEdbIdb(incompleteExamples)
     val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
+    runActiveLearning(newProblem, staticConfigRelations, nDrop, _logDir)
+  }
+
+  def runActiveLearning(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Option[Program], Int, Double) = {
+    Misc.makeDir(Paths.get(_logDir))
 
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
-    val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, timeout=timeout,
+    val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples, timeout=timeout,
       logDir=logSubDir.toString)
 
     val progressCache = progressLogFile(problem)
     Misc.makeDir(progressCache.getParent)
-    val (_p0, _iter, _queries, _durations, _correctness0) = loadProgressFromCache(newProblem, progressCache)
+    val (_p0, _iter, _queries, _durations, _correctness0) = loadProgressFromCache(problem, progressCache)
 
     val t1 = System.nanoTime
     val (program, nRuns, nQueries, _allDurations, correctness, isTimeOut, hasError, finalProblem) =
@@ -216,6 +225,61 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     }
     (program, nQueries.sum, duration)
   }
+
+  // def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Option[Program], Int, Double) = {
+  //   logger.info(s"Randomly drop ${nDrop} examples.")
+  //   val examples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
+  //   val n_remains = examples.size - nDrop
+  //   assert(n_remains > 0, s"${examples.size}")
+
+  //   val incompleteExamples = sampleExamples(examples, n_remains)
+  //   logger.info(s"${incompleteExamples.size} examples left.")
+  //   val (newEdb, newIdb) = ExampleInstance.toEdbIdb(incompleteExamples)
+  //   val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
+
+  //   // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
+  //   val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
+  //   val learner = new ActiveLearning(newProblem, staticConfigRelations, maxExamples, timeout=timeout,
+  //     logDir=logSubDir.toString)
+
+  //   val progressCache = progressLogFile(problem)
+  //   Misc.makeDir(progressCache.getParent)
+  //   val (_p0, _iter, _queries, _durations, _correctness0) = loadProgressFromCache(newProblem, progressCache)
+
+  //   val t1 = System.nanoTime
+  //   val (program, nRuns, nQueries, _allDurations, correctness, isTimeOut, hasError, finalProblem) =
+  //     learner.go(_p0,_iter, _queries, _durations)
+
+  //   val duration = (System.nanoTime - t1) / 1e9d
+  //   println(s"Finished in ${duration}s, ${nQueries} queries.")
+
+  //   if (!hasError) {
+  //     assert(program.isDefined)
+  //     val record = ExperimentRecord(Map("problem"->problem.name,
+  //       "exp_name" -> s"drop_${nDrop}_example",
+  //       "numDrop" -> nDrop,
+  //       "numRuns" -> nRuns,
+  //       "numQuereis" -> nQueries.sum,
+  //       "time"->duration,
+  //       "sig"->getProblemSignature(problem),
+  //       "correctness"->correctness,
+  //       "logDir"->logSubDir,
+  //       "isTimeOut"->isTimeOut,
+  //       "timeout"->timeout
+  //     ),
+  //       program.get,
+  //       nQueries,_allDurations
+  //     )
+  //     record.dump(outDir)
+  //     /** Remove progress log, if any */
+  //     clearProgressLog(progressCache)
+  //   }
+  //   else {
+  //     /** Dump the progress */
+  //     logProgress(progressCache, finalProblem, nRuns, nQueries, _allDurations, correctness)
+  //   }
+  //   (program, nQueries.sum, duration)
+  // }
 
   // def sampleExamples(examples: Set[ExampleInstance], n_samples: Int, seed: Option[Int]=None): Set[ExampleInstance] = {
   def sampleExamples(examples: Set[ExampleInstance], n_samples: Int): Set[ExampleInstance] = {
