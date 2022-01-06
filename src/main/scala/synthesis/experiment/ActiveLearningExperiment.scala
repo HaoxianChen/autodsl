@@ -66,11 +66,11 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
         val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
         val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
 
-        var problem = initProblem
-        var examples = initExamples
         var iters = 0
 
         while (iters < repeats-rc) {
+          var problem = initProblem
+          var examples = initExamples
           logger.info(s"Drop examples, ${initProblem.name}, iteration ${iters}.")
           for (nDrop <- nDrops) {
             val nextExampleSize = initExamples.size - nDrop
