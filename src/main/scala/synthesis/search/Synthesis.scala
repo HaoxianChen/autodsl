@@ -24,24 +24,21 @@ object Synthesis {
   def apply(problem: Problem,
             initConfigSpace: SynthesisConfigSpace = SynthesisConfigSpace.emptySpace()
            ): Synthesis = problem.domain match {
-    case "SDN" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
-    case "routing" => new ProgramSynthesizer(problem)
-    case "NIB" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
-    case "sensor" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
-    case "consensus" => {
-      SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
-      // new ProgramSynthesizer(problem)
-    }
-    case "consensusagg" => new ProgramSynthesizer(problem)
+    // case "SDN" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    // case "NIB" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    // case "sensor" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    // case "consensus" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    // case "consensusagg" => new ProgramSynthesizer(problem)
+    // case "overlay" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
+    // case "routingProto" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
     case "consensusbarrier" => {
       /** Use the count aggregator */
       val preprocessors: Set[InputAggregator] = getPreprocessors(problem)
       val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
       SynthesisAllPrograms(newProblem, initConfigSpace = initConfigSpace)
     }
-    case "overlay" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
-    case "routingProto" => SynthesisAllPrograms(problem, initConfigSpace = initConfigSpace)
-    case _ => ???
+    // case _ => ???
+    case _ => new ProgramSynthesizer(problem)
   }
 
   def getPreprocessors(problem: Problem): Set[InputAggregator] = problem.domain match {

@@ -68,10 +68,13 @@ object ProgramBuilder {
         val aggregators: Set[OutputAggregator] = ArgMax.allInstances(problem)
         new ProgramBuilder(ruleBuilder, aggregators)
       }
-      case "NIB" => {
+      // case "NIB" => {
+      //   new ProgramBuilder(ruleBuilder, Set())
+      // }
+      // case _ => ???
+      case _ => {
         new ProgramBuilder(ruleBuilder, Set())
       }
-      case _ => ???
     }
 
   }

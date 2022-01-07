@@ -64,14 +64,11 @@ object Main extends App {
     if (checker.check(programs)) println(s"Correct solution.") else println(s"Incorrect solution.")
     displayResults(problem, programs)
   }
-  else if (args(0) == "synth") {
-    val experiment = new SynthesisExperiment(benchmarkDir)
-    experiment.run(update=args(1).toBoolean)
-  }
   else if (args(0) == "tab1") {
     require(args.size == 2)
     val _benchmarkDir = args(1)
-    val experiment = new AllSynthesisExperiments(_benchmarkDir)
+    // val experiment = new AllSynthesisExperiments(_benchmarkDir, outDir="results")
+    val experiment = new AllSynthesisExperiments(_benchmarkDir, outDir="results-2")
     experiment.run()
   }
   else if (args(0) == "tab2") {
@@ -79,7 +76,8 @@ object Main extends App {
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
-      outDir = s"results/active-learning")
+      // outDir = s"results/active-learning")
+      outDir = s"results-2/active-learning")
     experiment.run(Experiment.activelearningProblems, repeats)
   }
   else if (args(0) == "tab2full") {
@@ -87,7 +85,8 @@ object Main extends App {
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
-      outDir = s"results/active-learning-full")
+      // outDir = s"results/active-learning-full")
+      outDir = s"results-2/active-learning-full")
     experiment.run(Experiment.activeLearningWithOracle ,repeats = repeats)
   }
   else if (args(0) == "tab3") {
@@ -95,7 +94,8 @@ object Main extends App {
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
-      outDir = s"results/random-drop")
+      // outDir = s"results/random-drop")
+      outDir = s"results-2/random-drop")
     // val nDrops = List(1,3,5,7,9)
     val nDrops = List(1,2,3,4,5)
     experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
@@ -132,7 +132,9 @@ object Main extends App {
     require(args.size == 3)
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
-    val experiment = new ActiveLearningExperiment(_benchmarkDir, outDir="results/debloat")
+    ???
+    val experiment = new ActiveLearningExperiment(_benchmarkDir,
+      outDir="results/debloat")
     experiment.run(Experiment.debloatingExperiments,repeats = repeats)
     // val problem = Misc.readProblem(args(1))
     // val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
@@ -140,10 +142,6 @@ object Main extends App {
     // require(repeats <= 10)
     // val experiment = new DebloatingExperiment()
     // experiment.go(problem, staticConfigRelations, repeats=repeats)
-  }
-  else if (args(0) == "facon") {
-    val experiment = new FaconExperiment(benchmarkDir)
-    experiment.run(update=false)
   }
   else if (args(0) == "foil") {
     val problem = Misc.readProblem(args(1))

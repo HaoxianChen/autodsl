@@ -113,9 +113,18 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     }
 
     if (programPool.isEmpty) logger.debug(s"Runs out of candidate programs. Explored ${evaluatedPrograms.size}.")
-    logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
     assert(validPrograms.nonEmpty)
-    validPrograms.toList.map(_.program).sortWith(_<_)
+
+    // logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
+    // validPrograms.toList.map(_.program).sortWith(_<_)
+
+    val allValidPrograms = {
+      val _vp = validPrograms.map(_.program)
+      _vp ++ _vp.flatMap(simplerAlternatives)
+    }
+    logger.info(s"Found ${allValidPrograms.size} programs after ${iters} iterations.")
+    val programsSorted = allValidPrograms.toList.sortWith(_<_)
+    programsSorted
   }
 
   def sampleNextCandidateProgram(candidates: Set[ScoredProgram], baseScore: Double): ScoredProgram = {
@@ -167,16 +176,23 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
 
   def refineProgram(scoredProgram: ScoredProgram, idb: Set[Tuple]): Set[Program] = {
     val program = scoredProgram.program
+    val hasAggregator = programBuilder.getAggregators.nonEmpty
     // val refinedPrograms: Set[Program] = programBuilder.refine(program)
     val refinedPrograms: Set[Program] = refineARule(program, idb)
 
     // if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program) && !isRecursive(program)) {
     if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {
-      logger.info(s"Add a rule. ${program.rules.size} rules.")
-      val addedRule = addARule(program, idb)
-      refinedPrograms ++ addedRule
+      if (hasAggregator || scoredProgram.precision >= 1.0) {
+        logger.info(s"Add a rule. ${program.rules.size} rules.")
+        val addedRule = addARule(program, idb)
+        refinedPrograms ++ addedRule
+      }
+      else {
+        refinedPrograms
+      }
     }
-    else if (isComplete(program) && scoredProgram.recall > 1-1e-4 && !isAggProgram(program)) {
+    else if (isComplete(program) && scoredProgram.recall > 1-1e-4 && !isAggProgram(program) &&
+        programBuilder.getAggregators.nonEmpty) {
       logger.info(s"Aggregate output")
       val aggregated = programBuilder.aggregateOutput(program)
       refinedPrograms ++ aggregated
@@ -235,6 +251,54 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   }
 
   def isProgramValid(program: ScoredProgram): Boolean = program.score >= 1-1e-3
+
+  def dropOneRule(program: Program): Set[Program] = {
+    def programWithout(p0: Program, r0: Rule): Option[Program] = {
+      val otherRules = p0.rules.diff(Set(r0))
+      val p1 = Program(otherRules)
+      val idb0 = evaluator.eval(p0)
+      val idb1 = evaluator.eval(p1)
+      if (idb0 == idb1)  {
+        Some(p1)
+      }
+      else {
+        None
+      }
+    }
+
+    val rulesWithAlternatives = getRulesWithAlternatives(program)
+    if (rulesWithAlternatives.nonEmpty) {
+      rulesWithAlternatives.flatMap(r=>programWithout(program,r))
+    }
+    else {
+      Set()
+    }
+  }
+
+  def getRulesWithAlternatives(program: Program) :Set[Rule] = {
+    val relationWithAlternatives: Set[Relation] = program.rules.groupBy(_.head.relation).flatMap{
+      case (rel, _ruleGroup) => {
+        if (_ruleGroup.size>1) Some(rel)
+        else None
+      }
+    }.toSet
+    program.rules.filter(r => relationWithAlternatives.contains(r.head.relation))
+  }
+
+  def simplerAlternatives(program: Program): Set[Program] = {
+    val rulesWithAlternatives = getRulesWithAlternatives(program)
+    var nDrop = 1
+    var alternatives: Set[Program] = Set()
+    var dropN: Set[Program] = Set(program)
+    while (nDrop < rulesWithAlternatives.size && dropN.nonEmpty) {
+      assert(dropN.forall(_.rules.size == program.rules.size - nDrop + 1))
+      dropN = dropN.flatMap(dropOneRule)
+      assert(dropN.forall(_.rules.size == program.rules.size - nDrop))
+      alternatives ++= dropN
+      nDrop += 1
+    }
+    alternatives
+  }
 }
 
 

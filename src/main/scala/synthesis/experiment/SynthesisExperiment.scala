@@ -10,7 +10,7 @@ import java.nio.file.{Path, Paths}
 import scala.io.Source
 
 
-class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthesis",
+class SynthesisExperiment(benchmarkDir: String, outDir: String
                          ) extends Experiment(outDir) {
   private val logger = Logger("Synthesis")
   def getBenchmarkDir = benchmarkDir
@@ -122,7 +122,7 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String = "results/synthe
   }
 }
 
-class FaconExperiment(benchmarkDir: String, outDir: String = "results/facon")
+class FaconExperiment(benchmarkDir: String, outDir: String)
     extends SynthesisExperiment(benchmarkDir,outDir=outDir) {
 
   override def getSynthesizer(p: Problem): Synthesis = new FaconSynthesizer(p)
@@ -149,9 +149,9 @@ class FaconExperiment(benchmarkDir: String, outDir: String = "results/facon")
   ).map(s => Paths.get(benchmarkDir, s))
 }
 
-class AllSynthesisExperiments(benchmarkDir: String) {
-  val netspec = new SynthesisExperiment(benchmarkDir)
-  val facon = new FaconExperiment(benchmarkDir)
+class AllSynthesisExperiments(benchmarkDir: String, outDir: String) {
+  val netspec = new SynthesisExperiment(benchmarkDir, outDir = Paths.get(outDir,"synthesis").toString)
+  val facon = new FaconExperiment(benchmarkDir, outDir = Paths.get(outDir, "facon").toString)
   val allProblems = netspec.allProblems
 
   val recursion = Set(
@@ -249,7 +249,8 @@ class AllSynthesisExperiments(benchmarkDir: String) {
       allStats.mkString("\t")
     }
     val fileStr = stats.mkString("\n") + "\n"
-    val outFile: Path = Paths.get("results", s"synthesis_all.log")
+    // val outFile: Path = Paths.get("results", s"synthesis_all.log")
+    val outFile: Path = Paths.get(outDir, s"synthesis_all.log")
     Misc.writeFile(fileStr, outFile)
   }
 }
