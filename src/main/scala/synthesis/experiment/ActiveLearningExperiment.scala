@@ -54,69 +54,78 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
   def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
     val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
-    for (problemFile <- randomDropProblems) {
 
-      val initProblem = Misc.readProblem(problemFile.toString)
+    var allFinish = true
+    var retries = 0
 
-      val problemOutDir = Paths.get(outDir, initProblem.name)
-      Misc.makeDir(problemOutDir)
+    do {
+      allFinish = true
+      for (problemFile <- randomDropProblems) {
 
-      val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
-      val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
+        val initProblem = Misc.readProblem(problemFile.toString)
 
-      def nextProblemAndExamples(prevProblem: Problem, prevExamples: Set[ExampleInstance],
-                                 nDrop: Int, runId: Int): (Problem, Set[ExampleInstance]) = {
-        val exampleDir = Paths.get(problemOutDir.toString, s"drop_${nDrop}_examples_run${runId}")
-        if (Files.notExists(exampleDir)) {
-          /** Sample from previous examples */
-          Misc.makeDir(exampleDir)
-          val nextExampleSize = initExamples.size - nDrop
-          assert(nextExampleSize < prevExamples.size)
-          assert(nextExampleSize > 0)
-          val next_examples = sampleExamples(prevExamples, nextExampleSize)
-          val (newEdb, newIdb) = ExampleInstance.toEdbIdb(next_examples)
-          val next_problem = prevProblem.copy(edb = newEdb, idb = newIdb)
-          Misc.dumpExamples(next_problem, exampleDir.toString)
-          (next_problem, next_examples)
-        }
-        else {
-          /** Load from file instead */
-          val p0 = initProblem.copy(edb=Examples(), idb=Examples())
-          val next_problem = Misc.readExamples(p0, exampleDir.toString)
-          val next_examples = ExampleInstance.fromEdbIdb(next_problem.edb, next_problem.idb)
-          assert(next_examples.size == initExamples.size - nDrop)
-          assert(next_examples.subsetOf(prevExamples))
-          logger.info(s"Load examples from ${exampleDir}")
-          (next_problem, next_examples)
-        }
-      }
+        val problemOutDir = Paths.get(outDir, initProblem.name)
+        Misc.makeDir(problemOutDir)
 
-      for (i <- 0 to repeats) {
-        var problem = initProblem
-        var examples = initExamples
+        val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
+        val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
 
-        for (nDrop <- nDrops) {
-          val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, i)
-          assert(enext.subsetOf(examples))
-          assert(enext.size < examples.size)
-          assert(enext.size == initExamples.size - nDrop)
-          problem = pnext
-          examples = enext
-
-          val sig = getProblemSignature(problem)
-          val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrop)
-          if (rc < 1) {
-            logger.info(s"Run ${initProblem.name}, drop ${nDrop} example, run ${i}.")
-
-            val logDir = Paths.get(logRootDir.toString, problem.name)
-            runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString)
+        def nextProblemAndExamples(prevProblem: Problem, prevExamples: Set[ExampleInstance],
+                                   nDrop: Int, runId: Int): (Problem, Set[ExampleInstance]) = {
+          val exampleDir = Paths.get(problemOutDir.toString, s"drop_${nDrop}_examples_run${runId}")
+          if (Files.notExists(exampleDir)) {
+            /** Sample from previous examples */
+            Misc.makeDir(exampleDir)
+            val nextExampleSize = initExamples.size - nDrop
+            assert(nextExampleSize < prevExamples.size)
+            assert(nextExampleSize > 0)
+            val next_examples = sampleExamples(prevExamples, nextExampleSize)
+            val (newEdb, newIdb) = ExampleInstance.toEdbIdb(next_examples)
+            val next_problem = prevProblem.copy(edb = newEdb, idb = newIdb)
+            Misc.dumpExamples(next_problem, exampleDir.toString)
+            (next_problem, next_examples)
           }
           else {
-            logger.info(s"${initProblem.name} drop ${nDrop} run ${i} has results already. Skip.")
+            /** Load from file instead */
+            val p0 = initProblem.copy(edb = Examples(), idb = Examples())
+            val next_problem = Misc.readExamples(p0, exampleDir.toString)
+            val next_examples = ExampleInstance.fromEdbIdb(next_problem.edb, next_problem.idb)
+            assert(next_examples.size == initExamples.size - nDrop)
+            assert(next_examples.subsetOf(prevExamples))
+            logger.info(s"Load examples from ${exampleDir}")
+            (next_problem, next_examples)
+          }
+        }
+
+        for (i <- 0 to repeats) {
+          var problem = initProblem
+          var examples = initExamples
+
+          for (nDrop <- nDrops) {
+            val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, i)
+            assert(enext.subsetOf(examples))
+            assert(enext.size < examples.size)
+            assert(enext.size == initExamples.size - nDrop)
+            problem = pnext
+            examples = enext
+
+            val sig = getProblemSignature(problem)
+            val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrop)
+            if (rc < 1) {
+              allFinish = false
+              logger.info(s"Run ${initProblem.name}, drop ${nDrop} example, run ${i}.")
+
+              val logDir = Paths.get(logRootDir.toString, problem.name)
+              runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString)
+            }
+            else {
+              logger.info(s"${initProblem.name} drop ${nDrop} run ${i} has results already. Skip.")
+            }
           }
         }
       }
-    }
+      retries +=1
+    } while (retries < 10 && !allFinish)
   }
   // def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
   //   val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
