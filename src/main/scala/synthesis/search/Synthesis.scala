@@ -35,10 +35,11 @@ object Synthesis {
       /** Use the count aggregator */
       val preprocessors: Set[InputAggregator] = getPreprocessors(problem)
       val newProblem = preprocessors.foldLeft(problem)((p1, agg) => agg.preprocess(p1))
-      SynthesisAllPrograms(newProblem, initConfigSpace = initConfigSpace)
+      // SynthesisAllPrograms(newProblem, initConfigSpace = initConfigSpace)
+      new ProgramSynthesizer(newProblem, initConfigSpace)
     }
     // case _ => ???
-    case _ => new ProgramSynthesizer(problem)
+    case _ => new ProgramSynthesizer(problem, initConfigSpace)
   }
 
   def getPreprocessors(problem: Problem): Set[InputAggregator] = problem.domain match {

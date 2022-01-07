@@ -132,9 +132,8 @@ object Main extends App {
     require(args.size == 3)
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
-    ???
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
-      outDir="results/debloat")
+      outDir="results-2/debloat")
     experiment.run(Experiment.debloatingExperiments,repeats = repeats)
     // val problem = Misc.readProblem(args(1))
     // val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))

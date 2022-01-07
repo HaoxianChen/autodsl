@@ -5,22 +5,43 @@ import synthesis._
 import synthesis.rulebuilder.AggregateLiteral
 import synthesis.util.Misc
 
-class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
+class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace) extends Synthesis(problem) {
   /** Synthesize program on a program basis */
 
-  private val programBuilder: ProgramBuilder = ProgramBuilder(problem)
-  private val ruleLearner = SynthesisAllPrograms(problem)
+  // private val ruleLearner = SynthesisAllPrograms(problem)
   private val evaluator = new PartialProgramEvaluator(problem)
   private val syntaxConstraint = SyntaxConstraint()
   private val logger = Logger(s"ProgramSynthesizer")
 
-  logger.info(s"${programBuilder.getAggregators.size} aggreators.")
 
   private val maxBranching: Int = 50
 
-  def getConfigSpace: SynthesisConfigSpace = ruleLearner.getConfigSpace
+  private val configSpace: SynthesisConfigSpace = {
+    if (initConfigSpace.isEmpty) SynthesisConfigSpace.getConfigSpace(problem) else initConfigSpace
+  }
+  private var programBuilder: ProgramBuilder = ProgramBuilder(problem, configSpace.get_config())
+  logger.info(s"${programBuilder.getAggregators.size} aggreators.")
+
+  def getConfigSpace: SynthesisConfigSpace = configSpace
 
   def learnNPrograms(idb: Set[Tuple]): List[Program] = {
+    /** This while loop incrementally increase the program space */
+    var config = configSpace.get_config()
+    var ans: List[Program] = List()
+
+    do {
+      ans = _learnNPrograms(idb)
+
+      if (ans.isEmpty) {
+        config = configSpace.next_config()
+        logger.info(s"Increase config space ${config}")
+        programBuilder = ProgramBuilder(problem, config)
+      }
+    } while (ans.isEmpty)
+    ans
+  }
+
+  def _learnNPrograms(idb: Set[Tuple]): List[Program] = {
     var validPrograms: Set[ScoredProgram] = Set()
     // var evaluatedPrograms: Set[Program] = Set()
     var evaluatedPrograms: Set[Program] = Set()
@@ -100,9 +121,12 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
           def _getScore(sp: ScoredProgram): Double = sp.recall
           Some(SimulatedAnnealing.sample(higherRecall, _getScore, _getScore(baseProgram)))
       }
-      else {
+      else if (programPool.nonEmpty){
         def _getScore(sp: ScoredProgram): Double = sp.score
         Some(SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram)))
+      }
+      else {
+          None
       }
 
       // if (refinedPrograms.size < allRefinedPrograms.size) programPool += baseProgram
@@ -114,7 +138,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
     }
 
     if (programPool.isEmpty) logger.debug(s"Runs out of candidate programs. Explored ${evaluatedPrograms.size}.")
-    assert(validPrograms.nonEmpty)
+    // assert(validPrograms.nonEmpty)
 
     // logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
     // validPrograms.toList.map(_.program).sortWith(_<_)

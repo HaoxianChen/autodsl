@@ -1,7 +1,7 @@
 package synthesis
 
-import synthesis.rulebuilder.{AggregateLiteral, OutputAggregator, ArgMax, ArgMin, RuleBuilder}
-import synthesis.search.SynthesisConfigSpace
+import synthesis.rulebuilder.{AggregateLiteral, ArgMax, ArgMin, OutputAggregator, RuleBuilder}
+import synthesis.search.{SynthesisConfigSpace, SynthesisConfigs}
 
 class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[OutputAggregator]) {
   def getAggregators: Set[OutputAggregator] = aggregators
@@ -56,9 +56,9 @@ class ProgramBuilder(ruleBuilder: RuleBuilder, aggregators: Set[OutputAggregator
 }
 
 object ProgramBuilder {
-  def apply(problem: Problem): ProgramBuilder = {
-    val configSpace = SynthesisConfigSpace.getConfigSpace(problem)
-    val ruleBuilder = configSpace.get_config().get_rule_builder(problem)
+  def apply(problem: Problem, config: SynthesisConfigs): ProgramBuilder = {
+    // val configSpace = SynthesisConfigSpace.getConfigSpace(problem)
+    val ruleBuilder = config.get_rule_builder(problem)
     problem.domain match {
       case "routing" => {
         val aggregators: Set[OutputAggregator] = ArgMin.allInstances(problem) ++ ArgMax.allInstances(problem)
