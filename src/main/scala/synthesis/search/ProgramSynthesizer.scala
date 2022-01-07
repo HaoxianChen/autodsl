@@ -15,6 +15,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
 
   private val maxBranching: Int = 50
+  private val maxIters: Int = 1000
 
   private val configSpace: SynthesisConfigSpace = {
     if (initConfigSpace.isEmpty) SynthesisConfigSpace.getConfigSpace(problem) else initConfigSpace
@@ -60,14 +61,14 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     evaluatedPrograms ++= mostGeneralPrograms
 
     var extraIters: Int = 0
-    val maxExtraIters: Int = 10
+    val maxExtraIters: Int = 20
     val maxSolutionSize: Int = 10
     var iters: Int = 0
     // while (validPrograms.isEmpty) {
     assert(programPool.nonEmpty, s"$idb")
     var next: Option[ScoredProgram] = Some(sampleNextCandidateProgram(programPool, baseScore = 0))
     // while (programPool.nonEmpty && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
-    while (next.isDefined && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
+    while (next.isDefined && validPrograms.size < maxSolutionSize && iters<maxIters && extraIters < maxExtraIters) {
       // val baseProgram: ScoredProgram = programPool.dequeue()
       val baseProgram: ScoredProgram = next.get
       assert(evaluatedPrograms.contains(baseProgram.program))
@@ -138,6 +139,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     }
 
     if (programPool.isEmpty) logger.debug(s"Runs out of candidate programs. Explored ${evaluatedPrograms.size}.")
+    if (iters==maxIters) logger.debug(s"Stop after maximum iterations (${maxIters}).")
     // assert(validPrograms.nonEmpty)
 
     // logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
