@@ -11,6 +11,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
   private val programBuilder: ProgramBuilder = ProgramBuilder(problem)
   private val ruleLearner = SynthesisAllPrograms(problem)
   private val evaluator = new PartialProgramEvaluator(problem)
+  private val syntaxConstraint = SyntaxConstraint()
   private val logger = Logger(s"ProgramSynthesizer")
 
   logger.info(s"${programBuilder.getAggregators.size} aggreators.")
@@ -139,6 +140,7 @@ class ProgramSynthesizer(problem: Problem) extends Synthesis(problem) {
       require(program.rules.contains(rule))
       val otherRules = program.rules.diff(Set(rule))
       val newRules = programBuilder.refineRule(rule)
+        .filter(syntaxConstraint.filter)
       val newPrograms = newRules.map(r => Program(otherRules+r))
       assert(newPrograms.forall(_.rules.size<=program.rules.size))
 
