@@ -109,7 +109,8 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
             problem = pnext
             examples = enext
 
-            val sig = getProblemSignature(problem)
+            // val sig = getProblemSignature(problem)
+            val sig = getProblemSignature(problem) + i // different runs may share the same set of examples
             val rc = ExperimentRecord.recordCount(outDir, initProblem, sig, nDrop = nDrop)
             if (rc < 1) {
               allFinish = false
