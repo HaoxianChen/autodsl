@@ -210,14 +210,14 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         newExamples += nextExample.get
       }
 
-      // logProblem(problem)
+      logProblem(problem)
       val start = System.nanoTime()
       val (_candidates, _timeout, _error) = trySynthesize(problem, outRel, candidates, remainingTime)
       candidates = _candidates
       isTimeOut = _timeout
       hasError=_error
       val duration: Int = ((System.nanoTime()- start) / 1e9).toInt
-      logger.debug(s"Last iteration lasted $duration s.")
+      logger.debug(s"Last iteration lasted $duration s, ${newExamples.size} new examples.")
       remainingTime -= duration
 
       if (candidates.size > 1 && !hasError) {
@@ -299,6 +299,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
 
   def synthesize(problem: Problem, outRel: Relation, candidates: List[Program], minPrograms: Int = 50): List[Program] = {
     val evaluator = EvaluatorWrapper(problem)
+    val maxNewCandidates = 100
 
     def isProgramValid(program: Program, problem: Problem): Boolean = {
       val idb = evaluator.eval(program,outRel)
@@ -321,7 +322,8 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     if (validCandidates.size < minPrograms) {
       // val synthesizer = SynthesisAllPrograms(problem, initConfigSpace = configSpace)
       val synthesizer = Synthesis(problem, initConfigSpace = configSpace)
-      val newCandidates = synthesizer.go()(outRel)
+      // Keep at most 100 new candidates
+      val newCandidates = synthesizer.go()(outRel).take(maxNewCandidates)
       configSpace = synthesizer.getConfigSpace
       require(newCandidates.forall(p=>isProgramValid(p, problem)))
       validCandidates ++ newCandidates
