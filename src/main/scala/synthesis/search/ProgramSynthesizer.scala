@@ -97,6 +97,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
         logger.info(s"${newValidRules.size} new valid rules.")
         /** Reset program pool */
         programPool = mostGeneralPrograms.map(p=> Program(p.rules++validRules))
+          .diff(expandedPrograms)
           .map(p => evalProgram(p, idb))
           .filter(needsRefinement)
       }
