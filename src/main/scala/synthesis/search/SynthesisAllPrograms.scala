@@ -66,7 +66,7 @@ case class SynthesisAllPrograms(problem: Problem,
     /** Return all combinations of rules that cover all idb
      * how to handle recursion? */
 
-    val maxPrograms = 10
+    val maxPrograms = 20
 
     def sortScoredRules(a: ScoredRule, b: ScoredRule) :Boolean = {
       /** rule a is more preferable than rule b if:
@@ -83,8 +83,14 @@ case class SynthesisAllPrograms(problem: Problem,
       else true
     }
 
+    var solutions: Set[List[Rule]] = Set()
+
     def _combineRules(learnedRules: List[Rule], remainingRules: List[Rule], remainingIdb: Set[Tuple]): Set[List[Rule]] = {
       if (remainingIdb.isEmpty) {
+        solutions += learnedRules
+        Set(List())
+      }
+      else if (solutions.size > maxPrograms) {
         Set(List())
       }
       else {
@@ -149,7 +155,8 @@ case class SynthesisAllPrograms(problem: Problem,
     val programs = _combineRules(List(),ruleList, idb).map(
       rs=>Program(rs.toSet)
     )
-    programs.toList.sortBy(_.rules.size)(Ordering[Int])
+    // programs.toList.sortBy(_.rules.size)(Ordering[Int])
+    programs.toList.sortWith(_ < _)
   }
 
   def _getRelevantScoredRules(idb: Set[Tuple], rules: Set[Rule], learnedRules: Set[Rule]): Set[ScoredRule] = {
