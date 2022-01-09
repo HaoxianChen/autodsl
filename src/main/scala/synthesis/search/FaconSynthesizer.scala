@@ -147,7 +147,15 @@ class FaconSynthesizer(problem: Problem) extends SynthesisAllPrograms(problem) {
     }
 
     val candidateRelations = if(getConfigSpace.get_config().recursion) problem.inputRels+outRel else problem.inputRels
-    val allBodies: Set[Set[Literal]] = _allBindings(Set(), candidateRelations.toList)
+    // val allBodies: Set[Set[Literal]] = _allBindings(Set(), candidateRelations.toList)
+    val relLists = {
+      var ret: List[Relation] = List()
+      for (i <- 1 to getConfigSpace.get_config().maxRelCount) {
+        ret ++= candidateRelations.toList
+      }
+      ret
+    }
+    val allBodies: Set[Set[Literal]] = _allBindings(Set(), relLists)
 
     def bindHead(body: Set[Literal]): Set[Rule] = {
       /** Bind head to body literals */
