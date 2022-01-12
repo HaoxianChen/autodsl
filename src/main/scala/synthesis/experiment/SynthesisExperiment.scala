@@ -23,7 +23,8 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String
       val sig = getProblemSignature(problem)
       val rc = ExperimentRecord.recordCount(getOutDir(problem).toString, problem, sig)
       if (rc < repeats || update) {
-        for (i <- 1 to repeats) {
+        logger.info(s"run ${problem.name} for ${repeats-rc} times.")
+        for (i <- 1 to repeats-rc) {
           logger.info(s"run ${problem.name}. Iteration $i.")
           val t1 = System.nanoTime
           val synthesizer = getSynthesizer(problem)
