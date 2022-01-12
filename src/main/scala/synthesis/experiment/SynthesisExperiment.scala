@@ -88,7 +88,7 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String
     println(s"${literalCounts} literals, ${fieldCounts} fields.")
 
     val record = ExperimentRecord(Map("problem"->problem.name,
-      "domain" -> problem.domain
+      "domain" -> problem.domain,
       "exp_name" -> "synthesis",
       "relations" -> nTotal,
       "inRel" -> nInputRels,
