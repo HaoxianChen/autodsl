@@ -17,29 +17,33 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String
   def allProblems: List[Path] = allProblemDirStr.map(s => Paths.get(benchmarkDir, s))
   def getSynthesizer(p: Problem): Synthesis = Synthesis(p)
 
-  def run(update: Boolean): Unit = {
+  def run(update: Boolean, repeats: Int=1): Unit = {
     for (problemFile <- allProblems) {
       val problem = Misc.readProblem(problemFile.toString)
-      if (!isResultExist(problem) || update) {
-        logger.info(s"run ${problem.name}")
-        val t1 = System.nanoTime
-        val synthesizer = getSynthesizer(problem)
-        val programs = synthesizer.go()
-        val duration = (System.nanoTime - t1) / 1e9d
-        logger.info(s"Finished in ${duration}s")
-        assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
-        val isCorrect: Boolean = checkSolution(problemFile.toString, getSolution(programs))
-        if (!isCorrect) {
-          logger.debug(s"Incorrect Solution: ${getSolutionFile(problem)}")
+      val sig = getProblemSignature(problem)
+      val rc = ExperimentRecord.recordCount(getOutDir(problem).toString, problem, sig)
+      if (rc < repeats || update) {
+        for (i <- 1 to repeats) {
+          logger.info(s"run ${problem.name}. Iteration $i.")
+          val t1 = System.nanoTime
+          val synthesizer = getSynthesizer(problem)
+          val programs = synthesizer.go()
+          val duration = (System.nanoTime - t1) / 1e9d
+          logger.info(s"Finished in ${duration}s")
+          assert(programs.nonEmpty, s"Test failed: ${problemFile}.")
+          val isCorrect: Boolean = checkSolution(problemFile.toString, getSolution(programs))
+          if (!isCorrect) {
+            logger.debug(s"Incorrect Solution: ${getSolutionFile(problem)}")
+          }
+          writeResults(problem, programs, duration.toInt, isCorrect)
         }
-        writeResults(problem, programs, duration.toInt, isCorrect)
       }
       else {
-        logger.info(s"${problem.name} result exists. Skip.")
+        logger.info(s"${problem.name} has $rc results already. Skip.")
       }
 
     }
-    generateTable()
+    // generateTable()
     // checkResultCorrectness()
   }
 
@@ -72,54 +76,100 @@ class SynthesisExperiment(benchmarkDir: String, outDir: String
     var literalCounts: Int = 0
     var fieldCounts: Int = 0
     var ruleCounts: Int = 0
+    var rules: Set[Rule] = Set()
     for ((rel,ps)<-programs) {
       val p = ps.head
+      rules ++= p.rules
       ruleCounts += p.rules.size
       literalCounts += p.literalCounts
       fieldCounts += p.fieldCounts
     }
+    val solution = Program(rules)
     println(s"${literalCounts} literals, ${fieldCounts} fields.")
 
-    var fileStr: String = s"# domain name features(recur agg udf) \n" +
-      "# relations(in out) rules literals variables \n" +
-      "# rules literals variables \n" +
-      "# examples(instances in out rows) \n" +
-      "# time\n"
-
-    val fields: Seq[Any] = Seq(problem.domain, problem.name, s"", s"", s"") ++
-      Seq(nInputRels, nOutputRels) ++
-      Seq(ruleCounts, literalCounts, fieldCounts) ++
-      Seq(problem.getNumExampleInstances, nInputTuples, nOutputTuples, nTotalTuples) ++
-      Seq(duration)
-    fileStr += fields.mkString("\t") + "\n\n"
-
-    fileStr += s"correctness:"
-    if (isCorrect) {
-      fileStr += s"1\n"
-    }
-    else {
-      fileStr += s"0\n"
-    }
-
-    fileStr += s"${problem.name}\n"
-    fileStr += s"$nTotal Relations ($nInputRels, $nOutputRels)\n"
-    fileStr += s"$nTotalTuples examples ($nInputTuples, $nOutputTuples).\n"
-    fileStr += s"${problem.getNumExampleInstances} example instances.\n"
-
-    for ((rel,ps)<-programs) {
-      val p = ps.head
-      fileStr += s"$rel: ${ps.size} programs, smallest one contains ${p.literalCounts} literals.\n"
-      fileStr += s"$p\n"
-    }
-    fileStr += s"sig:${getProblemSignature(problem)}\n"
-    Misc.makeDir(getOutFile(problem).getParent)
-    Misc.writeFile(fileStr, getOutFile(problem))
-
-    /** Write solution to file */
-    val evaluator = Evaluator(problem)
-    val pStr: String = evaluator.getSpecString(getSolution(programs))
-    Misc.writeFile(pStr, getSolutionFile(problem))
+    val record = ExperimentRecord(Map("problem"->problem.name,
+      "domain" -> problem.domain
+      "exp_name" -> "synthesis",
+      "relations" -> nTotal,
+      "inRel" -> nInputRels,
+      "outRel" -> nOutputRels,
+      "examples" -> problem.getNumExampleInstances,
+      "inTuples" -> nInputTuples,
+      "outTuples" -> nOutputTuples,
+      "totalTuples" -> nTotalTuples,
+      "time"->duration,
+      "sig"->getProblemSignature(problem),
+      "correctness"->isCorrect,
+      "rules" -> ruleCounts,
+      "literals" -> literalCounts,
+      "fields" -> fieldCounts
+    ),
+      solution)
+    record.dump(getOutDir(problem).toString)
   }
+
+
+  // def writeResults(problem: Problem, programs: Map[Relation, List[Program]], duration: Int, isCorrect: Boolean): Unit = {
+  //   /*** Gather problem specs */
+  //   val nInputTuples: Int = problem.edb.toTuples().size
+  //   val nOutputTuples: Int =  problem.idb.toTuples().size
+  //   val nTotalTuples = nInputTuples + nOutputTuples
+  //   val nInputRels = problem.inputRels.size
+  //   val nOutputRels = problem.outputRels.size
+  //   val nTotal = nInputRels + nOutputRels
+
+  //   /*** Display results */
+  //   var literalCounts: Int = 0
+  //   var fieldCounts: Int = 0
+  //   var ruleCounts: Int = 0
+  //   for ((rel,ps)<-programs) {
+  //     val p = ps.head
+  //     ruleCounts += p.rules.size
+  //     literalCounts += p.literalCounts
+  //     fieldCounts += p.fieldCounts
+  //   }
+  //   println(s"${literalCounts} literals, ${fieldCounts} fields.")
+
+  //   var fileStr: String = s"# domain name features(recur agg udf) \n" +
+  //     "# relations(in out) rules literals variables \n" +
+  //     "# rules literals variables \n" +
+  //     "# examples(instances in out rows) \n" +
+  //     "# time\n"
+
+  //   val fields: Seq[Any] = Seq(problem.domain, problem.name, s"", s"", s"") ++
+  //     Seq(nInputRels, nOutputRels) ++
+  //     Seq(ruleCounts, literalCounts, fieldCounts) ++
+  //     Seq(problem.getNumExampleInstances, nInputTuples, nOutputTuples, nTotalTuples) ++
+  //     Seq(duration)
+  //   fileStr += fields.mkString("\t") + "\n\n"
+
+  //   fileStr += s"correctness:"
+  //   if (isCorrect) {
+  //     fileStr += s"1\n"
+  //   }
+  //   else {
+  //     fileStr += s"0\n"
+  //   }
+
+  //   fileStr += s"${problem.name}\n"
+  //   fileStr += s"$nTotal Relations ($nInputRels, $nOutputRels)\n"
+  //   fileStr += s"$nTotalTuples examples ($nInputTuples, $nOutputTuples).\n"
+  //   fileStr += s"${problem.getNumExampleInstances} example instances.\n"
+
+  //   for ((rel,ps)<-programs) {
+  //     val p = ps.head
+  //     fileStr += s"$rel: ${ps.size} programs, smallest one contains ${p.literalCounts} literals.\n"
+  //     fileStr += s"$p\n"
+  //   }
+  //   fileStr += s"sig:${getProblemSignature(problem)}\n"
+  //   Misc.makeDir(getOutFile(problem).getParent)
+  //   Misc.writeFile(fileStr, getOutFile(problem))
+
+  //   /** Write solution to file */
+  //   val evaluator = Evaluator(problem)
+  //   val pStr: String = evaluator.getSpecString(getSolution(programs))
+  //   Misc.writeFile(pStr, getSolutionFile(problem))
+  // }
 }
 
 class FaconExperiment(benchmarkDir: String, outDir: String)

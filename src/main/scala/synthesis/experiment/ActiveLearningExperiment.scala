@@ -306,7 +306,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
         "timeout"->timeout
       ),
         program.get,
-        nQueries,_allDurations
+        nQueries=_queries, durations = _allDurations
       )
       record.dump(outDir)
       /** Remove progress log, if any */
@@ -423,12 +423,12 @@ object ActiveLearningExperiment {
     val allProblems = problemDirs.map(f=>Paths.get(benchmarkDir,f))
     for (problemFile <- allProblems) {
       val problem = Misc.readProblem(problemFile.toString)
-      val resultDir = Paths.get(resultRootDir, problem.name)
-      val allFiles: List[String] = Misc.getListOfFiles(resultDir.toString)
-      val logFiles: List[String] = allFiles.filter(_.contains("result"))
-      val records: List[Map[String,String]] = logFiles.map(f => Paths.get(resultDir.toString,f).toString).
-        map(fromFile)
-      allRecords ++=  records
+      // val resultDir = Paths.get(resultRootDir, problem.name)
+      // val allFiles: List[String] = Misc.getListOfFiles(resultDir.toString)
+      // val logFiles: List[String] = allFiles.filter(_.contains("result"))
+      // val records: List[Map[String,String]] = logFiles.map(f => Paths.get(resultDir.toString,f).toString).
+      //   map(fromFile)
+      allRecords ++=  ExperimentRecord.allRecords(problemFile.toString, problem)
     }
 
     def _strToInt(_s: String): Int = _s match {
@@ -443,8 +443,9 @@ object ActiveLearningExperiment {
     val statLines = allRecords.map { rc =>
       val correctness = _strToInt(rc("correctness") )
       val numRuns = rc.getOrElse("numRuns","1")
-      List(rc("problem"), rc("numDrop"), rc("numQuereis"), rc("time"), numRuns, correctness)
+      List(rc("problem"), rc("numDrop"), rc("numQuereis"), rc("time"), correctness, numRuns)
     }.toList
+    val rawHeader = List("spec", "numDropExamples", "numQueries", "time", "validated", "numRuns")
 
     val aggLines = allRecords.groupBy(rc => (rc("problem"), rc("numDrop"))).map {
       case (k,group) => {
@@ -457,8 +458,6 @@ object ActiveLearningExperiment {
         List(k._1, k._2, avgQueries, avgTime, correctRatio, avgRuns, N)
       }
     }.toList
-
-    val rawHeader = List("spec", "numDropExamples", "numQueries", "time", "validated", "numRuns")
     val aggHeader = rawHeader :+ "count"
 
     val rawFile = Paths.get(resultRootDir, s"${outFileName}_raw.csv")
@@ -472,10 +471,14 @@ object ActiveLearningExperiment {
     val resultDir = Paths.get(resultRootDir, "active-learning").toString
     makeTable(benchmarkDir,Experiment.activelearningProblems, resultDir, "active-learning")
 
-    // val resultDir2 = Paths.get(resultRootDir, "active-learning-full").toString
-    // makeTable(benchmarkDir,Experiment.activelearningProblems, resultDir2, "active-learning-full")
+    val resultDir2 = Paths.get(resultRootDir, "active-learning-full").toString
+    makeTable(benchmarkDir,Experiment.activeLearningWithOracle, resultDir2, "active-learning")
 
-    makeTable(benchmarkDir,Experiment.randomDropExperiments, resultDir, "drop-examples")
+    val resultDir3 = Paths.get(resultRootDir, "debloat").toString
+    makeTable(benchmarkDir,Experiment.debloatingExperiments, resultDir3, "debloat")
+
+    val resultDir4 = Paths.get(resultRootDir, "random-drop").toString
+    makeTable(benchmarkDir,Experiment.randomDropExperiments, resultDir4, "drop-examples")
 
   }
 }
