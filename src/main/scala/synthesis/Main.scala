@@ -65,10 +65,11 @@ object Main extends App {
     displayResults(problem, programs)
   }
   else if (args(0) == "tab1") {
-    require(args.size == 2)
-    val _benchmarkDir = args(1)
+    require(args.size == 3)
+    val repeats = args(1).toInt
+    val _benchmarkDir = args(2)
     // val experiment = new AllSynthesisExperiments(_benchmarkDir, outDir="results")
-    val experiment = new AllSynthesisExperiments(_benchmarkDir, outDir="results-2")
+    val experiment = new AllSynthesisExperiments(_benchmarkDir, outDir="results-2", repeats=repeats)
     experiment.run()
   }
   else if (args(0) == "tab2") {

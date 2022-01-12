@@ -199,7 +199,7 @@ class FaconExperiment(benchmarkDir: String, outDir: String)
   ).map(s => Paths.get(benchmarkDir, s))
 }
 
-class AllSynthesisExperiments(benchmarkDir: String, outDir: String) {
+class AllSynthesisExperiments(benchmarkDir: String, outDir: String, repeats: Int=1) {
   val netspec = new SynthesisExperiment(benchmarkDir, outDir = Paths.get(outDir,"synthesis").toString)
   val facon = new FaconExperiment(benchmarkDir, outDir = Paths.get(outDir, "facon").toString)
   val allProblems = netspec.allProblems
@@ -255,8 +255,8 @@ class AllSynthesisExperiments(benchmarkDir: String, outDir: String) {
   )
 
   def run(): Unit = {
-    netspec.run(update = false)
-    facon.run(update = false)
+    netspec.run(update = false, repeats=repeats)
+    facon.run(update = false, repeats=repeats)
     generateTable()
   }
 
