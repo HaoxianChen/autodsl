@@ -5,7 +5,15 @@ import synthesis._
 import synthesis.rulebuilder.AggregateLiteral
 import synthesis.util.Misc
 
-class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace) extends Synthesis(problem) {
+import scala.collection.parallel.CollectionConverters._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Success, Try}
+
+class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace,
+                        threads: Int=5) extends Synthesis(problem) {
   /** Synthesize program on a program basis */
 
   // private val ruleLearner = SynthesisAllPrograms(problem)
@@ -13,7 +21,6 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
   private val syntaxConstraint = SyntaxConstraint()
   private val logger = Logger(s"ProgramSynthesizer")
   private val ruleHelper = SynthesisAllPrograms(problem)
-
 
   private val maxBranching: Int = 50
   private val maxIters: Int = 1000
@@ -27,6 +34,22 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
   def getConfigSpace: SynthesisConfigSpace = configSpace
 
   def learnNPrograms(idb: Set[Tuple]): List[Program] = {
+    logger.info(s"$threads threads.")
+    val idbList: List[Set[Tuple]] = List.fill(threads)(idb)
+    val allPrograms = idbList.par.flatMap(ts => {
+      val res = Future(learnNProgramsSingleThread(ts))
+      Try(Await.result(res, Duration(70,SECONDS))) match {
+        case Success(value) => value
+        case Failure(exception) => {
+          logger.warn(s"$exception")
+          List()
+        }
+      }
+    }).toSet
+    allPrograms.toList.sortWith(_<_)
+  }
+
+  def learnNProgramsSingleThread(idb: Set[Tuple]): List[Program] = {
     /** This while loop incrementally increase the program space */
     var config = configSpace.get_config()
     var ans: List[Program] = List()
