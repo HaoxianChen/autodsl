@@ -48,35 +48,39 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     // var evaluatedPrograms: Set[Program] = Set()
     var evaluatedPrograms: Set[Program] = Set()
     var expandedPrograms: Set[Program] = Set()
+    var remainingIdb: Set[Tuple] = idb
 
     val refRel: Set[Relation] = idb.map(_.relation)
 
     // var programPool: mutable.PriorityQueue[ScoredProgram] = new mutable.PriorityQueue()
     var programPool: Set[ScoredProgram] = Set()
     var validRules: Set[Rule] = Set()
+    var newValidRules: Set[Rule] = Set()
 
     // init program Pool with the most general programs
     val mostGeneralPrograms = programBuilder.mostGeneralPrograms().filter(
       p => p.rules.forall(r => refRel.contains(r.head.relation))
     )
-    programPool ++= mostGeneralPrograms.map(p => evalProgram(p, idb)).filter(needsRefinement)
+    programPool ++= mostGeneralPrograms.map(p => evalProgram(p, validRules, idb)).filter(needsRefinement)
     evaluatedPrograms ++= mostGeneralPrograms
 
     var extraIters: Int = 0
     val maxExtraIters: Int = 20
     val maxSolutionSize: Int = 10
     var iters: Int = 0
-    // while (validPrograms.isEmpty) {
     assert(programPool.nonEmpty, s"$idb")
-    var next: Option[ScoredProgram] = Some(sampleNextCandidateProgram(programPool, baseScore = 0))
-    // while (programPool.nonEmpty && validPrograms.size < maxSolutionSize && extraIters < maxExtraIters) {
-    while (next.isDefined && validPrograms.size < maxSolutionSize && iters<maxIters && extraIters < maxExtraIters) {
-      // val baseProgram: ScoredProgram = programPool.dequeue()
+    var next: Option[ScoredProgram] = {
+      def _getScore(sp: ScoredProgram): Double = sp.score
+      Some(SimulatedAnnealing.sample(programPool, _getScore))
+    }
+    while (next.isDefined && validPrograms.size < maxSolutionSize && iters<maxIters
+      // && extraIters < maxExtraIters
+      && remainingIdb.nonEmpty
+    ) {
       val baseProgram: ScoredProgram = next.get
-      // assert(evaluatedPrograms.contains(baseProgram.program))
       assert(!expandedPrograms.contains(baseProgram.program))
 
-      val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, idb, validRules).diff(evaluatedPrograms)
+      val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, remainingIdb, validRules).diff(evaluatedPrograms)
       val (refinedPrograms, isBaseProgramExhausted) = if (allRefinedPrograms.size > maxBranching) {
         (Misc.sampleSet(allRefinedPrograms, maxBranching), false)
       } else (allRefinedPrograms, true)
@@ -88,72 +92,98 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
         diff(expandedPrograms).
         map(p => Program(p.rules++validRules)).
-        map(p => evalProgram(p, idb))
+        map(p => evalProgram(p, validRules, remainingIdb))
+      val toRefine = candidatePrograms.filter(needsRefinement)
 
       /** Rule sharing */
-      val newValidRules: Set[Rule] = getValidRules(candidatePrograms).diff(validRules)
+      newValidRules ++= {
+        val vr = getValidRules(toRefine).diff(validRules)
+        if (vr.nonEmpty) logger.info(s"Found ${vr.size} valid rules.")
+        vr
+      }
+
       /** Update the pool of valid programs */
-      if (newValidRules.nonEmpty) {
+      if (newValidRules.nonEmpty && extraIters >= maxExtraIters) {
         validRules ++= newValidRules
-        logger.info(s"${newValidRules.size} new valid rules.")
-        /** Reset program pool */
-        programPool = mostGeneralPrograms.map(p=> Program(p.rules++validRules))
-          .diff(expandedPrograms)
-          .map(p => evalProgram(p, idb))
+        newValidRules = Set()
+        /** Reset everything else */
+        programPool = mostGeneralPrograms
+          .map(p=> Program(p.rules++validRules))
+          // .diff(expandedPrograms)
+          // .map(p => evalProgram(p, validRules, idb))
+          .map(p => evalProgram(p, validRules, remainingIdb))
           .filter(needsRefinement)
+        expandedPrograms = Set()
+        evaluatedPrograms = Set()
+        remainingIdb = updateIdb(validRules, idb)
+        logger.info(s"Update remaining idb ${extraIters} iterations, and reset program pool")
+        extraIters = 0
+        next = if (programPool.nonEmpty) {
+            def _getScore(sp: ScoredProgram): Double = sp.score
+            Some(SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram)))
+          }
+          else {
+            None
+          }
+      }
+      else {
+        val pnext = toRefine
+        programPool ++= toRefine
+
+        /** Sample next candidate program to explore */
+        val higherScore: Set[ScoredProgram] = pnext.filter(_.score>baseProgram.score)
+        val higherRecall = pnext.filter(_.recall > baseProgram.recall)
+        // val perfectRecall: Set[ScoredProgram] = programPool.filter(p => p.recall >= 1.0 && p.completeness >= 1.0)
+        val maxExpandedValidPrograms: Int = 5
+        val unexpandedValidPrograms: Set[ScoredProgram] = validPrograms.filterNot(sp=>expandedPrograms.contains(sp.program))
+        val toExpandValidPrograms: Boolean = {
+          val expandedValidPrograms: Set[Program] = expandedPrograms.intersect(validPrograms.map(_.program))
+          unexpandedValidPrograms.nonEmpty && expandedValidPrograms.size < maxExpandedValidPrograms
+        }
+        next =
+        // if (perfectRecall.nonEmpty) {
+        //   sampleNextCandidateProgram(perfectRecall, baseProgram.score)
+        // }
+        // else if(higherScore.nonEmpty) {
+          if (toExpandValidPrograms) {
+            def _getScore(sp: ScoredProgram): Double = sp.score
+            Some(SimulatedAnnealing.sample(unexpandedValidPrograms, _getScore, _getScore(baseProgram)))
+          }
+          else if(higherScore.nonEmpty) {
+            /** Always go along the current path if higher score available */
+            def _getScore(sp: ScoredProgram): Double = sp.score
+            Some(SimulatedAnnealing.sample(higherScore, _getScore, _getScore(baseProgram)))
+            // Some(higherScore.maxBy(_.score))
+          }
+          else if (higherRecall.nonEmpty) {
+            def _getScore(sp: ScoredProgram): Double = sp.recall
+            Some(SimulatedAnnealing.sample(higherRecall, _getScore, _getScore(baseProgram)))
+          }
+          else if (programPool.nonEmpty){
+            def _getScore(sp: ScoredProgram): Double = sp.score
+            Some(SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram)))
+          }
+          else {
+            None
+          }
+
+          if (newValidRules.nonEmpty && !toExpandValidPrograms) {
+            extraIters += 1
+          }
       }
 
       evaluatedPrograms ++= refinedPrograms
       validPrograms ++= candidatePrograms.filter(isProgramValid)
 
-      val toRefine = candidatePrograms.filter(needsRefinement)
-      val pnext = toRefine
-      programPool ++= toRefine
-
-
-      /** Sample next candidate program to explore */
-      val higherScore: Set[ScoredProgram] = pnext.filter(_.score>baseProgram.score)
-      val higherRecall = pnext.filter(_.recall > baseProgram.recall)
-      // val perfectRecall: Set[ScoredProgram] = programPool.filter(p => p.recall >= 1.0 && p.completeness >= 1.0)
-      val maxExpandedValidPrograms: Int = 5
-      val unexpandedValidPrograms: Set[ScoredProgram] = validPrograms.filterNot(sp=>expandedPrograms.contains(sp.program))
-      val toExpandValidPrograms: Boolean = {
-        val expandedValidPrograms: Set[Program] = expandedPrograms.intersect(validPrograms.map(_.program))
-        unexpandedValidPrograms.nonEmpty && expandedValidPrograms.size < maxExpandedValidPrograms
-      }
-      next =
-      // if (perfectRecall.nonEmpty) {
-      //   sampleNextCandidateProgram(perfectRecall, baseProgram.score)
-      // }
-      // else if(higherScore.nonEmpty) {
-        if (toExpandValidPrograms) {
-          def _getScore(sp: ScoredProgram): Double = sp.score
-          Some(SimulatedAnnealing.sample(unexpandedValidPrograms, _getScore, _getScore(baseProgram)))
+      if (next.isDefined) {
+        if (expandedPrograms.contains(next.get.program)) {
+          assert(false)
         }
-        else if(higherScore.nonEmpty) {
-        /** Always go along the current path if higher score available */
-        // sampleNextCandidateProgram(higherScore, baseProgram.score)
-        def _getScore(sp: ScoredProgram): Double = sp.score
-        Some(SimulatedAnnealing.sample(higherScore, _getScore, _getScore(baseProgram)))
-      }
-      else if (higherRecall.nonEmpty) {
-          def _getScore(sp: ScoredProgram): Double = sp.recall
-          Some(SimulatedAnnealing.sample(higherRecall, _getScore, _getScore(baseProgram)))
-      }
-      else if (programPool.nonEmpty){
-        def _getScore(sp: ScoredProgram): Double = sp.score
-        Some(SimulatedAnnealing.sample(programPool, _getScore, _getScore(baseProgram)))
-      }
-      else {
-          None
       }
 
       // if (refinedPrograms.size < allRefinedPrograms.size) programPool += baseProgram
       iters += 1
       if (iters % 20 == 0) logger.info(s"iteration $iters")
-      if (validPrograms.nonEmpty && !toExpandValidPrograms) {
-        extraIters += 1
-      }
     }
 
     logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
@@ -164,17 +194,23 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     // logger.info(s"Found ${validPrograms.size} programs after ${iters} iterations.")
     // validPrograms.toList.map(_.program).sortWith(_<_)
 
-    val allValidPrograms = simplerAlternatives(validPrograms.map(_.program), idb)
+    // val allValidPrograms = simplerAlternatives(validPrograms.map(_.program), idb)
+    val allValidPrograms = simplerAlternatives(validPrograms.map(p => Program(p.program.rules++validRules)), idb)
     logger.info(s"Found ${allValidPrograms.size} programs after ${iters} iterations.")
     val programsSorted = allValidPrograms.toList.sortWith(_<_)
     programsSorted
   }
 
-  def sampleNextCandidateProgram(candidates: Set[ScoredProgram], baseScore: Double): ScoredProgram = {
-    // def _getScore(program: ScoredProgram): Double = program.score
-    def _getScore(program: ScoredProgram): Double = program.recall * program.completeness
-    SimulatedAnnealing.sample(candidates,_getScore,baseScore)
+  def updateIdb(validRules: Set[Rule], idb: Set[Tuple]): Set[Tuple] = {
+    val covered = evaluator.eval(Program(validRules))
+    idb.diff(covered)
   }
+
+  // def sampleNextCandidateProgram(candidates: Set[ScoredProgram], baseScore: Double): ScoredProgram = {
+  //   // def _getScore(program: ScoredProgram): Double = program.score
+  //   def _getScore(program: ScoredProgram): Double = program.recall * program.completeness
+  //   SimulatedAnnealing.sample(candidates,_getScore,baseScore)
+  // }
 
   def refineARule(program: Program, idb: Set[Tuple], validRules: Set[Rule]): Set[Program] = {
 
@@ -182,6 +218,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
       require(program.rules.contains(rule))
       val otherRules = program.rules.diff(Set(rule))
       val newRules = programBuilder.refineRule(rule)
+        .map(_.normalize())
         .filter(syntaxConstraint.filter)
       val newPrograms = newRules.map(r => Program(otherRules+r))
       assert(newPrograms.forall(_.rules.size<=program.rules.size))
@@ -192,9 +229,9 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
           true
         }
         else {
-          val p0 = evalProgram(Program(otherRules), idb)
+          val p0 = evalProgram(Program(otherRules), validRules, idb)
           val baseRecall = p0.recall
-          val p1Scored = evalProgram(p1,idb)
+          val p1Scored = evalProgram(p1, validRules,idb)
           val newRecall = p1Scored.recall
           newRecall > baseRecall
         }
@@ -230,7 +267,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {
       if (hasAggregator || scoredProgram.precision >= 1.0) {
         logger.info(s"Add a rule. ${program.rules.size} rules.")
-        val addedRule = addARule(program, idb)
+        val addedRule = addARule(program, validRules, idb)
         refinedPrograms ++ addedRule
       }
       else {
@@ -254,7 +291,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     program.rules.exists(_.body.exists(_.isInstanceOf[AggregateLiteral]))
   }
 
-  def addARule(program: Program, idb: Set[Tuple]): Set[Program] = {
+  def addARule(program: Program, learnedRules: Set[Rule], idb: Set[Tuple]): Set[Program] = {
     val refRel = idb.map(_.relation)
     val generalPrograms = programBuilder.mostGeneralPrograms().filter(
       p => p.rules.forall(r => refRel.contains(r.head.relation))
@@ -262,8 +299,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     require(generalPrograms.forall(_.rules.size==1))
     val addedRules = generalPrograms.map(gp=>Program(program.rules+gp.rules.head))
 
-    val addedRulesEvaluated = addedRules.map(p => evalProgram(p,idb))
-    val baseRecall = evalProgram(program, idb).recall
+    val addedRulesEvaluated = addedRules.map(p => evalProgram(p, learnedRules, idb))
+    val baseRecall = evalProgram(program, learnedRules, idb).recall
     val improvedRecalls = addedRulesEvaluated.filter(_.recall > baseRecall)
     improvedRecalls.map(_.program)
   }
@@ -277,11 +314,15 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
   def isComplete(program: Program): Boolean = program.rules.forall(_.isHeadBounded())
 
-  def evalProgram(program: Program, refIdb: Set[Tuple]): ScoredProgram = {
+  def evalProgram(program: Program, learnedRules: Set[Rule], refIdb: Set[Tuple]): ScoredProgram = {
     require(program.rules.nonEmpty)
-    val (idb0,partialRelationMap)  = evaluator.evalAndPartialRelations(program)
+    // val (idb0,partialRelationMap) = evaluator.evalAndPartialRelations(program)
+    val covered = evaluator.eval(Program(learnedRules))
+    val p1 = Program(program.rules++learnedRules)
+    val (idb0,partialRelationMap) = evaluator.evalAndPartialRelations(p1)
     /** Filter only relevant idb */
-    val idb = getRelevantIdb(idb0)
+    // val idb = getRelevantIdb(idb0)
+    val idb = getRelevantIdb(idb0).diff(covered)
 
     def getPartialTuple(tuple: Tuple): Tuple = {
       val partialRelation: PartialRelation = partialRelationMap(tuple.relation)

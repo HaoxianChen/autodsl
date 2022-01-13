@@ -91,7 +91,7 @@ case class SynthesisAllPrograms(problem: Problem,
         Set(List())
       }
       else if (solutions.size > maxPrograms) {
-        Set(List())
+        Set()
       }
       else {
         remainingRules match {
@@ -145,6 +145,7 @@ case class SynthesisAllPrograms(problem: Problem,
           // If non-recursive, sort by output size
           val scoredRules: List[ScoredRule] = nonRecursiveRules.map(r => scoreRule(r, idb, Set())).toList
           // val ans = scoredRules.sorted(Ordering[ScoredRule].reverse).map(_.rule)
+          // todo: Why this sortWith function violates contract?
           val ans = scoredRules.sortWith(sortScoredRules).map(_.rule)
           ans
         }

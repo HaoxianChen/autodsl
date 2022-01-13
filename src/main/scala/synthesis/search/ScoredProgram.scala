@@ -66,8 +66,9 @@ object ScoredProgram {
           val covered = refIdb.intersect(idb)
           val remaining = refIdb.diff(idb)
           val partialRefIdbs = remaining.map(getPartialTuple)
-          val coveredPartially = partialRefIdbs.intersect(idb)
-          covered.size + coveredPartially.size * completeness
+          // val coveredPartially = partialRefIdbs.intersect(idb)
+          val nCoveredPartially = remaining.count(t => idb.contains(getPartialTuple(t)))
+          covered.size + nCoveredPartially * completeness
         }
         val precision = {
           val completeRelations = refIdb.map(_.relation)
