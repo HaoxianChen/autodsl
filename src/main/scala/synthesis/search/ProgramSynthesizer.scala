@@ -7,7 +7,7 @@ import synthesis.util.Misc
 
 import scala.collection.parallel.CollectionConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.{Duration, SECONDS}
+import scala.concurrent.duration.{Duration, MILLISECONDS, SECONDS}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
@@ -44,27 +44,35 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     val allPrograms: Set[Program] = {
       var remainingResults: List[Future[List[Program]]] = allResFuture
       var solutions: List[Program] = List()
-      var remainingTime: Int = 300
-      val timeStep: Int = 10
-      val completionThreshold = 0.5
-      while (threads - remainingResults.size < threads*completionThreshold &&
+      var remainingTime: Int = 30 * 60
+      val timeStep: Int = 1
+      val completionThreshold = 0.3
+      var nFinished: Int = 0
+      assert(threads*completionThreshold >= 1)
+      while (nFinished > threads*completionThreshold &&
+        remainingResults.nonEmpty &&
         remainingTime > 0
         ) {
-        Thread.sleep(timeStep * 1000) // wait for 10 seconds
+        Thread.sleep(timeStep * 1000)
         var nextRemainingResults: List[Future[List[Program]]] = List()
         for (f <- remainingResults) {
           f.value match {
             case Some(Success(x)) => {
               solutions ++:= x
+              nFinished += 1
             }
             case Some(Failure(exception)) => logger.warn(s"$exception")
             case None => nextRemainingResults :+= f
           }
         }
         remainingTime -= timeStep
-        if (solutions.nonEmpty) remainingTime = timeStep
+        if (solutions.nonEmpty && remainingTime>20*timeStep) remainingTime = 20*timeStep
         remainingResults = nextRemainingResults
-        logger.info(s"${remainingResults.size} threads running")
+        logger.info(s"${nFinished} threads finished, ${remainingResults.size} running, remaining time ${remainingTime} s.")
+      }
+      /** kill everything still running */
+      for (f <- remainingResults) {
+        Await.result(f, Duration(0,MILLISECONDS))
       }
       solutions.toSet
     }
