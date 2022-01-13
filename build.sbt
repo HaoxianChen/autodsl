@@ -5,6 +5,7 @@ version := "0.1"
 scalaVersion := "2.13.3"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.4"
 
 // For logging
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
