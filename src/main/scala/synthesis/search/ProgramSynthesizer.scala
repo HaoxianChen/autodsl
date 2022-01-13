@@ -33,19 +33,41 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
   def getConfigSpace: SynthesisConfigSpace = configSpace
 
-  def learnNPrograms(idb: Set[Tuple]): List[Program] = {
+  def learnNPrograms(idb: Set[Tuple]): List[Program] = learnNProgramsSingleThread(idb)
+
+  def learnNProgramsMultiThreads(idb: Set[Tuple]): List[Program] = {
     logger.info(s"$threads threads.")
     val idbList: List[Set[Tuple]] = List.fill(threads)(idb)
-    val allPrograms = idbList.par.flatMap(ts => {
-      val res = Future(learnNProgramsSingleThread(ts))
-      Try(Await.result(res, Duration(70,SECONDS))) match {
-        case Success(value) => value
-        case Failure(exception) => {
-          logger.warn(s"$exception")
-          List()
+    val allResFuture = idbList.par.map(ts => {
+      Future(learnNProgramsSingleThread(ts))
+    }).toList
+    val allPrograms: Set[Program] = {
+      var remainingResults: List[Future[List[Program]]] = allResFuture
+      var solutions: List[Program] = List()
+      var remainingTime: Int = 300
+      val timeStep: Int = 10
+      val completionThreshold = 0.5
+      while (threads - remainingResults.size < threads*completionThreshold &&
+        remainingTime > 0
+        ) {
+        Thread.sleep(timeStep * 1000) // wait for 10 seconds
+        var nextRemainingResults: List[Future[List[Program]]] = List()
+        for (f <- remainingResults) {
+          f.value match {
+            case Some(Success(x)) => {
+              solutions ++:= x
+            }
+            case Some(Failure(exception)) => logger.warn(s"$exception")
+            case None => nextRemainingResults :+= f
+          }
         }
+        remainingTime -= timeStep
+        if (solutions.nonEmpty) remainingTime = timeStep
+        remainingResults = nextRemainingResults
+        logger.info(s"${remainingResults.size} threads running")
       }
-    }).toSet
+      solutions.toSet
+    }
     allPrograms.toList.sortWith(_<_)
   }
 
