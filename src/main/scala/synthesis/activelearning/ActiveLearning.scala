@@ -270,6 +270,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     var iters: Int = 0
 
     do {
+      hasError = false
       val candidatesFuture = Future {
         synthesize(problem, outRel, candidates)
       }
@@ -313,9 +314,9 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
 
     val validCandidates: List[Program] = candidates.filter(p=>isProgramValid(p, problem))
-    // todo: Why this assertion fails?
-    // require(validCandidates.size < candidates.size || candidates.isEmpty, s"${validCandidates.size}")
 
+    // todo: Why these assertions fail?
+    require(validCandidates.size < candidates.size || candidates.isEmpty, s"${validCandidates.size}")
     val inValidCandidates = candidates.diff(validCandidates)
     assert(inValidCandidates.nonEmpty || candidates.isEmpty)
 
