@@ -49,7 +49,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
       val completionThreshold = 0.3
       var nFinished: Int = 0
       assert(threads*completionThreshold >= 1)
-      while (nFinished > threads*completionThreshold &&
+      while (nFinished < threads*completionThreshold &&
         remainingResults.nonEmpty &&
         remainingTime > 0
         ) {
@@ -156,7 +156,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
       }
 
       /** Update the pool of valid programs */
-      if (newValidRules.nonEmpty && extraIters >= maxExtraIters) {
+      if (newValidRules.nonEmpty &&
+        (extraIters >= maxExtraIters || newValidRules.size > 10)) {
         validRules ++= newValidRules
         newValidRules = Set()
         /** Reset everything else */
