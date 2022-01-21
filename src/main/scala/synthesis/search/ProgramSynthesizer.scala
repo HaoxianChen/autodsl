@@ -428,23 +428,16 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
   def simplerAlternatives(programs: Set[Program], idb: Set[Tuple]): Set[Program] = {
     if (programs.exists(isAggProgram)) {
-      programs ++ programs.flatMap(p=>simplerAlternatives(p,idb))
+      programs ++ programs.flatMap(simplerAlternatives)
     }
     else {
       val allRules = programs.flatMap(_.rules)
       require(allRules.map(_.head.relation).size==1)
-      ruleHelper.combineRules(allRules, idb).toSet
+      val sorted = ruleHelper.combineRules(allRules, idb)
+      sorted.take(5).flatMap(p=>simplerAlternatives(p)).toSet
     }
   }
-  def simplerAlternatives(program: Program, idb: Set[Tuple]): Set[Program] = {
-    if (isAggProgram(program)) {
-      simplerAlternatives(program)
-    }
-    else {
-      require(program.rules.map(_.head.relation).size==1)
-      ruleHelper.combineRules(program.rules, idb).toSet
-    }
-  }
+
   def simplerAlternatives(program: Program): Set[Program] = {
     val rulesWithAlternatives = getRulesWithAlternatives(program)
     var nDrop = 1
