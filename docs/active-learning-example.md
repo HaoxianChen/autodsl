@@ -14,7 +14,7 @@ the following figure), and it tries to disambiguate them by randomly generating
 new input tables. For instance, let's compare three possible new input
 talbes shown in the first column in the following figure:
 
-![example](docs/examples.png) 
+![example](./examples.png) 
 
 The derived output ``path`` tuples are shown in the corresponding cell in 
 the table.
