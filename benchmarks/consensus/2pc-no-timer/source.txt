@@ -1,0 +1,1 @@
+Alvaro, Peter, et al. "I do declare: consensus in a logic language." ACM SIGOPS Operating Systems Review 43.4 (2010): 25-30.

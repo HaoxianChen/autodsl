@@ -1,0 +1,31 @@
+.type Node <: symbol
+.type Ballot <: number
+.type Value <: number
+.type InstanceId <: number
+
+.decl aState(node: Node,  mBallot: Ballot, aBallot: Ballot, value: Value, i: InstanceId)
+.decl receive_1a(ballot:Ballot, i: InstanceId)
+.decl send_1b(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)
+
+.input receive_1a
+.input aState
+
+// phase 1b
+send_1b(b, acc, mb, v,i) :- receive_1a(b, i), aState(acc, mb, _, v, i), 
+                        b > mb.
+new_aState(acc, b, ab, v,i) :- receive_1a(b, i), aState(acc, mb, ab, v, i), 
+                        b > mb.
+
+.output send_1b
+
+// phase 2b
+.decl receive_2a(ballot: Ballot, value: Value, i: InstanceId)
+.decl new_aState(acc: Node, mBallot: Ballot, aBallot: Ballot, value: Value, i: InstanceId)
+.decl send_2b(ballot: Ballot, acceptor: Node, value: Value, i: InstanceId)
+
+.input receive_2a
+new_aState(acc,b,b,v,i) :- receive_2a(b,v,i), aState(acc, b, _, _,i).
+send_2b(b,acc,v,i) :- receive_2a(b,v,i), aState(acc, b,_,_,i).
+
+.output send_2b
+.output new_aState

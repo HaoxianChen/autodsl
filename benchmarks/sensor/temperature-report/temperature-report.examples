@@ -1,0 +1,110 @@
+Static {}
+Examples {
+    // 1. Report light
+    input {
+        photometer(1,2),
+        authorize(1, 11),
+        light(11)
+    }
+    output {
+        lightLog(1,2)
+    }
+
+    // 2. Unauthorized
+    input {
+        photometer(1,2),
+        light(11)
+    }
+    output {
+        lightLog(1,2)
+    }
+
+    // 2b. Unauthorized
+    input {
+        photometer(1,2),
+        authorize(3,11),
+        light(11)
+    }
+    output {
+        lightLog(1,2)
+    }
+
+    // 3. no light
+    input {
+        photometer(1,2),
+        authorize(1,11)
+    }
+    output {
+        lightLog(1,2)
+    }
+
+    // 4. Report temperature
+    input {
+        themometer(1,2),
+        // src,dst,next,cost
+        nextHop(1,4,3,15),
+        authorize(1,11),
+        temp(11)
+    }
+    output {
+        tempReport(3,2)
+    }
+
+    // 5. Unauthorized
+    input {
+        themometer(1,2),
+        // src,dst,next,cost
+        nextHop(1,4,3,15),
+        temp(11)
+    }
+    output {
+        tempReport(3,2)
+    }
+
+    // 6. Unauthorized
+    input {
+        themometer(1,2),
+        // src,dst,next,cost
+        nextHop(1,4,3,15),
+        authorize(2,11),
+        temp(11)
+    }
+    output {
+        tempReport(3,2)
+    }
+
+    // 7. No temperature signal
+    input {
+        themometer(1,2),
+        // src,dst,next,cost
+        nextHop(1,4,3,15),
+        authorize(1,11)
+    }
+    output {
+        tempReport(3,2)
+    }
+
+    // 8. No temperature signal
+    input {
+        themometer(1,2),
+        // src,dst,next,cost
+        nextHop(1,4,3,15),
+        authorize(1,11),
+        temp(12)
+    }
+    output {
+        tempReport(3,2)
+    }
+
+    // 9. No theemo reading 
+    input {
+        themometer(2,2),
+        // src,dst,next,cost
+        nextHop(1,4,3,15),
+        authorize(1,11),
+        temp(11)
+    }
+    output {
+        tempReport(3,2)
+    }
+}

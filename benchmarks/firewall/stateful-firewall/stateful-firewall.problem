@@ -1,0 +1,16 @@
+.domain SDN
+
+.type Host <: symbol
+.type Switch <: symbol
+.type Port <: number
+.type InstanceId <: number
+
+.decl *switch1(s:Switch,i: InstanceId)
+.decl *port1(p: Port, id: InstanceId)
+.decl *port2(p: Port, id: InstanceId)
+.decl *trusted(s: Switch, h: Host, id: InstanceId)
+.decl *packet(s: Switch, p: Port, src: Host, dst: Host, id: InstanceId)
+
+.decl new_trusted(s: Switch, h: Host, id: InstanceId)
+.decl forward(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)
+.decl flowMod(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)

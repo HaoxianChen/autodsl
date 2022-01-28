@@ -1,0 +1,10 @@
+.domain routing
+
+.type Node <: symbol
+.type NodeList  <: symbol
+.type Cost  <: number
+.type InstanceId <: number
+
+.decl *Link(x: Node, y: Node, cost: Cost, i: InstanceId)
+
+.decl bestPath(x: Node, y:Node, path: NodeList, cost: Cost, i: InstanceId)

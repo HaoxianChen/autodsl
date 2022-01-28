@@ -1,0 +1,88 @@
+/** The Ad-hoc on-demand routing protocol.
+*/
+.type Node <: symbol
+.type Time <: number
+.type Seq <: number
+.type InstanceId <: number
+.type Distance <: number
+
+.decl this(t: Node, instanceId: InstanceId)
+.decl seqno(seq: Seq, instanceId: InstanceId)
+.decl defaultTimeOut(time: Time, instanceId: InstanceId)
+.decl initHops(h0: Distance, instanceId: InstanceId)
+.decl infinity(inf: Distance, instanceId: InstanceId)
+
+
+/* Routing table stored at each node, 
+    indexed by the first field d
+    - d: destination
+    - next: next node on the path to d
+    - hops: distance from d
+    - seqno: last recorded sequence number for d
+    - lifetime: remaiing time before rout expiration
+*/
+.decl route(d: Node, next: Node, hops: Distance, 
+            seqno: Seq, lifetime: Time, 
+            instanceId: InstanceId)
+
+/** Route request message.
+    - from: sender of the message
+    - hopsToSrc: current distance from the node that initiated the request
+    - d: destination
+    - seqno: the least sequence number for a route that s would accept
+    - s: the node that initiated the request
+*/
+.decl recvRREQ(from: Node, hopsToSrc: Distance, d: Node, 
+                seqno: Seq, s: Node, instanceId: InstanceId)
+
+/** Route reply message.
+    - hops, d, seqno, lifetime are the attributes of sender's route.
+    - s: originator
+*/
+.decl recvRREP(from: Node, d: Node, hops: Distance, 
+            seqno: Seq, lifetime: Time, 
+            s: Node,
+            instanceId: InstanceId)
+
+/** When a link to neighbor s is broken */
+// .decl broken(s: Node, instanceId: InstanceId)
+
+.input this,seqno,defaultTimeOut,infinity,initHops,
+    route,
+    recvRREQ,recvRREP
+
+// Output relations
+
+.decl sendRREP(to: Node, d: Node, hops: Distance, 
+                seqno: Seq, 
+                lifetime: Time, 
+                s: Node,
+                instanceId: InstanceId)
+
+.output sendRREP
+
+// Rules
+
+/** Has a valid route, send REPP
+*/
+sendRREP(from,d,hops,seq2,lieftime,s, i) :-
+    recvRREQ(from,hopsToSrc, d, seqno, s, i),
+    !this(d,i),
+    route(d,next,hops,seq2,lieftime, i), seq2 >= seqno.
+
+ /** t is the destination
+ */   
+ sendRREP(from, d,h0,maxseq,lifetime,s,i) :-
+    recvRREQ(from,hopsToSrc, d, seqno, s,i),
+    this(d,i), 
+    seqno(seq2,i),maxseq=max(seqno, seq2),
+    initHops(h0,i),
+    defaultTimeOut(lifetime,i).
+
+ /** Send a route reply to orginator when receive a 
+     route reply.
+ */   
+sendRREP(nxt,d,hops+1,seqno,lifetime,s,i) :-
+    recvRREP(_,d,hops,seqno,lifetime,s,i),
+    route(s,nxt,_,_,_,i).
+

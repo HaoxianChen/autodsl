@@ -1,0 +1,152 @@
+Static{
+    switch1("s1"),
+    port1(1),
+    port2(2)
+}
+Examples {
+    // 1. a packet from port 1
+    input {
+        // switch,port,from,to
+        packet("s1",1,"h1","h2")
+    }
+    output {
+        // switch,host
+        new_trusted("s1", "h2"),
+        // switch,from,to,port
+        forward("s1","h1","h2",2),
+        flowMod("s1","h1","h2",2)
+    }
+
+    // 1b. a packet from port 1, with idential src and dst
+    input {
+        // switch,port,from,to
+        packet("s1",1,"h1","h1")
+    }
+    output {
+        // switch,host
+        new_trusted("s1", "h1")
+    }
+
+    // 2. a packet from port 2, untrusted
+    input {
+        // switch,port,from,to
+        packet("s1",2,"h1","h2")
+    }
+    output {
+    }
+
+    // 3. a packet from port 2, trusted
+    input {
+        // switch,port,from,to
+        packet("s1",2,"h1","h2"),
+        // switch,host
+        trusted("s1","h1")
+    }
+    output {
+        // switch,from,to,port
+        forward("s1","h1","h2",1),
+        flowMod("s1","h1","h2",1)
+    }
+
+    // 3b. a packet from port 2, trusted, with same src and dst
+    input {
+        // switch,port,from,to
+        packet("s1",2,"h1","h1"),
+        // switch,host
+        trusted("s1","h1")
+    }
+    output {
+    }
+
+    // 4a. a packet from port 2, untrusted
+    input {
+        // switch,port,from,to
+        packet("s1",2,"h1","h2"),
+        // switch,host
+        trusted("s2","h1")
+    }
+    output {
+    }
+
+    // 4b. a packet from port 2, untrusted
+    input {
+        // switch,port,from,to
+        packet("s1",2,"h1","h2"),
+        // switch,host
+        trusted("s1","h2")
+    }
+    output {
+    }
+
+    // 5. a packet from another switch, untrusted
+    input {
+        // switch,port,from,to
+        packet("s2",1,"h1","h2")
+    }
+    output {
+    }
+
+    // 6. a packet from another switch, trusted
+    input {
+        // switch,port,from,to
+        packet("s2",1,"h1","h2"),
+        trusted("s1","h1")
+    }
+    output {
+    }
+
+    // 6b. a packet from another switch, trusted
+    input {
+        // switch,port,from,to
+        packet("s2",1,"h1","h2"),
+        trusted("s1","h2")
+    }
+    output {
+    }
+
+    // 6c. a packet from another switch, trusted
+    input {
+        // switch,port,from,to
+        packet("s2",1,"h1","h2"),
+        trusted("s1","h2"),
+        trusted("s1","h1")
+    }
+    output {
+    }
+
+    // 7. a packet from another port of switch 1
+    input {
+        // switch,port,from,to
+        packet("s1",3,"h1","h2")
+    }
+    output {
+    }
+
+    // 7b. a packet from another port of switch 1, trusted
+    input {
+        // switch,port,from,to
+        packet("s1",3,"h1","h2"),
+        trusted("s1", "h1")
+    }
+    output {
+    }
+
+    // 7c. a packet from another port of switch 1, trusted
+    input {
+        // switch,port,from,to
+        packet("s1",3,"h1","h2"),
+        trusted("s1", "h2")
+    }
+    output {
+    }
+
+    // 7d. a packet from another port of switch 1, trusted
+    input {
+        // switch,port,from,to
+        packet("s1",3,"h1","h2"),
+        trusted("s1", "h1"),
+        trusted("s1", "h2")
+    }
+    output {
+    }
+}

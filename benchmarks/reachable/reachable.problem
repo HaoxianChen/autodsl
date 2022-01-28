@@ -1,5 +1,0 @@
-.type Node <: symbol
-
-.decl *link(x: Node,y:Node)
-
-.decl reachable(x: Node, y: Node)

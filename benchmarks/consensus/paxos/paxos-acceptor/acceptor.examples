@@ -1,0 +1,46 @@
+Static {
+    // node, mBallot, aBallot, value
+    aState(1,5,3,1)
+}
+
+Examples {
+    // 1. phase 1b: ballot smaller than max ballot
+    input {
+        receive_1a(1)
+    }
+    output{}
+
+    // 2. phase 1b: ballot is the same as the max ballot
+    input {
+        receive_1a(5)
+    }
+    output {
+
+    }
+
+    // 3. phase 1b: ballot greater than the max ballot
+    input {
+        receive_1a(6)
+    }
+    output {
+        // ballot, acceptor, max ballot, value
+        send_1b(6,1,5,1),
+        // acceptor, mBallot, aBallot, value
+        new_aState(1,6,3,1)
+    }
+
+    // 4. phase 2b
+    input {
+        receive_2a(5,2)
+    }
+    output {
+        send_2b(5,1,2)
+    }
+
+    // 5. phase 2b: message from a different ballot
+    input {
+        receive_2a(4,2)
+    }
+    output {
+    }
+}

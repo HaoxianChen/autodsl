@@ -1,0 +1,28 @@
+Static {
+    this(1),
+    link(1,2,11),
+    link(1,3,13),
+    link(1,4,15)
+}
+
+Examples {
+    input {
+        // node,dst,next,hops
+        route(1,11,9,25),
+        route(1,13,9,4),
+        route(2,11,9,3),
+        route(2,12,6,9),
+        route(2,13,9,11),
+        route(3,12,5,3),
+        route(3,13,5,9),
+        route(4,11,5,1),
+        route(4,12,5,9),
+        route(15,11,5,1),
+        route(15,12,5,2)
+    }
+    output {
+        new_route(1,11,2,4),
+        new_route(1,12,3,6)
+    }
+
+}

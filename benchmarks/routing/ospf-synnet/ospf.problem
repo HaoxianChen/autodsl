@@ -1,0 +1,13 @@
+.domain routing
+
+.type Node <: symbol
+.type Interface <: number
+.type Cost <: number
+.type IP <: number
+.type Network <: symbol
+.type InstanceId <: number
+
+.decl *Neighbor(y: Node, cost: Cost, i:InstanceId)
+.decl *ConnectedRoute(x: Node, net: Network, nextHop: Node, cost: Cost, i:InstanceId)
+.decl BestRoute(net: Network, nextHop: Node, cost: Cost, i:InstanceId)
+

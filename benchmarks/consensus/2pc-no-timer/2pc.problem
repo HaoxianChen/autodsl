@@ -1,0 +1,17 @@
+.domain consensusbarrier
+
+.type Node <: symbol
+.type Vote <: symbol
+.type State <: symbol
+.type InstanceId <: number
+.type Time <: number
+
+.decl *Peers(x:Node, y:Node, i: InstanceId)
+.decl *coordinator(x:Node, i:InstanceId)
+.decl *no_vote(x:Node, y:Node, tid:InstanceId)
+.decl *yes_vote(x:Node, y:Node, tid:InstanceId)
+
+.decl *prepare(x: Node, tid:InstanceId)
+
+.decl commit(x: Node, tid:InstanceId)
+.decl abort(x: Node, tid:InstanceId)

@@ -1,0 +1,49 @@
+/* DSDV routing protocol for ad-hoc mobile network.
+    Adopted from He, Guoyou. "Destination-sequenced 
+    distance vector (DSDV) protocol."  
+*/
+
+.type Seq <: number
+.type Node <: symbol
+.type InstanceId <: number
+.type Distance <: number
+
+/* Routing table:
+    - destination
+    - metric
+    - next hop
+    - sequence number
+    */
+.decl route(dest: Node, metic: Distance, nextHop: Node, seq: Seq, i:InstanceId)
+
+/* Update message:
+    - from
+    - destination
+    - metric
+    - sequence number
+*/
+.decl recvUpdate(from: Node, dest: Node, metic: Distance, seq:Seq, i:InstanceId)
+
+.decl brokenLink(x: Node, i:InstanceId)
+.decl infinity(inf: Distance, i:InstanceId)
+
+.input route, recvUpdate, brokenLink, infinity
+
+.decl newRoute(dest: Node, metic: Distance, nextHop: Node, seq: Seq, i:InstanceId)
+
+.output newRoute
+
+// Update routing table on receving route update from neighbor.
+newRoute(dest,newMetric,from,seq,i) :- 
+    recvUpdate(from,dest,metric,seq,i),
+    newMetric = metric+1,
+    (!route(dest,_,_,_,i);
+    route(dest,_,_,seq2,i), seq2<seq;
+    route(dest,m2,_,seq,i), newMetric<m2).
+
+// Update routing table on topology changes.
+newRoute(dest,inf,x,newSeq,i) :-
+    brokenLink(x,i),
+    route(dest,_,x,seq,i),
+    newSeq=seq+1,
+    infinity(inf,i).

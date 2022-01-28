@@ -1,0 +1,1 @@
+Cook, J. "Reachability analysis for AWS-based networks." 31ST INTERNATIONAL CONFERENCE ON COMPUTER AIDED VERIFICATION. Vol. 11562. Springer, Cham, 2019.

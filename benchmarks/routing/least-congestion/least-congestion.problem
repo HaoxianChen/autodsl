@@ -1,0 +1,9 @@
+.domain routing
+
+.type Node <: symbol
+.type NodeList  <: symbol
+.type Bw <: number
+.type InstanceId <: number
+
+.decl *Link(x: Node, y: Node, bw: Bw, i:InstanceId)
+.decl bestPath(x: Node, y:Node, path: NodeList, bw: Bw, i:InstanceId)

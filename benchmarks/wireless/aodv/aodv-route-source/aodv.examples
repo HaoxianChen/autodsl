@@ -1,0 +1,133 @@
+Static {
+    this(2),
+    initHops(0),
+    seqno(1),
+    infinity(15),
+    defaultTimeOut(15)
+}
+
+Examples {
+    // 5 Update route to source
+    // 5a there is no route to source at all
+    // does the route match with target?
+    // does the seq match or less or greater than the reply seq?
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+        route(8,3,3,1,5),
+        route(3,5,4,5,4),
+        route(4,5,1,4,5)
+    }
+    output { 
+        sendRREQ(3,8,3,1,1),
+       // dest,next,hops,seq,lifetime
+       newRoute(1,7,2,3,15)
+    }
+
+    // 5a there is no route to source at all
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+        route(3,5,4,5,4),
+        route(4,5,1,4,5)
+    }
+    output { 
+        sendRREQ(3,8,3,1,1),
+       // dest,next,hops,seq,lifetime
+       newRoute(1,7,2,3,15)
+    }
+
+    // 5b the route to source has smaller seq, fewer hops, update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(1,5,1,2,3)
+    }
+    output { 
+       newRoute(1,7,2,3,15)
+    }
+
+    // 5b the route to source has smaller seq, fewer hops, don't update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(8,5,1,2,3)
+    }
+    output { 
+    }
+
+    // 5b the route to source has smaller seq, more hops, don't update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(1,5,4,2,3)
+    }
+    output { 
+    }
+
+    // 5c the route to source has higher seq, don't update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(1,5,3,5,3)
+    }
+    output { 
+        sendRREQ(3,8,3,1,1)
+    }
+
+    // 5c the route to source has the same seq, 
+    // fewer hops, don't update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,9,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(1,5,2,3,3)
+    }
+    output { 
+        sendRREQ(3,10,3,1,1)
+    }
+
+    // 5d the route to source has the same seq, 
+    // more hops, update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(1,5,9,3,3)
+    }
+    output { 
+        sendRREQ(3,10,3,1,1),
+       // dest,next,hops,seq,lifetime
+       newRoute(1,7,2,3,15)
+    }
+
+    // 5d the route to source has the same seq, 
+    // more hops, update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(8,5,9,3,3)
+    }
+    output { 
+        sendRREQ(3,10,3,1,1)
+    }
+
+    // 5d the route to source has the same seq, 
+    // more hops, update
+    input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(7,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(6,5,9,3,3)
+    }
+    output { 
+        sendRREQ(3,10,3,1,1)
+    }
+}

@@ -1,0 +1,15 @@
+.type Time <: number
+.type Press <: number
+.type Temp <: number
+.type InstanceId <: number
+
+.decl evidence(t: Temp, p: Press, i:InstanceId)
+.decl tempLog(time: Time, t: Temp, i:InstanceId)
+.decl pressLog(time: Time, p:Press, i:InstanceId)
+
+.input tempLog
+.input pressLog
+
+evidence(temp, press,i) :- tempLog(time, temp,i), pressLog(time, press,i).
+
+.output evidence

@@ -1,0 +1,25 @@
+Static {
+    this("a")
+}
+Examples {
+    // 1. not the request target
+    input {
+        // org,dst,route,reqid
+        recvRREQ("b","d","bc",1)
+    }
+    output {
+        // org,dst,route,reqid
+        sendRREQ("b","d","bca",1)
+    }
+
+    // 2. Is the request target
+    input {
+        // org,dst,route,reqid
+        recvRREQ("b","a","bc",1)
+    }
+    output {
+        // org,dst,route,reqid
+        sendRREP("b","a","bca",1)
+    }
+
+}

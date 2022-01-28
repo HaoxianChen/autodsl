@@ -1,0 +1,38 @@
+/** Dynamic source routing protocol. 
+    Specification following the original paper: 
+    Johnson, David B., and David A. Maltz. 
+    "Dynamic source routing in ad hoc wireless networks." 
+*/
+
+.type Seq <: number
+.type Node <: symbol
+.type NodeList <: symbol
+.type InstanceId <: number
+
+/** Route error message:
+    The hop that cannot be reached.
+*/
+.decl recvRERR(node: Node, i: InstanceId)
+
+/** Route cache table
+    - destination
+    - route: the list of intermediate hops
+*/
+.decl route(destination: Node, route: NodeList, i: InstanceId)
+
+.decl this(node: Node, i: InstanceId)
+
+.input this,recvRERR,route
+
+
+.decl delRoute(destination: Node, route: NodeList, i: InstanceId)
+
+.output delRoute
+
+// Rules
+
+/* Delete affected route on a node failure. */
+delRoute(dest,path,i) :-
+    recvRERR(x,i),
+    route(dest, path, i),
+    contains(as(x,symbol), as(path,symbol)).

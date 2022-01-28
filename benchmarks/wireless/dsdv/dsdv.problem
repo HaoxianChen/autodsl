@@ -1,0 +1,14 @@
+.domain routingProto
+
+.type Seq <: number
+.type Node <: symbol
+.type InstanceId <: number
+.type Distance <: number
+
+.decl *route(dest: Node, metic: Distance, nextHop: Node, seq: Seq, i:InstanceId)
+.decl *recvUpdate(from: Node, dest: Node, metic: Distance, seq:Seq, i:InstanceId)
+.decl *brokenLink(x: Node, i:InstanceId)
+.decl *infinity(inf: Distance, i:InstanceId)
+
+
+.decl newRoute(dest: Node, metic: Distance, nextHop: Node, seq: Seq, i:InstanceId)

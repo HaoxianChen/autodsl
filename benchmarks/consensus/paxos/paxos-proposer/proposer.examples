@@ -1,0 +1,74 @@
+Static {
+    null_ballot(0)
+}
+
+Examples {
+    // 1. has quorum, and valid max ballot
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(5,1,4,5),
+        hasQuorum(5)
+    }
+    output {
+        send_2a(5,5)
+    }
+
+    // 1b. has quorum, and valid max ballot
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(5,1,4,5),
+        hasQuorum(5),
+        propose(5,1)
+    }
+    output {
+        send_2a(5,5)
+    }
+
+
+    // 2. has no quorum
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(5,1,4,5)
+    }
+    output {
+    }
+
+    // 2b. has no quorum
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(5,1,4,5),
+        hasQuorum(2)
+    }
+    output {
+    }
+
+    // 3. has null max ballot
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(5,1,0,5),
+        propose(5,1),
+        hasQuorum(5)
+    }
+    output {
+        send_2a(5,1)
+    }
+
+    // 3b. Some other ballot has null max ballot
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(1,1,0,5),
+        propose(5,1),
+        hasQuorum(1)
+    }
+    output {
+    }
+
+    // 4. has null max ballot, no quorum
+    input {
+        // ballot,acceptor,maxPreBallot,value
+        maxPreBallot(5,1,0,5),
+        propose(5,1)
+    }
+    output {
+    }
+}

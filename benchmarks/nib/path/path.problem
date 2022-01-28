@@ -1,0 +1,10 @@
+.domain NIB
+
+.type Node <: symbol
+.type NodeList  <: symbol
+.type InstanceId <: number
+
+.decl *Link(x: Node, y: Node, i:InstanceId)
+
+.decl Path(x: Node, y: Node, path: NodeList, i:InstanceId)
+

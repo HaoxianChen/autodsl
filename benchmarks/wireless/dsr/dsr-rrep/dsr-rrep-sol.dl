@@ -1,0 +1,30 @@
+/** Dynamic source routing protocol. 
+    Specification following the original paper: 
+    Johnson, David B., and David A. Maltz. 
+    "Dynamic source routing in ad hoc wireless networks." 
+*/
+
+.type Seq <: number
+.type Node <: symbol
+.type NodeList <: symbol
+.type InstanceId <: number
+
+/** Route reply message:
+    Contains the same fields as the route request, but with a complete path
+*/
+.decl recvRREP(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+.decl this(node: Node, i: InstanceId)
+
+.input this,recvRREP
+
+.decl newRoute(destination: Node, route: NodeList, i: InstanceId)
+
+.output newRoute
+
+// Rules
+
+/* Store learned routes  */
+ newRoute(dest, rrecord, i) :-
+    recvRREP(orig, dest, rrecord, _, i),
+    this(orig,i).

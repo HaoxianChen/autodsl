@@ -1,0 +1,33 @@
+Static {
+    port1(1),
+    port2(2)
+}
+Examples {
+    // 1. a packet from port 1
+    input{
+        // switch,port,from,to
+        packet("s1",1,"h1","h2")
+    }
+    output{
+        // switch,from,to,port
+        forward("s1","h1","h2",2),
+        flowMod("s1","h1","h2",2),
+        flowMod("s1","h2","h1",1)
+    }
+
+    // 2. a packet from port 2, do nothing
+    input{
+        // switch,port,from,to
+        packet("s1",2,"h1","h2")
+    }
+    output{
+    }
+
+    // 3. a packet from port 3, do nothing
+    input{
+        // switch,port,from,to
+        packet("s1",3,"h1","h2")
+    }
+    output{
+    }
+}

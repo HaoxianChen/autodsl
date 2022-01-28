@@ -1,0 +1,10 @@
+.domain consensus
+
+.type Node <: symbol
+.type Ballot <: number
+.type Value <: number
+.type InstanceId <: number
+
+.decl decide(ballot: Ballot, value: Value, i: InstanceId)
+.decl *sent2b(b: Ballot, value: Value, i: InstanceId)
+.decl *hasQuorum2b(ballot: Ballot, i: InstanceId)

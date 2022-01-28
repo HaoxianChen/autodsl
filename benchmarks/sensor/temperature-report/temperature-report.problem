@@ -1,0 +1,17 @@
+.domain sensor
+
+.type Node <: symbol
+.type Reading <: number
+.type Signal <: number
+.type Cost <: number
+.type InstanceId <: number
+
+.decl *photometer(x: Node, r: Reading, i: InstanceId)
+.decl *themometer(x: Node, r: Reading, i: InstanceId)
+.decl *authorize(x: Node, s: Signal, i: InstanceId)
+.decl *nextHop(x:Node, y:Node, z:Node,c: Cost, i: InstanceId)
+.decl *light(s: Signal, i: InstanceId)
+.decl *temp(s: Signal, i: InstanceId)
+
+.decl tempReport(x: Node, r: Reading, i: InstanceId)
+.decl lightLog(x: Node, r: Reading, i: InstanceId)

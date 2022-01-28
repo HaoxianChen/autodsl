@@ -1,0 +1,30 @@
+.type Node <: symbol
+.type Reading <: number
+.type Signal <: number
+.type Cost <: number
+.type InstanceId <: number
+
+.decl lightLog(x: Node, r: Reading, i: InstanceId)
+.decl photometer(x: Node, r: Reading, i: InstanceId)
+.decl themometer(x: Node, r: Reading, i: InstanceId)
+.decl authorize(x: Node, s: Signal, i: InstanceId)
+.decl nextHop(x:Node, y:Node, z:Node,c: Cost, i: InstanceId)
+.decl light(s: Signal, i: InstanceId)
+.decl temp(s: Signal, i: InstanceId)
+
+.decl tempReport(x: Node, r: Reading, i: InstanceId)
+
+.input photometer
+.input authorize
+.input light
+.input themometer
+.input nextHop
+.input temp
+
+lightLog(src, reading,i) :- photometer(src,reading,i), authorize(src, sig,i),
+  light(sig,i).
+tempReport(next,reading,i) :- themometer(src,reading,i),nextHop(src,_,next,_,i),
+  authorize(src,sig,i), temp(sig,i).
+
+.output lightLog
+.output tempReport

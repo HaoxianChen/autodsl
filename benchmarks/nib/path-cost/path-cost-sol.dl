@@ -1,0 +1,15 @@
+.type Cost <: number
+.type Node <: symbol
+.type NodeList  <: symbol
+.type InstanceId <: number
+
+.decl Link(x: Node, y: Node, c: Cost, i:InstanceId)
+.input Link
+
+.decl Path(x: Node, y: Node, path: NodeList, c: Cost, i:InstanceId)
+Path(x,y,p,c,i) :- Link(x,y,c,i), p=cat(x,y), x!=y.
+Path(x,y,p,c,i) :- Link(x,z,c1,i), Path(z,y,p1,c2,i) , p=cat(x,p1), 
+  !contains(as(x, symbol), as(p1, symbol)),
+  c = c1+c2.
+
+.output Path

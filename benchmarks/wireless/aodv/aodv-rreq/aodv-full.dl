@@ -1,0 +1,118 @@
+/** The Ad-hoc on-demand routing protocol.
+*/
+.type Node <: symbol
+.type Time <: number
+.type Seq <: number
+.type InstanceId <: number
+.type Distance <: number
+
+.decl this(t: Node, instanceId: InstanceId)
+.decl seqno(seq: Seq, instanceId: InstanceId)
+.decl defaultTimeOut(time: Time, instanceId: InstanceId)
+.decl initHops(h0: Distance, instanceId: InstanceId)
+.decl infinity(inf: Distance, instanceId: InstanceId)
+
+.input this,seqno, defaultTimeOut,infinity,initHops
+
+/* Routing table stored at each node, 
+    indexed by the first field d
+    - d: destination
+    - next: next node on the path to d
+    - hops: distance from d
+    - seqno: last recorded sequence number for d
+    - lifetime: remaiing time before rout expiration
+*/
+.decl route(d: Node, next: Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+
+/** Route request message.
+    - from: sender of the message
+    - hopsToSrc: current distance from the node that initiated the request
+    - broadcastId: unique integer assgned to each RREQ originated by s, 
+                    it is incremented after every RREQ.
+    - d: destination
+    - seqno: the least sequence number for a route that s would accept
+    - s: the node that initiated the request
+    - src_seq_no: sequence number of the initiating node s.
+*/
+.decl recvRREQ(from: Node, hopsToSrc: Distance, broadcastId: Seq, d: Node, 
+                seqno: Seq, s: Node, src_seq_no: Seq, instanceId: InstanceId)
+
+/** Route reply message.
+    - hops, d, seqno, lifetime are the attributes of sender's route.
+*/
+// .decl recvRREP(from: Node, d: Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+
+/** When a link to neighbor s is broken */
+// .decl broken(s: Node, instanceId: InstanceId)
+
+.input route
+.input recvRREQ
+// .input recvRREP
+// .input broken
+
+// Output relations
+
+.decl sendRREQ(hopsToSrc: Distance, broadcastId: Seq, d: Node, 
+                seqno: Seq, s: Node, src_seq_no: Seq, instanceId: InstanceId)
+
+// .decl sendRREP(d: Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+// 
+// /** Update local route. */
+// .decl newRoute(d: Node, next:Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+
+.output sendRREQ
+// .output sendRREP
+// .output newRoute
+
+// Rules
+
+/** No route to d with seqno greater than requested, 
+    rebroadcast the RREQ messages.
+*/
+sendRREQ(hopsToSrc+1, broadcastId, d, seqno, s, src_seq_no, i) :- 
+    recvRREQ(_,hopsToSrc, broadcastId, d, seqno, s, src_seq_no, i),
+    !this(d,i),
+    (!route(d, _,_,_,_, i);
+    route(d,_,_,seq2,_, i), seq2 < seqno).
+
+// /** Has a valid route, send REPP
+// */
+// sendRREP(d,hops,seq2,lieftime, i) :-
+//     recvRREQ(_,hopsToSrc, broadcastId, d, seqno, s, src_seq_no, i),
+//     !this(d,i),
+//     route(d,next,hops,seq2,lieftime, i), seq2 >= seqno.
+// 
+//  /** t is the destination
+//  */   
+//  sendRREP(d,h0,maxseq,lifetime,i) :-
+//     recvRREQ(_,hopsToSrc, broadcastId, d, seqno, s, src_seq_no,i),
+//     this(d,i), 
+//     seqno(seq2,i),maxseq=max(seqno, seq2),
+//     initHops(h0,i),
+//     defaultTimeOut(lifetime,i).
+
+//  /** Update a route to the source, on an RREQ message
+//  */   
+//  newRoute(s,from,hopsToSrc,seqno,lifetime,i) :-
+//     recvRREQ(from,hopsToSrc,broadcastId, d, seqno, s, src_seq_no,i),
+//     (!route(s,_,_,_,_,i);
+//     route(s,_,_,seq2,_,i), seq2 < seqno;
+//     route(s,_,hops,seqno,_,i), hops > hopsToSrc),
+//     defaultTimeOut(lifetime,i).
+// 
+//  /** Update a route to the destination, when receive an RREP message
+//  */   
+//  newRoute(d,from,hops,seqno,lifetime,i) :-
+//     recvRREP(from, d, hops,seqno, lifetime,i),
+//     (!route(d,_,_,_,_,i);
+//     route(d,_,_,seq2,_,i), seq2 < seqno;
+//     route(d,_,hops2,seqno,_,i), hops2 > hops).
+// 
+// /** When a route to d is detected broken, broadcast an infinite route 
+//     with seqno greater than the route 1.
+// */
+// sendRREP(d,inf,seqno+1, lifetime,i) :- 
+//     broken(s,i),
+//     route(d, s, hops, seqno, _,i),
+//     infinity(inf,i),
+//     defaultTimeOut(lifetime,i).

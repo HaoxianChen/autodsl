@@ -1,0 +1,30 @@
+.type Switch <: number
+.type Port <: number
+.type Mac <: symbol
+.type InstanceId <: number
+.type Buf <: number
+.type Type <: number
+
+.decl packet_in(x:Switch, y:Port, buf: Buf, z:Mac, m:Mac, type: Type, i:InstanceId)
+.input packet_in
+
+.decl table(x:Switch, y:Mac, m:Port, i:InstanceId)
+.input table
+
+.decl new_table(x:Switch, y:Mac, z:Port, i:InstanceId)
+new_table(s1, m1, p1,i) :- packet_in(s1, p1, _, m1,_, _,i), 
+                    !table(s1, m1, _, i).
+
+.decl flood(x:Switch, buf:Buf, i:InstanceId)
+flood(s1, buf, i) :- packet_in(s1, _, buf, _, m2, _, i), 
+                    !table(s1,m2,_,i).
+
+.decl flow_mod(x:Switch, y:Mac, z:Mac, m:Port, i:InstanceId)
+flow_mod(s1, m1, m2, p2,i) :- packet_in(s1, _, _,m1,m2, _,i), 
+                            table(s1,m2,p2,i).
+flow_mod(s1, m2, m1, p1,i) :- packet_in(s1, p1, _,m1,m2,_,i), 
+                            table(s1,m2,_,i).
+
+.output new_table
+.output flood
+.output flow_mod

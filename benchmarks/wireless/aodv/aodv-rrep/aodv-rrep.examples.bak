@@ -1,0 +1,103 @@
+Static {
+    this(2),
+    initHops(0),
+    seqno(1),
+    infinity(15),
+    defaultTimeOut(15)
+}
+
+Examples {
+    /*************** Handeling route requests ***********/
+    // 1 No matching route to the destination 8
+
+   // 2 Has a route to destiantion 8, but seq smaller than requested. 
+   // 3a Has a route to destiantion 8, the same seq, 
+   // send reply. 
+   input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(9,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(8,3,3,3,5),
+       route(1,5,3,1,3),
+       route(3,5,2,2,4),
+       route(4,5,1,4,5)
+   }
+   output {
+       // this, d, 
+       sendRREP(9,8,3,3,5,1)
+   }
+
+    /* 3b Has a route to destiantion 8, with bigger seq, 
+        send reply. 
+    */
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(9,2,8,3,1),
+        // d,next,hops,seq,lifetime
+       route(8,3,3,9,5),
+       route(1,5,3,1,3),
+       route(3,5,2,3,4),
+       route(4,5,1,4,5)
+    }
+    output {
+       sendRREP(9,8,3,9,5,1)
+    }
+
+    // 4 This is the destination, send reply
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(9,2,2,3,1),
+        // d,next,hops,seq,lifetime
+       route(8,3,3,9,5),
+       route(1,5,3,1,3),
+       route(3,5,2,3,4),
+       route(4,5,1,4,5)
+    }
+    output {
+        // to,dest,hops,seq,lifetime,source
+       sendRREP(9,2,3,9,5,1)
+    }
+
+    // 5 Update route to source
+    // 5c the route to source has the same seq, 
+    /*************** Handeling route replies ***********/
+
+    // 6 send it to the originator
+    input {
+        // from,dest,hops,seq,lifetime,source
+        recvRREP(7,8,3,3,13,1),
+        // dest,next,hops,seq,lifetime
+        route(1,4,5,5,14),
+        route(2,6,4,2,14)
+    }
+    output {
+        // to,dest,hops,seq,lifetime,source
+        sendRREP(4,8,4,3,13,1)
+    }
+
+    // 7a update the route to destination, 
+    // when no route at all
+
+    // 7b update the route to destination, 
+    // when existing route has smaller seq
+
+    // 7c don't update the route to destination, 
+    // when existing route has larger seq
+
+    // 7d don't update the route to destination, 
+    // when existing route has the smae seq, 
+    // but fewer hops
+
+    // 7e update the route to destination, 
+    // when existing route has the smae seq, 
+    // but more hops
+
+
+    /*************** Handeling broken link ***********/
+
+    // 8 send route update to all precursors
+
+    /*************** Handeling incoming packet *******/
+
+    // 9 updaet precursor list when receive a packet
+}

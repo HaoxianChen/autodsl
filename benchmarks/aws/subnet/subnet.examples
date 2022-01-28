@@ -1,0 +1,63 @@
+Static {
+    tag("bastion"),
+    subnet("web")
+}
+
+Examples {
+    // 1. Instance 1 has a subnet "web" with tag "bastion"
+    input {
+        hasSubnet(1,"web"),
+        hasTag(1,"bastion")
+    }
+    output {
+        q(1)
+    }
+
+    // 2. Instance 1 has no subnet 
+    input {
+        hasTag(1,"bastion")
+    }
+    output {
+    }
+
+    // 2b. Instance 1 has no subnet "web"
+    input {
+        hasSubnet(1,"server"),
+        hasTag(1,"bastion")
+    }
+    output {
+        q(1)
+    }
+
+    // 3. Instance 1 has no tag "bastion" 
+    input {
+        hasSubnet(1,"web")
+    }
+    output {
+    }
+
+    // 3b. Instance 1 has no tag "bastion" 
+    input {
+        hasSubnet(1,"web"),
+        hasTag(1,"null")
+    }
+    output {
+    }
+    
+    // 4. Other instances
+    input {
+        hasSubnet(2,"web"),
+        hasTag(1,"bastion")
+    }
+    output {
+    }
+
+    // 4b. Other instances
+    input {
+        hasSubnet(1,"web"),
+        hasTag(2,"bastion")
+    }
+    output {
+    }
+
+}

@@ -1,0 +1,9 @@
+.domain NIB
+
+.type Node <: symbol
+.type InstanceId <: number
+
+.decl *canSsh(x: Node,y:Node, i:InstanceId)
+
+.decl canSshTunnel(x: Node, y: Node , i:InstanceId)
+

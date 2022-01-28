@@ -1,0 +1,163 @@
+/** The Ad-hoc on-demand routing protocol.
+*/
+.type Node <: symbol
+.type Time <: number
+.type Seq <: number
+.type InstanceId <: number
+.type Distance <: number
+
+.decl this(t: Node, instanceId: InstanceId)
+.decl seqno(seq: Seq, instanceId: InstanceId)
+.decl defaultTimeOut(time: Time, instanceId: InstanceId)
+.decl initHops(h0: Distance, instanceId: InstanceId)
+.decl infinity(inf: Distance, instanceId: InstanceId)
+
+/* A precursor is a node who has this node as the next
+ hop for the route to destination d
+ */
+// .decl precursor(d: Node, t: Node, instanceId: InstanceId)
+
+/*  Receive a packet from a neighbor,
+    from s to destination d.
+*/
+// .decl recvPacket(from:Node, s:Node, d:Node, i: InstanceId)
+
+/* Routing table stored at each node, 
+    indexed by the first field d
+    - d: destination
+    - next: next node on the path to d
+    - hops: distance from d
+    - seqno: last recorded sequence number for d
+    - lifetime: remaiing time before rout expiration
+*/
+.decl route(d: Node, next: Node, hops: Distance, 
+            seqno: Seq, lifetime: Time, 
+            instanceId: InstanceId)
+
+/** Route request message.
+    - from: sender of the message
+    - hopsToSrc: current distance from the node that initiated the request
+    - d: destination
+    - seqno: the least sequence number for a route that s would accept
+    - s: the node that initiated the request
+*/
+// .decl recvRREQ(from: Node, hopsToSrc: Distance, d: Node, 
+//                 seqno: Seq, s: Node, instanceId: InstanceId)
+
+/** Route reply message.
+    - hops, d, seqno, lifetime are the attributes of sender's route.
+    - s: originator
+*/
+.decl recvRREP(from: Node, d: Node, hops: Distance, 
+            seqno: Seq, lifetime: Time, 
+            s: Node,
+            instanceId: InstanceId)
+
+/** When a link to neighbor s is broken */
+// .decl broken(s: Node, instanceId: InstanceId)
+
+.input this,seqno,defaultTimeOut,infinity,initHops,
+    //precursor,
+    route,
+    // recvRREQ
+    recvRREP
+    // ,broken,recvPacket
+
+// Output relations
+
+// .decl sendRREQ(hopsToSrc: Distance, d: Node, 
+//                 seqno: Seq, s: Node, instanceId: InstanceId)
+// 
+// .decl sendRREP(to: Node, d: Node, hops: Distance, 
+//                 seqno: Seq, 
+//                 lifetime: Time, 
+//                 s: Node,
+//                 instanceId: InstanceId)
+
+/** Update local route. */
+.decl newRoute(d: Node, next:Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+
+// .decl newPrecursor(p: Node, d:Node, i: InstanceId)
+// .decl newSeq(s: Seq, i:InstanceId)
+
+// .output sendRREQ
+// .output sendRREP
+.output newRoute
+//,newPrecursor
+
+// Rules
+
+/** No route to d with seqno greater than requested, 
+    rebroadcast the RREQ messages.
+*/
+// sendRREQ(hopsToSrc+1, d, seqno, s, i) :- 
+//     recvRREQ(_,hopsToSrc, d, seqno, s, i),
+//     !this(d,i),
+//     (!route(d,_,_,_,_,i);
+//     route(d,_,_,seq2,_, i), seq2 < seqno).
+// 
+// /** Has a valid route, send REPP
+// */
+// sendRREP(from,d,hops,seq2,lieftime,s, i) :-
+//     recvRREQ(from,hopsToSrc, d, seqno, s, i),
+//     !this(d,i),
+//     route(d,next,hops,seq2,lieftime, i), seq2 >= seqno.
+// 
+//  /** t is the destination
+//  */   
+//  sendRREP(from, d,h0,maxseq,lifetime,s,i) :-
+//     recvRREQ(from,hopsToSrc, d, seqno, s,i),
+//     this(d,i), 
+//     seqno(seq2,i),maxseq=max(seqno, seq2),
+//     initHops(h0,i),
+//     defaultTimeOut(lifetime,i).
+
+ /** Update a route to the source, on an RREQ message
+ */   
+ // newRoute(s,from,hopsToSrc,seqno,lifetime,i) :-
+ //    recvRREQ(from,hopsToSrc, d, seqno, s,i),
+ //    (!route(s,_,_,_,_,i);
+ //    route(s,_,_,seq2,_,i), seq2 < seqno;
+ //    route(s,_,hops,seqno,_,i), hops > hopsToSrc),
+ //    defaultTimeOut(lifetime,i).
+
+ /** Update a route to the destination, when receive an RREP message
+ */   
+ newRoute(d,from,hops,seqno,lifetime,i) :-
+    recvRREP(from, d, hops,seqno, lifetime, _,i),
+    (!route(d,_,_,_,_,i);
+    route(d,_,_,seq2,_,i), seq2 < seqno;
+    route(d,_,hops2,seqno,_,i), hops2 > hops).
+
+ /** Send a route reply to orginator when receive a 
+     route reply.
+ */   
+// sendRREP(nxt,d,hops+1,seqno,lifetime,s,i) :-
+//     recvRREP(_,d,hops,seqno,lifetime,s,i),
+//     route(s,nxt,_,_,_,i).
+// 
+// /** When a route to d is detected broken, broadcast an infinite route 
+//     with seqno greater than the route 1.
+// */
+// sendRREP(p,d,inf,seqno+1, lifetime,s,i) :- 
+//     broken(s,i),
+//     route(d, s, hops, seqno, _,i),
+//     infinity(inf,i),
+//     precursor(d,p,i),
+//     defaultTimeOut(lifetime,i).
+// 
+// /** Update sequence number when link down is detected. */
+// newSeq(s+1,i) :- 
+//     broken(_,i),
+//     seqno(s,i).
+//     
+// /** Update sequence number when route request to itself. */
+// newSeq(s2,i) :-
+//     recvRREQ(_,_, d, seqno, _, i),
+//     this(d,i),
+//     seqno(s1,i),
+//     s2 = max(s1,seqno).
+// 
+// /** Update precursor on hearing route request. */
+// newPrecursor(from,d,i) :-
+//     recvPacket(from,_,d,i).

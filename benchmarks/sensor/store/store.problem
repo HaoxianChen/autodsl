@@ -1,0 +1,10 @@
+.domain sensor
+
+.type Object <: symbol
+.type Node <: symbol
+.type InstanceId <: number
+
+.decl *produce(x: Node, obj: Object, i:InstanceId)
+.decl *consume(x: Node, y: Node, i:InstanceId)
+.decl store(x: Node, obj: Object, i:InstanceId)
+

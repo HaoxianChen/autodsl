@@ -1,0 +1,13 @@
+.domain SDN
+
+.type Switch <: number
+.type Port <: number
+.type Mac <: number
+.type InstanceId <: number
+
+.decl *packet(x:Switch, y:Port, z:Mac, m:Mac, i:InstanceId)
+.decl *map(x:Switch, y:Mac, m:Port, i:InstanceId)
+
+.decl new_map(x:Switch, y:Mac, z:Port, i:InstanceId)
+.decl flood(x:Switch, y:Mac, z:Mac, i:InstanceId)
+.decl flowMod(x:Switch, y:Mac, z:Mac, m:Port, i:InstanceId)

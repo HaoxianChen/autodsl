@@ -1,0 +1,12 @@
+.type Node <: symbol
+.type Ballot <: number
+.type Value <: number
+.type InstanceId <: number
+
+.decl decide(ballot: Ballot, value: Value, i: InstanceId)
+.decl sent2b(b: Ballot, value: Value, i: InstanceId)
+.decl hasQuorum2b(ballot: Ballot, i: InstanceId)
+
+.input hasQuorum2b,sent2b
+decide(b,v,i) :- hasQuorum2b(b,i), sent2b(b,v,i).
+.output decide

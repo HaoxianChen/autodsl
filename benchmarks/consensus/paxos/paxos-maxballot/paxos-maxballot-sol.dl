@@ -1,0 +1,17 @@
+.type Node <: symbol
+.type InstanceId <: number
+.type Ballot <: number
+.type Value <: number
+
+.decl null_ballot(ballot: Ballot, i: InstanceId)
+.decl receive_1b(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)
+.decl maxPreBallot(ballot: Ballot, maxBallot: Ballot, i: InstanceId)
+
+.input receive_1b,null_ballot
+.decl maxAccBallot(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)
+
+maxPreBallot(b,mb,i) :- receive_1b(b, _,_,_,i), !null_ballot(b,i), 
+                        mb = max b2: receive_1b(b, _, b2, _,i).
+maxAccBallot(b,a,mb,v,i) :- receive_1b(b,a,mb,v,i), maxPreBallot(b,mb,i).
+
+.output maxAccBallot

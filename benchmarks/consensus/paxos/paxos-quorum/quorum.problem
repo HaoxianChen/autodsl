@@ -1,0 +1,10 @@
+.domain consensusbarrier
+
+.type Node <: symbol
+.type InstanceId <: number
+.type Ballot <: number
+.type Value <: number
+
+.decl *acceptors(a: Node, i: InstanceId)
+.decl *receive_1b(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)
+.decl hasQuorum(ballot: Ballot, i: InstanceId)

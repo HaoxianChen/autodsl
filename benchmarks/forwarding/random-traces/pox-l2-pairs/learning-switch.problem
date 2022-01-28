@@ -1,0 +1,15 @@
+.domain SDN
+
+.type Switch <: number
+.type Port <: number
+.type Mac <: symbol
+.type InstanceId <: number
+.type Buf <: number
+.type Type <: number
+
+.decl *packet_in(x:Switch, y:Port, buf: Buf, z:Mac, m:Mac, type: Type, i:InstanceId)
+.decl *table(x:Switch, y:Mac, m:Port, i:InstanceId)
+
+.decl new_table(x:Switch, y:Mac, z:Port, i:InstanceId)
+.decl flood(x:Switch, buf:Buf, i:InstanceId)
+.decl flow_mod(x:Switch, y:Mac, z:Mac, m:Port, i:InstanceId)

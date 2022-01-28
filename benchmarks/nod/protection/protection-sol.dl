@@ -1,0 +1,16 @@
+.type Address <: number
+.type Router <: number
+.type InstanceId <: number
+
+.decl VMaddr(a: Address, i: InstanceId)
+.decl FMaddr(a: Address, i: InstanceId)
+.decl route(r: Router, src: Address, dst: Address, i: InstanceId)
+.decl violation(src: Address, dst: Address, i: InstanceId)
+
+.input VMaddr
+.input FMaddr
+.input route
+
+violation(src,dst, i) :- VMaddr(src, i), FMaddr(dst, i), route(_,src,dst, i).
+
+.output violation

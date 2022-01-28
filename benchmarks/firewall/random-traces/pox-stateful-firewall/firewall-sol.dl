@@ -1,0 +1,29 @@
+.type Host <: symbol
+.type Switch <: number
+.type Port <: number
+.type Buf <: number
+.type Type <: number
+.type InstanceId <: number
+
+.decl trusted_hosts(h: Host, id: InstanceId)
+.decl packet_in(s: Switch, p: Port, buf: Buf, src: Host, dst: Host, type: Type, id: InstanceId)
+
+.input packet_in
+.input trusted_hosts
+
+.decl new_trusted_hosts(m: Host, id: InstanceId)
+new_trusted_hosts(m2, id) :- packet_in (1,1, buf, m1, m2, 800, id),!trusted_hosts(m2, id).
+
+.output new_trusted_hosts
+
+.decl packet_out(s: Switch, buf: Buf, p: Port, id: InstanceId)
+.decl flow_mod(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)
+
+packet_out (1, buf, 2, id) :- packet_in(1, 1, buf, _, _, 806, id).
+packet_out (1, buf, 1, id) :- packet_in(1, 2, buf, _, _, 806, id).
+
+flow_mod(1, m1, m2, 2, id) :- packet_in (1,1, buf, m1, m2, 800, id).
+flow_mod(1, m1, m2, 1, id) :- packet_in (1,2, buf, m1, m2, 800, id),trusted_hosts(m1, id).
+
+.output flow_mod
+.output packet_out

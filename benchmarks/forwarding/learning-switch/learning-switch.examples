@@ -1,0 +1,53 @@
+Static {}
+
+Examples {
+    // 1. see a new packet, don't know the destination
+    // keep the mapping of switch and port
+    input {
+        // switch,port,from,to
+        packet(1,1,11,12)
+    }
+    output {
+        // switch, mac, port
+        new_map(1,11,1),
+        flood(1,11,12)
+    }
+
+    // 2. see a new packet, know the destination
+    // keep the mapping of switch and port
+    input {
+        // switch,port,from,to
+        packet(1,1,11,12),
+        // switch,dest,port
+        map(1,12,2)
+    }
+    output {
+        flowMod(1,11,12,2)
+    }
+
+    // 3a. see a new packet, don't know the destination
+    // but have mapping to other flows, flood
+    input {
+        // switch,port,from,to
+        packet(1,1,11,12),
+        // switch,dest,port
+        map(1,11,1)
+    }
+    output {
+        flood(1,11,12)
+    }
+
+    // 3b. see a new packet, don't know the destination
+    // but have mapping to other flows, flood
+    input {
+        // switch,port,from,to
+        packet(1,1,11,12),
+        // switch,dest,port
+        map(2,12,2)
+    }
+    output {
+        flood(1,11,12)
+    }
+
+
+}

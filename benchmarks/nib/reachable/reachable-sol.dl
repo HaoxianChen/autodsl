@@ -1,0 +1,12 @@
+.type Node <: symbol
+.type InstanceId <: number
+
+.decl link(x: Node,y:Node, i:InstanceId)
+.input link
+
+.decl reachable(x: Node, y: Node, i:InstanceId)
+
+reachable(x,y,i) :- link(x,y,i).
+reachable(x,y,i) :- reachable(x,z,i), reachable(z,y,i).
+
+.output reachable

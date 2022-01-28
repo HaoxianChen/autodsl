@@ -1,0 +1,9 @@
+.domain routing
+
+.type Node <: symbol
+.type NodeList  <: symbol
+.type Cost <: number
+.type InstanceId <: number
+
+.decl *Link(x: Node, y: Node, cost: Cost, i:InstanceId)
+.decl nextHop(x: Node, y:Node, path: NodeList, nh: Node, cost: Cost, i:InstanceId)

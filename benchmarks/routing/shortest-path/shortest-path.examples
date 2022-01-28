@@ -1,0 +1,14 @@
+Static {}
+Examples {
+   input {
+    Link("a","b",2),
+    Link("b","c",3),
+    Link("c","d",6),
+    Link("a","d",4)
+   } 
+   output {}
+   input {
+    Link("a","a",2)
+   } 
+   output {}
+}

@@ -1,0 +1,75 @@
+Static {
+    this(2),
+    initHops(0),
+    seqno(1),
+    infinity(15),
+    defaultTimeOut(15)
+}
+
+Examples {
+    /*************** Handeling route requests ***********/
+   // 1 Has a route to destiantion 8, the same seq, 
+   // send reply. 
+   input {
+       // from,hopsToSrc,target,seq,source
+       recvRREQ(9,2,8,3,1),
+       // d,next,hops,seq,lifetime
+       route(8,3,3,3,5),
+       route(5,3,3,3,5)
+   }
+   output {
+       // this, d, 
+       sendRREP(9,8,3,3,5,1)
+   }
+
+    /* 2 Has a route to destiantion 8, with bigger seq, 
+        send reply. 
+    */
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(9,2,8,3,1),
+        // d,next,hops,seq,lifetime
+       route(8,3,3,9,5),
+       route(5,3,3,1,5)
+    }
+    output {
+       sendRREP(9,8,3,9,5,1)
+    }
+
+    // 2 This is the destination, send reply
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(9,2,2,3,1)
+    }
+    output {
+        // to,dest,hops,seq,lifetime,source
+       sendRREP(9,2,3,9,5,1)
+    }
+
+    // 2b This is the destination, send reply
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(9,2,2,3,1),
+       route(5,3,3,1,5)
+    }
+    output {
+        // to,dest,hops,seq,lifetime,source
+       sendRREP(9,2,3,9,5,1)
+    }
+
+    /*************** Handeling route replies ***********/
+
+    // 6 send it to the originator
+    input {
+        // from,dest,hops,seq,lifetime,source
+        recvRREP(7,8,3,3,13,1),
+        // dest,next,hops,seq,lifetime
+        route(1,4,5,5,14),
+        route(5,5,5,5,14)
+    }
+    output {
+        // to,dest,hops,seq,lifetime,source
+        sendRREP(4,8,4,3,13,1)
+    }
+
+}

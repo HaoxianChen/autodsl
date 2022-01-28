@@ -1,0 +1,21 @@
+.domain SDN
+
+.type Mac <: symbol
+.type IP <: symbol
+.type Switch <: number
+.type Port <: number
+.type Buf <: number
+.type Type <: number
+.type InstanceId <: number
+
+.decl *switch1(s:Switch, i:InstanceId)
+.decl *port1(p:Port,i: InstanceId)
+.decl *port2(p:Port,i: InstanceId)
+.decl *arppacket(type:Type, i: InstanceId)
+
+.decl *packet_in(s: Switch, p: Port, buf: Buf, src: Mac, dst: Mac, type: Type, id: InstanceId)
+.decl *packet_in_l3(s: Switch, p: Port, buf: Buf, src: IP, dst: IP, id: InstanceId)
+
+.decl packet_out(s: Switch, buf: Buf, p: Port, id: InstanceId)
+.decl flow_mod_l3(s: Switch, src: IP, dst: IP, p: Port, id: InstanceId)
+.decl drop_l3(s: Switch, src: IP, dst: IP, id: InstanceId)

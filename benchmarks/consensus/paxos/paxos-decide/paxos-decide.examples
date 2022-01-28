@@ -1,0 +1,19 @@
+Static {} 
+Examples {
+    // 4. phase 2b decide a value
+    input {
+        sent2b(1,1),
+        hasQuorum2b(1)
+    }
+    output {
+        decide(1,1)
+    }
+
+    // 5. phase 2b: no quorum yet
+    input {
+        sent2b(2,1),
+        hasQuorum2b(3)
+    }
+    output {
+    }
+}

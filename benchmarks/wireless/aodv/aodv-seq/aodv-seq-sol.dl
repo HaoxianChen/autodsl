@@ -1,0 +1,125 @@
+/** The Ad-hoc on-demand routing protocol.
+*/
+.type Node <: symbol
+.type Time <: number
+.type Seq <: number
+.type InstanceId <: number
+.type Distance <: number
+
+.decl this(t: Node, instanceId: InstanceId)
+.decl seqno(seq: Seq, instanceId: InstanceId)
+.decl defaultTimeOut(time: Time, instanceId: InstanceId)
+.decl initHops(h0: Distance, instanceId: InstanceId)
+.decl infinity(inf: Distance, instanceId: InstanceId)
+
+/* A precursor is a node who has this node as the next
+ hop for the route to destination d
+ */
+.decl precursor(d: Node, t: Node, instanceId: InstanceId)
+
+/*  Receive a packet from a neighbor,
+    from s to destination d.
+*/
+.decl recvPacket(from:Node, s:Node, d:Node, i: InstanceId)
+
+/* Routing table stored at each node, 
+    indexed by the first field d
+    - d: destination
+    - next: next node on the path to d
+    - hops: distance from d
+    - seqno: last recorded sequence number for d
+    - lifetime: remaiing time before rout expiration
+*/
+.decl route(d: Node, next: Node, hops: Distance, 
+            seqno: Seq, lifetime: Time, 
+            instanceId: InstanceId)
+
+/** Route request message.
+    - from: sender of the message
+    - hopsToSrc: current distance from the node that initiated the request
+    - d: destination
+    - seqno: the least sequence number for a route that s would accept
+    - s: the node that initiated the request
+*/
+.decl recvRREQ(from: Node, hopsToSrc: Distance, d: Node, 
+                seqno: Seq, s: Node, instanceId: InstanceId)
+
+/** Route reply message.
+    - hops, d, seqno, lifetime are the attributes of sender's route.
+    - s: originator
+*/
+// .decl recvRREP(from: Node, d: Node, hops: Distance, 
+//             seqno: Seq, lifetime: Time, 
+//             s: Node,
+//             instanceId: InstanceId)
+
+/** When a link to neighbor s is broken */
+.decl broken(s: Node, instanceId: InstanceId)
+
+.input this,seqno,defaultTimeOut,infinity,initHops,
+    precursor,route,
+    broken,recvPacket,
+    recvRREQ
+
+// Output relations
+
+.decl sendRREP(to: Node, d: Node, hops: Distance, 
+                seqno: Seq, 
+                lifetime: Time, 
+                s: Node,
+                instanceId: InstanceId)
+
+/** Update local route. */
+
+.decl newPrecursor(p: Node, d:Node, i: InstanceId)
+.decl newSeq(s: Seq, i:InstanceId)
+
+.output sendRREP
+.output newPrecursor,newSeq
+
+// Rules
+
+/** No route to d with seqno greater than requested, 
+    rebroadcast the RREQ messages.
+*/
+
+/** Has a valid route, send REPP
+*/
+ /** t is the destination
+ */   
+
+ /** Update a route to the source, on an RREQ message
+ */   
+
+ /** Update a route to the destination, when receive an RREP message
+ */   
+
+ /** Send a route reply to orginator when receive a 
+     route reply.
+ */   
+
+/** When a route to d is detected broken, broadcast an infinite route 
+    with seqno greater than the route 1.
+*/
+sendRREP(p,d,inf,seqno+1, lifetime,s,i) :- 
+    broken(s,i),
+    route(d, s, hops, seqno, _,i),
+    infinity(inf,i),
+    precursor(d,p,i),
+    defaultTimeOut(lifetime,i).
+
+/** Update sequence number when link down is detected. */
+newSeq(s+1,i) :- 
+    broken(_,i),
+    seqno(s,i).
+    
+/** Update sequence number when route request to itself. */
+newSeq(seq,i) :-
+    recvRREQ(_,_, d, seq, _, i),
+    this(d,i),
+    seqno(s1,i),
+    seq>s1.
+
+/** Update precursor on hearing route request. */
+newPrecursor(from,d,i) :-
+    recvPacket(from,_,d,i).

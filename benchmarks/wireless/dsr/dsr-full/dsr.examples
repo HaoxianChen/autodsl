@@ -1,0 +1,54 @@
+Static {
+    this("a")
+}
+Examples {
+    // 1. not the request target
+    input {
+        // org,dst,route,reqid
+        recvRREQ("b","d","bc",1)
+    }
+    output {
+        // org,dst,route,reqid
+        sendRREQ("b","d","bca",1)
+    }
+
+    // 2. Is the request target
+    input {
+        // org,dst,route,reqid
+        recvRREQ("b","a","bc",1)
+    }
+    output {
+        // org,dst,route,reqid
+        sendRREP("b","a","bca",1)
+    }
+    
+    // 3. Store learned routes
+    input {
+        // org,dst,route,reqid
+        recvRREP("a","d","ad",1)
+    }
+    output {
+        // dst,route
+        newRoute("d", "ad")
+    }
+
+    // 3b. Don't store routes originated elsewhere
+    input {
+        // org,dst,route,reqid
+        recvRREP("b","d","bad",1)
+    }
+    output {
+    }
+
+    // 4. Delete affected route when a node fails.
+    input {
+        // org,dst,route,reqid
+        recvRERR("d"),
+        route("e", "ade"),
+        route("f", "af")
+    }
+    output {
+        // dst,route
+        delRoute("e", "ade")
+    }
+}

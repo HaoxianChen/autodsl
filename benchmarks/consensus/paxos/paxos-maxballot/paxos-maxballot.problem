@@ -1,0 +1,11 @@
+.domain consensusagg
+
+.type Node <: symbol
+.type InstanceId <: number
+.type Ballot <: number
+.type Value <: number
+
+.decl *null_ballot(ballot: Ballot, i: InstanceId)
+.decl *receive_1b(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)
+
+.decl maxAccBallot(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)

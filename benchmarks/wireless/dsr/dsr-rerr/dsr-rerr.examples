@@ -1,0 +1,17 @@
+Static {
+    this("a")
+}
+Examples {
+    // 4. Delete affected route when a node fails.
+    input {
+        // org,dst,route,reqid
+        recvRERR("d"),
+        route("e", "ade"),
+        route("f", "af"),
+        route("a","a")
+    }
+    output {
+        // dst,route
+        delRoute("e", "ade")
+    }
+}

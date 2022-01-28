@@ -1,0 +1,62 @@
+Static {
+    this(2),
+    initHops(0),
+    infinity(15)
+}
+
+Examples {
+    // No matching route to the destination 8
+    input {
+        // from,hopsToSrc,target,seq,source
+        recvRREQ(*,2,8,3,1),
+        // d,next,hops,seq,lifetime
+        route(1,*,*,*,*),
+        route(3,*,*,*,*),
+        route(4,*,*,*,*)
+    }
+    output { 
+        sendRREQ(3,8,3,1,1)
+    }
+
+//    // Has a route to destiantion 8, but seq smaller than requested. 
+//    input {
+//        // from,hopsToSrc,target,seq,source
+//        recvRREQ(*,2,8,3,1),
+//        // d,next,hops,seq,lifetime
+//        route(8,*,*,1,*),
+//        route(1,*,*,*,*),
+//        route(3,*,*,*,*),
+//        route(4,*,*,*,*),
+//    }
+//    output {
+//        sendRREQ(3,8,3,1,1)
+//    }
+//
+//    // Has a route to destiantion 8, send reply. 
+//    input {
+//        // from,hopsToSrc,target,seq,source
+//        recvRREQ(*,2,8,3,1),
+//        // d,next,hops,seq,lifetime
+//        route(8,3,4,3,4),
+//        route(1,*,*,*,*),
+//        route(1,*,*,*,*)
+//    }
+//    output {
+//        sendRREP(8,4,3,4)
+//    }
+//
+//    // Has a route to destiantion 8, send reply. 
+//    input {
+//        // from,hopsToSrc,target,seq,source
+//        recvRREQ(*,2,8,3,1),
+//        // d,next,hops,seq,lifetime
+//        route(8,3,4,4,4)
+//    }
+//    output {
+//        route(8,3,4,3,4)
+//        route(1,*,*,*,*),
+//        route(1,*,*,*,*)
+//    }
+//
+//    // This is the destination, send reply
+}

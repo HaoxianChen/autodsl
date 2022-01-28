@@ -1,0 +1,10 @@
+.domain NIB
+
+.type Address <: number
+.type InstanceId <: number
+.type Router <: number
+
+.decl *VMaddr(a: Address, i: InstanceId)
+.decl *FMaddr(a: Address, i: InstanceId)
+.decl *route(r: Router, src: Address, dst: Address, i: InstanceId)
+.decl violation(src: Address, dst: Address, i: InstanceId)

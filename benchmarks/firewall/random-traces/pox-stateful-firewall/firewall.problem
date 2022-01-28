@@ -1,0 +1,16 @@
+.domain SDN
+
+.type Host <: symbol
+.type Switch <: number
+.type Port <: number
+.type Buf <: number
+.type Type <: number
+.type InstanceId <: number
+
+.decl *trusted_hosts(h: Host, id: InstanceId)
+.decl *packet_in(s: Switch, p: Port, buf: Buf, src: Host, dst: Host, type: Type, id: InstanceId)
+
+.decl new_trusted_hosts(m: Host, id: InstanceId)
+
+.decl packet_out(s: Switch, buf: Buf, p: Port, id: InstanceId)
+.decl flow_mod(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)

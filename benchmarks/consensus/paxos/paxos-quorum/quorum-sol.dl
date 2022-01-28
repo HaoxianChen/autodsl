@@ -1,0 +1,21 @@
+.type Node <: symbol
+.type InstanceId <: number
+.type Ballot <: number
+.type Value <: number
+
+.decl acceptors(a: Node, i: InstanceId)
+.decl receive_1b(ballot: Ballot, acceptor: Node,
+    maxBallot: Ballot, value: Value, i: InstanceId)
+.decl hasQuorum(ballot: Ballot, i: InstanceId)
+.decl responseCount(ballot: Ballot, c: number, i: InstanceId)
+.decl acceptorsCount(c: number, i: InstanceId)
+
+// phase 2a
+.input acceptors
+.input receive_1b
+
+responseCount(b,c,i) :- receive_1b(b,_,_,_,i),   c = count : receive_1b(b,_,_,_,i).
+acceptorsCount(c,i) :- c = count : acceptors(_,i), acceptors(_,i).
+hasQuorum(b,i) :- responseCount(b, cr,i),  acceptorsCount(ca,i), cr > ca / 2.
+
+.output hasQuorum

@@ -1,0 +1,74 @@
+Static {
+    infinity(15)
+}
+
+Examples {
+    // 1. no existing route to destination
+    input {
+        // from,dest,hops,seq
+        recvUpdate(2,5,3,3),
+        // dest,hops,next,seq
+        route(3,1,4,7)
+    }
+    output {
+        newRoute(5,2,4,3)
+    }
+
+    // 2. has existing route to destination, with higher seq, 
+    // don't udpate
+    input {
+        // from,dest,hops,seq
+        recvUpdate(2,5,3,3),
+        // dest,hops,next,seq
+        route(5,6,4,7)
+    }
+    output {}
+
+    // 3. has existing route to destination, with smaller seq,
+    // update
+    input {
+        // from,dest,hops,seq
+        recvUpdate(2,5,3,3),
+        // dest,hops,next,seq
+        route(5,1,4,1)
+    }
+    output {
+        newRoute(5,2,4,3)
+    }
+
+    // 4. has existing route to destination, same seq,
+    // fewer hops, don't update
+    input {
+        // from,dest,hops,seq
+        recvUpdate(2,5,3,3),
+        // dest,hops,next,seq
+        route(5,1,4,3)
+    }
+    output {
+    }
+
+    // 5. has existing route to destination, same seq,
+    // more hops, update
+    input {
+        // from,dest,hops,seq
+        recvUpdate(2,5,3,3),
+        // dest,hops,next,seq
+        route(5,7,4,3)
+    }
+    output {
+        newRoute(5,2,4,3)
+    }
+
+    // 6. update on topo change, 
+    // only update the affected routes
+    input {
+        brokenLink(4),
+        // dest,hops,next,seq
+        route(5,7,4,3),
+        route(6,7,3,3)
+    }
+    output {
+        newRoute(5,15,4,4)
+    }
+
+}

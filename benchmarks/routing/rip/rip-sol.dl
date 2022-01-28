@@ -1,0 +1,38 @@
+.type Node <: symbol
+.type Interface <: number
+.type Cost <: number
+.type NodeList <: symbol
+.type InstanceId <: number
+
+.decl link(x: Node, y: Node, cost: Cost, i: InstanceId)
+.decl route(x: Node, dst: Node, next: Node, cost: Cost, i: InstanceId)
+.decl costBound(cost: Cost, i: InstanceId)
+.decl distanceVector(x: Node, dst: Node, next: Node, cost: Cost, i: InstanceId)
+
+.decl minCost(x: Node, dst: Node, cost: Cost, i: InstanceId)
+.decl new_route(x: Node, dst: Node, next: Node, cost: Cost, i: InstanceId)
+.decl this(x: Node, i: InstanceId)
+
+.input route
+.input this
+.input link
+.input costBound
+
+distanceVector(node,dst,next,cost,i) :-
+  this(node,i),
+  link(node, next, cost1,i),
+  route(next, dst, _, cost2,i),
+  cost = cost1 + cost2.
+//  costBound(bound,i),
+//  cost < bound,
+//  nn != node.
+distanceVector(node,dst,next,cost,i) :-
+  this(node,i),
+  route(node,dst,next,cost,i).
+
+minCost(node, dst, mc,i) :- distanceVector(node, dst, _, _,i), 
+  mc = min c: distanceVector(node, dst, _, c,i).
+new_route(node,dst,nextHop,mc,i) :- distanceVector(node,dst,nextHop,mc,i),
+  minCost(node, dst, mc,i).
+
+.output new_route

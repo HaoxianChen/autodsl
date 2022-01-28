@@ -1,0 +1,43 @@
+/** Dynamic source routing protocol. 
+    Specification following the original paper: 
+    Johnson, David B., and David A. Maltz. 
+    "Dynamic source routing in ad hoc wireless networks." 
+*/
+
+.type Seq <: number
+.type Node <: symbol
+.type NodeList <: symbol
+.type InstanceId <: number
+
+/** Route request message:
+    - origin
+    - destination
+    - route record: the list of routers along the path
+    - request id
+*/
+.decl recvRREQ(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+.decl this(node: Node, i: InstanceId)
+
+.input recvRREQ,this
+
+.decl sendRREQ(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+.decl sendRREP(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+.output sendRREQ,sendRREP
+
+// Rules
+
+/** On receving a route request, if it is not the target,
+    append itself to the route record. */
+sendRREQ(orig, dest, newRecord, reqid, i) :- 
+    recvRREQ(orig, dest, rrecord, reqid, i),
+    this(x,i),
+    x != dest,
+    newRecord = cat(rrecord,x), !contains(as(x,symbol),as(rrecord,symbol)).
+
+/* It is the target, reply the route.  */
+sendRREP(orig, dest, rrecord, reqid, i) :-
+    recvRREQ(orig, dest, rrecord, reqid, i),
+    this(dest,i).

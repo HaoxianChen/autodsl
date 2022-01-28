@@ -1,0 +1,23 @@
+.type Switch <: number
+.type Port <: number
+.type Mac <: number
+.type InstanceId <: number
+
+.decl packet(x:Switch, y:Port, z:Mac, m:Mac, i:InstanceId)
+.input packet
+
+.decl map(x:Switch, y:Mac, m:Port, i:InstanceId)
+.input map
+
+.decl new_map(x:Switch, y:Mac, z:Port, i:InstanceId)
+new_map(s1, m1, p1,i) :- packet(s1,p1,m1,_,i).
+
+.decl flood(x:Switch, y:Mac, z:Mac, i:InstanceId)
+flood(s1, m1, m2, i) :- packet(s1,_,m1,m2,i), !map(s1,m2,_,i).
+
+.decl flowMod(x:Switch, y:Mac, z:Mac, m:Port, i:InstanceId)
+flowMod(s1, m1, m2, p2,i) :- packet(s1,_,m1,m2,i), map(s1,m2,p2,i).
+
+.output new_map
+.output flood
+.output flowMod

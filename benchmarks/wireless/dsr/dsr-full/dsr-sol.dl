@@ -1,0 +1,73 @@
+/** Dynamic source routing protocol. 
+    Specification following the original paper: 
+    Johnson, David B., and David A. Maltz. 
+    "Dynamic source routing in ad hoc wireless networks." 
+*/
+
+.type Seq <: number
+.type Node <: symbol
+.type NodeList <: symbol
+.type InstanceId <: number
+
+/** Route request message:
+    - origin
+    - destination
+    - route record: the list of routers along the path
+    - request id
+*/
+.decl recvRREQ(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+/** Route reply message:
+    Contains the same fields as the route request, but with a complete path
+*/
+.decl recvRREP(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+/** Route error message:
+    The hop that cannot be reached.
+*/
+.decl recvRERR(node: Node, i: InstanceId)
+
+/** Route cache table
+    - destination
+    - route: the list of intermediate hops
+*/
+.decl route(destination: Node, route: NodeList, i: InstanceId)
+
+.decl this(node: Node, i: InstanceId)
+
+.input recvRREQ,this,recvRREP,recvRERR,route
+
+.decl sendRREQ(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+.decl sendRREP(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+
+.decl newRoute(destination: Node, route: NodeList, i: InstanceId)
+.decl delRoute(destination: Node, route: NodeList, i: InstanceId)
+
+.output sendRREQ,sendRREP,newRoute,delRoute
+
+// Rules
+
+/** On receving a route request, if it is not the target,
+    append itself to the route record. */
+sendRREQ(orig, dest, newRecord, reqid, i) :- 
+    recvRREQ(orig, dest, rrecord, reqid, i),
+    this(x,i),
+    x != dest,
+    newRecord = cat(rrecord,x).
+
+/* It is the target, reply the route.  */
+sendRREP(orig, dest, rrecord, reqid, i) :-
+    recvRREQ(orig, dest, rrecord, reqid, i),
+    this(dest,i).
+
+/* Store learned routes  */
+ newRoute(dest, rrecord, i) :-
+    recvRREP(orig, dest, rrecord, _, i),
+    this(orig,i).
+
+/* Delete affected route on a node failure. */
+delRoute(dest,path,i) :-
+    recvRERR(x,i),
+    route(dest, path, i),
+    contains(as(x,symbol), as(path,symbol)).

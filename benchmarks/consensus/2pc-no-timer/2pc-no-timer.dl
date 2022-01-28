@@ -1,0 +1,43 @@
+.type Node <: symbol
+.type Vote <: symbol
+.type State <: symbol
+.type InstanceId <: number
+.type Time <: number
+
+.decl Peers(x:Node, y:Node, i: InstanceId)
+.input Peers
+.decl no_vote(x:Node, tid:InstanceId, y:Node)
+.decl yes_vote(x:Node, tid:InstanceId, y:Node)
+.input yes_vote
+.input no_vote
+
+.decl peer_cnt(x:Node, c:number, i: InstanceId)
+peer_cnt("coordinator", c, i) :- c = count: Peers("coordinator", _, i),
+  Peers("coordinator", _,i).
+.output peer_cnt
+
+.decl yes_cnt(x:Node, tid:InstanceId, c:number)
+yes_cnt("coordinator", txnid, c) :- yes_vote("coordinator", txnid, _),
+                      c = count : yes_vote("coordinator", txnid, _).
+.output yes_cnt
+
+.decl prepare(x: Node, tid:InstanceId)
+.input prepare
+
+// .decl tick(x: Node, tid: InstanceId, c: Time)
+// .input tick
+
+.decl commit(x: Node, tid:InstanceId)
+.decl abort(x: Node, tid:InstanceId)
+// abort if one of the member votes "No"
+abort("coordinator", tid) :-
+     prepare("coordinator", tid),
+     no_vote("coordinator", tid, _).
+
+commit("coordinator", tid) :-
+     prepare("coordinator", tid),
+     peer_cnt("coordinator", c, tid),
+     yes_cnt("coordinator", tid, c).
+
+.output abort
+.output commit

@@ -1,0 +1,42 @@
+.type Mac <: symbol
+.type IP <: symbol
+.type Switch <: number
+.type Port <: number
+.type Buf <: number
+.type Type <: number
+.type InstanceId <: number
+
+.decl switch1(s:Switch, i:InstanceId)
+.decl port1(p:Port,i: InstanceId)
+.decl port2(p:Port,i: InstanceId)
+.decl arppacket(type:Type, i: InstanceId)
+
+.decl packet_in(s: Switch, p: Port, buf: Buf, src: Mac, dst: Mac, type: Type, id: InstanceId)
+.decl packet_in_l3(s: Switch, p: Port, buf: Buf, src: IP, dst: IP, id: InstanceId)
+
+.input packet_in
+.input packet_in_l3,port1,port2,switch1,arppacket
+
+.decl packet_out(s: Switch, buf: Buf, p: Port, id: InstanceId)
+.decl flow_mod_l3(s: Switch, src: IP, dst: IP, p: Port, id: InstanceId)
+.decl drop_l3(s: Switch, src: IP, dst: IP, id: InstanceId)
+
+packet_out (s1, buf, p2, id) :- packet_in(s1, p1, buf, h1, h2, t, id),switch1(s1,id),
+                                h1!=h2,
+                                port1(p1,id),port2(p2,id),arppacket(t,id).
+packet_out (s1, buf, p1, id) :- packet_in(s1, p2, buf, h1, h2, t, id),switch1(s1,id),
+                                h1!=h2,
+                                port1(p1,id),port2(p2,id),arppacket(t,id).
+
+flow_mod_l3(s1, ip1, ip2, p2, id) :- packet_in_l3 (s1,p1, _, ip1, ip2, id),
+                                ip1!=ip2,
+                                switch1(s1,id),port1(p1,id),port2(p2,id).
+flow_mod_l3(s1, ip2, ip1, p1, id) :- packet_in_l3 (s1,p1, _, ip1, ip2, id),
+                                ip1!=ip2,
+                                switch1(s1,id),port1(p1,id).
+
+drop_l3(s1,ip1,ip2,id) :- packet_in_l3(s1,p1,_,ip1,ip2, id),switch1(s1,id),!port1(p1,id).
+
+.output flow_mod_l3
+.output packet_out
+.output drop_l3

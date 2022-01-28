@@ -1,0 +1,48 @@
+Static {
+    local(1),
+    local(2),
+    spine(3)
+}
+
+Examples {
+    // Two local notes take the spine route. Violation.
+    input {
+        // router, s,d
+        route(3,1,2)
+    }
+    output {
+        violation(1,2)
+    }
+
+    // Two local notes take the non-spine route. No violation.
+    input {
+        // router, s,d
+        route(4,1,2)
+    }
+    output {
+    }
+
+    // Destination is not local. No violation.
+    input {
+        // router, s,d
+        route(3,1,3)
+    }
+    output {
+    }
+
+    // Source is not local. No violation.
+    input {
+        // router, s,d
+        route(3,3,2)
+    }
+    output {
+    }
+
+    // No local note take the spine route. No violation.
+    input {
+        // router, s,d
+        route(3,5,3)
+    }
+    output {
+    }
+}

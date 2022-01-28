@@ -1,0 +1,23 @@
+.type Node <: symbol
+.type NodeList  <: symbol
+.type Cost <: number
+.type InstanceId <: number
+
+.decl Link(x: Node, y: Node, cost: Cost, i:InstanceId)
+.input Link
+
+.decl Path(x: Node, y: Node, path: NodeList, nextHop: Node, cost: Cost, i:InstanceId)
+Path(x,y,p,y,c,i) :- Link(x,y,c,i), p=cat(x,y), x!=y.
+// Path(x,y,p,z,c) :- Link(x,z,c1), Path(z,y,p1,_,c2) , p=cat(x,p1), c=c1+c2.
+Path(x,y,p,n,c,i) :- Link(z,y,c1,i), Path(x,z,p1,n,c2,i) , p=cat(p1,y), c=c1+c2,
+  !contains(as(y,symbol), as(p1,symbol)).
+
+.output Path
+
+.decl minCost(x: Node, y: Node, cost: Cost, i:InstanceId)
+minCost(x,y,mc,i) :- Path(x,y,_,_,_,i),  mc = min c : Path(x,y,_,_,c,i).
+
+.decl nextHop(x: Node, y:Node, path: NodeList, nh: Node, cost: Cost, i:InstanceId)
+nextHop(x,y,p,z,mc,i) :- Path(x,y,p,z,mc,i), minCost(x,y,mc,i).
+
+.output nextHop

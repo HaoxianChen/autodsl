@@ -1,0 +1,14 @@
+.domain SDN
+
+.type Host <: symbol
+.type Switch <: number
+.type Port <: number
+.type Buf <: symbol
+.type Type <: number
+.type InstanceId <: number
+
+.decl *packet_in(s: Switch, p: Port, buf: Buf, src: Host, dst: Host, type: Type, id: InstanceId)
+
+.decl packet_out(s: Switch, buf: Buf, p: Port, id: InstanceId)
+.decl flow_mod(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)
+

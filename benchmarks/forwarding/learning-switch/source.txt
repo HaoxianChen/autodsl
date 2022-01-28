@@ -1,0 +1,1 @@
+Ball, Thomas, et al. "VeriCon: towards verifying controller programs in software-defined networks." Proceedings of the 35th ACM SIGPLAN Conference on Programming Language Design and Implementation. 2014.

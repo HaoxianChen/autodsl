@@ -1,0 +1,26 @@
+.type Instance <: number
+.type Address <: number
+.type E <: number
+.type Dir <: number
+.type Protocol <: number
+.type Port <: number
+.type InstanceId <: number
+
+.decl hasEni(i: Instance, e: E, id: InstanceId)
+.decl isPublicIP(a: Address, id: InstanceId)
+.decl reachPublicTcpUdp(dir: Dir, proto: Protocol, e: E, port: Port, a: Address, 
+    port2: Port, id: InstanceId)
+.decl isSshPort(port: Port, id: InstanceId)
+
+.decl reachable(i: Instance, e: E, id: InstanceId)
+
+.input hasEni
+.input isPublicIP
+.input reachPublicTcpUdp
+.input isSshPort
+
+reachable(i,e,id) :- hasEni(i,e,id), isPublicIP(a, id),
+  isSshPort(p, id),
+  reachPublicTcpUdp(_,_,e,p,a,_, id).
+
+.output reachable

@@ -1,0 +1,12 @@
+.domain routing
+
+.type Node <: symbol
+.type Cost <: number
+.type Network <: symbol
+.type Protocol <: symbol
+.type InstanceId <: number
+
+.decl *AdminCost(proto: Protocol, admin: Cost, i:InstanceId)
+.decl *ProtocolRoute(x: Node, net: Network, nextHop: Node, protocol: Protocol, i:InstanceId)
+.decl MinAdminRoute(x: Node, net: Network, nextHop: Node, admin: Cost, i:InstanceId)
+

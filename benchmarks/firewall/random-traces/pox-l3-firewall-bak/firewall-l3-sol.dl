@@ -1,0 +1,29 @@
+.type Mac <: symbol
+.type IP <: symbol
+.type Switch <: number
+.type Port <: number
+.type Buf <: number
+.type Type <: number
+.type InstanceId <: number
+
+.decl packet_in(s: Switch, p: Port, buf: Buf, src: Mac, dst: Mac, type: Type, id: InstanceId)
+.decl packet_in_l3(s: Switch, p: Port, buf: Buf, src: IP, dst: IP, id: InstanceId)
+
+.input packet_in
+.input packet_in_l3
+
+.decl packet_out(s: Switch, buf: Buf, p: Port, id: InstanceId)
+.decl flow_mod_l3(s: Switch, src: IP, dst: IP, p: Port, id: InstanceId)
+.decl drop_l3(s: Switch, src: IP, dst: IP, id: InstanceId)
+
+packet_out (1, buf, 2, id) :- packet_in(1, 1, buf, _, _, 806, id).
+packet_out (1, buf, 1, id) :- packet_in(1, 2, buf, _, _, 806, id).
+
+flow_mod_l3(1, ip1, ip2, 2, id) :- packet_in_l3 (1,1, _, ip1, ip2, id).
+flow_mod_l3(1, ip2, ip1, 1, id) :- packet_in_l3 (1,1, _, ip1, ip2, id).
+
+drop_l3(1,ip1,ip2,id) :- packet_in_l3(1,2,_,ip1,ip2, id).
+
+.output flow_mod_l3
+.output packet_out
+.output drop_l3

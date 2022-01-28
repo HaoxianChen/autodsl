@@ -1,0 +1,10 @@
+.domain sensor
+
+.type Time <: number
+.type Press <: number
+.type Temp <: number
+.type InstanceId <: number
+
+.decl *tempLog(time: Time, t: Temp, i:InstanceId)
+.decl *pressLog(time: Time, p:Press, i:InstanceId)
+.decl evidence(t: Temp, p: Press, i:InstanceId)

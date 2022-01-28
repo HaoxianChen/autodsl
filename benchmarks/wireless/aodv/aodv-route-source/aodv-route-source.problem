@@ -1,0 +1,44 @@
+.domain routingProto
+
+/** The Ad-hoc on-demand routing protocol.
+*/
+.type Node <: symbol
+.type Time <: number
+.type Seq <: number
+.type InstanceId <: number
+.type Distance <: number
+
+.decl *this(t: Node, instanceId: InstanceId)
+.decl *seqno(seq: Seq, instanceId: InstanceId)
+.decl *defaultTimeOut(time: Time, instanceId: InstanceId)
+.decl *infinity(inf: Distance, instanceId: InstanceId)
+.decl *initHops(h0: Distance, instanceId: InstanceId)
+
+.decl *route(d: Node, next: Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+
+.decl *recvRREQ(from: Node, hopsToSrc: Distance, d: Node, 
+                seqno: Seq, s: Node, instanceId: InstanceId)
+
+// .decl *precursor(d: Node, t: Node, instanceId: InstanceId)
+// .decl *recvPacket(from:Node, s:Node, d:Node, i: InstanceId)
+
+// .decl *recvRREP(from: Node, d: Node, hops: Distance, 
+//             seqno: Seq, lifetime: Time, 
+//             s: Node,
+//             instanceId: InstanceId)
+// 
+// .decl *broken(s: Node, instanceId: InstanceId)
+
+// .decl sendRREQ(hopsToSrc: Distance, d: Node, 
+//                seqno: Seq, s: Node, instanceId: InstanceId)
+
+// .decl sendRREP(to: Node, d: Node, hops: Distance, 
+//                 seqno: Seq, 
+//                 lifetime: Time, 
+//                 s: Node,
+//                 instanceId: InstanceId)
+
+.decl newRoute(d: Node, next:Node, hops: Distance, seqno: Seq, lifetime: Time, instanceId: InstanceId)
+
+// .decl newPrecursor(p: Node, d:Node, i: InstanceId)
+// .decl newSeq(s: Seq, i:InstanceId)

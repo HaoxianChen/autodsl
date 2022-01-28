@@ -1,0 +1,359 @@
+Static{
+    arppacket(806),
+    switch1(1),
+    port1(1),
+    port2(2)
+}
+Examples {
+    // 1. 806 packet from switch 1 port 1
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(1,1,101,"h1","h2",806)
+    // }
+    // output {
+    //     // switch,buf,port
+    //     packet_out(1,101,2)
+    // }
+
+    // // 2. 806 packet from switch 1 port 2
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(1,2,101,"h1","h2",806)
+    // }
+    // output {
+    //     // switch,buf,port
+    //     packet_out(1,101,1)
+    // }
+
+    // // 3. 806 packet from switch 2 port 1
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(2,1,101,"h1","h2",806)
+    // }
+    // output {
+    // }
+
+    // // 4. 806 packet from switch 2 port 2
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(2,2,101,"h1","h2",806)
+    // }
+    // output {
+    // }
+
+    // // 5. other packet from switch 1 port 1
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(1,1,101,"h1","h2",809)
+    // }
+    // output {
+    //     // switch,buf,port
+    //     packet_out(1,101,2)
+    // }
+
+    // // 6. other packet from switch 1 port 2
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(1,2,101,"h1","h2",809)
+    // }
+    // output {
+    //     // switch,buf,port
+    //     packet_out(1,101,1)
+    // }
+
+    /********************************************
+    L3 packets
+    */
+    // 7. l3 packet from switch 1 port 1
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,1,101,"h1","h2")
+    }
+    output {
+        flow_mod_l3(1,"h1","h2",2),
+        new_trusted_hosts("h2")
+    }
+
+    // 7b. l3 packet from switch 1 port 1
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(1,1,101,"h1","h2"),
+    //     trusted_hosts("h1"),
+    //     trusted_hosts("h3")
+    // }
+    // output {
+    //     flow_mod_l3(1,"h1","h2",2),
+    //     new_trusted_hosts("h2")
+    // }
+
+    // // 7c. l3 packet from switch 1 port 1
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(1,1,101,"h1","h2"),
+    //     trusted_hosts("h2"),
+    //     trusted_hosts("h3")
+    // }
+    // output {
+    //     flow_mod_l3(1,"h1","h2",2),
+    //     new_trusted_hosts("h2")
+    // }
+
+    // // 7d. l3 packet from switch 1 port 1
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(1,1,101,"h1","h2"),
+    //     trusted_hosts("h1"),
+    //     trusted_hosts("h2"),
+    //     trusted_hosts("h3")
+    // }
+    // output {
+    //     flow_mod_l3(1,"h1","h2",2),
+    //     new_trusted_hosts("h2")
+    // }
+
+    // 8. l3 packet from switch 1 port 2, trusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,2,101,"h1","h2"),
+        trusted_hosts("h1")
+    }
+    output {
+        // switch,from,to,port
+        flow_mod_l3(1,"h1","h2",2)
+    }
+
+    // 9. l3 packet from switch 2 port 1
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(2,1,101,"h1","h2")
+    }
+    output {
+    }
+
+    // 9b. l3 packet from switch 2 port 1
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(2,1,101,"h1","h2"),
+        trusted_hosts("h1"),
+        trusted_hosts("h2"),
+        trusted_hosts("h3")
+    }
+    output {
+    }
+
+    // 10. l3 packet from switch 2 port 2, untrusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(2,2,101,"h1","h2")
+    }
+    output {
+    }
+
+    // 10b. l3 packet from switch 2 port 2, trusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(2,2,101,"h1","h2"),
+        trusted_hosts("h1"),
+        trusted_hosts("h2"),
+        trusted_hosts("h3")
+    }
+    output {
+    }
+
+    // 11. l3 packet from switch 1 port 2, untrusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,2,101,"h1","h2"),
+        trusted_hosts("h2"),
+        trusted_hosts("h3")
+    }
+    output {
+        drop_l3(1,"h1","h2")
+    }
+
+    // 11b. l3 packet from switch 1 port 2, untrusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,2,101,"h1","h2")
+    }
+    output {
+        // switch,from,to,port
+        flow_mod_l3(1,"h1","h2",2)
+    }
+
+
+    // 12. l3 packet from switch 2 port 2, untrusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(2,2,101,"h1","h2"),
+    //     trusted_hosts("h2"),
+    //     trusted_hosts("h3")
+    // }
+    // output {
+    // }
+
+    // 12b. l3 packet from switch 2 port 2, untrusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(2,2,101,"h1","h2")
+    }
+    output {
+    }
+
+    // // 13. 806 packet with the same src and dst 
+    // // from switch 1 port 1
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(1,1,101,"h1","h1",806)
+    // }
+    // output {
+    // }
+
+    // // 13a. 806 packet with the same src and dst 
+    // // from switch 1 port 2
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(1,2,101,"h1","h1",806)
+    // }
+    // output {
+    // }
+
+    // // 13c. 806 packet with the same src and dst 
+    // // from switch 2 port 1
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(2,1,101,"h1","h1",806)
+    // }
+    // output {
+    // }
+
+    // // 13d. 806 packet with the same src and dst 
+    // // from switch 2 port 2
+    // input {
+    //     // switch,port,buf,from,to,type
+    //     packet_in(2,2,101,"h1","h1",806)
+    // }
+    // output {
+    // }
+
+    // 14. l3 packet from switch 1 port 1, 
+    // same src and dst, untrusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,1,101,"h1","h1")
+    }
+    output {
+    }
+
+    // // 14b. l3 packet from switch 1 port 1, 
+    // // same src and dst, trusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(1,1,101,"h1","h1"),
+    //     trusted_hosts("h2"),
+    //     trusted_hosts("h1")
+    // }
+    // output {
+    // }
+    
+    // 14c. l3 packet from switch 1 port 2, 
+    // same src and dst, trusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,2,101,"h1","h1"),
+        trusted_hosts("h1"),
+        trusted_hosts("h2")
+    }
+    output {
+    }
+
+    // 14d. l3 packet from switch 1 port 2, 
+    // same src and dst, untrusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(1,2,101,"h1","h1")
+    // }
+    // output {
+    // }
+
+    // 14d. l3 packet from switch 1 port 2, 
+    // same src and dst, untrusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(1,2,101,"h1","h1"),
+    //     trusted_hosts("h2")
+    // }
+    // output {
+    // }
+
+    // 14e. l3 packet from switch 2 port 1, 
+    // same src and dst, untrusted
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(2,1,101,"h1","h1")
+    }
+    output {
+    }
+
+    // 14e. l3 packet from switch 2 port 1, 
+    // same src and dst, untrusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(2,1,101,"h1","h1"),
+    //     trusted_hosts("h2")
+    // }
+    // output {
+    // }
+
+    // 14f. l3 packet from switch 2 port 1, 
+    // same src and dst, trusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(2,1,101,"h1","h1"),
+    //     trusted_hosts("h1"),
+    //     trusted_hosts("h2")
+    // }
+    // output {
+    // }
+
+
+    // // 15. l3 packet from switch 2 port 2, 
+    // // same src and dst, trusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(2,2,101,"h1","h1"),
+    //     trusted_hosts("h1"),
+    //     trusted_hosts("h2")
+    // }
+    // output {
+    // }
+
+    // // 15b. l3 packet from switch 2 port 2, 
+    // // same src and dst, untrusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(2,2,101,"h1","h1")
+    // }
+    // output {
+    // }
+
+    // // 15c. l3 packet from switch 2 port 2, 
+    // // same src and dst, untrusted
+    // input {
+    //     // switch,port,buf,from,to
+    //     packet_in_l3(2,2,101,"h1","h1"),
+    //     trusted_hosts("h2")
+    // }
+    // output {
+    // }
+
+    // 16. l3 packet from other ports at switch 1
+    input {
+        // switch,port,buf,from,to
+        packet_in_l3(1,3,101,"h1","h2")
+    }
+    output {
+    }
+
+
+}

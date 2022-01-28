@@ -1,0 +1,19 @@
+.type Host <: symbol
+.type Switch <: symbol
+.type Port <: number
+.type InstanceId <: number
+
+.decl port1(p:Port,i: InstanceId)
+.decl port2(p:Port,i: InstanceId)
+.decl packet(s: Switch, p: Port, src: Host, dst: Host, id: InstanceId)
+.input packet,port1,port2
+
+.decl forward(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)
+.decl flowMod(s: Switch, src: Host, dst: Host, p: Port, id: InstanceId)
+
+forward(s1, h1, h2, p2, id) :- packet(s1, p1, h1, h2, id),port1(p1,id),port2(p2,id).
+flowMod(s1, h1, h2, p2, id) :- packet(s1, p1, h1, h2, id),port1(p1,id),port2(p2,id).
+flowMod(s1, h2, h1, p1, id) :- packet(s1, p1, h1, h2, id),port1(p1,id).
+
+.output flowMod
+.output forward

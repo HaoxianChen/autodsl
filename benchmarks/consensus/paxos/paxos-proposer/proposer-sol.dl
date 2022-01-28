@@ -1,0 +1,16 @@
+.type Node <: symbol
+.type Ballot <: number
+.type Value <: number
+.type InstanceId <: number
+
+// phase 2a
+.decl send_2a(ballot: Ballot, value: Value, i: InstanceId)
+.decl maxPreBallot(ballot: Ballot, acceptor:Node, mb: Ballot, value: Value, i: InstanceId)
+.decl propose(ballot: Ballot, value: Value, i: InstanceId)
+.decl null_ballot(ballot: Ballot, i: InstanceId)
+.decl hasQuorum(ballot: Ballot, i: InstanceId)
+
+.input hasQuorum,propose,null_ballot,maxPreBallot
+send_2a(b,v,i) :- maxPreBallot(b,_,mb,v,i), hasQuorum(b,i), !null_ballot(mb,i).
+send_2a(b,v,i) :- maxPreBallot(b,_,mb,_,i), hasQuorum(b,i), null_ballot(mb,i), propose(b,v,i).
+.output send_2a

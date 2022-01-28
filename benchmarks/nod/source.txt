@@ -1,0 +1,2 @@
+Checking Beliefs in Dynamic Networks
+https://www.usenix.org/system/files/conference/nsdi15/nsdi15-paper-lopes.pdf

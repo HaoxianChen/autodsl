@@ -1,0 +1,15 @@
+.domain consensus
+
+.type Node <: symbol
+.type Ballot <: number
+.type Value <: number
+.type InstanceId <: number
+
+.decl *aState(node: Node,  mBallot: Ballot, aBallot: Ballot, value: Value, i: InstanceId)
+.decl *receive_1a(ballot:Ballot, i: InstanceId)
+.decl send_1b(ballot: Ballot, acceptor: Node, maxBallot: Ballot, value: Value, i: InstanceId)
+
+.decl *receive_2a(ballot: Ballot, value: Value, i: InstanceId)
+.decl new_aState(acc: Node, mBallot: Ballot, aBallot: Ballot, value: Value, i: InstanceId)
+.decl send_2b(ballot: Ballot, acceptor: Node, value: Value, i: InstanceId)
+

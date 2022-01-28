@@ -1,0 +1,33 @@
+Static {
+    acceptors(1),
+    acceptors(2),
+    acceptors(3),
+    acceptors(4),
+    acceptors(5)
+}
+
+Examples {
+    // 1 Has a quorum
+    input {
+        //ballot, acceptor, maxBallot, value
+        receive_1b(11,1,1,1),
+        receive_1b(11,2,3,1),
+        receive_1b(11,3,4,4),
+        receive_1b(11,4,5,2),
+        receive_1b(10,4,2,3)
+    }
+    output {
+        hasQuorum(11)
+    }
+
+    // 2 Don't have a quorum
+    input {
+        //ballot, acceptor, maxBallot, value
+        receive_1b(11,1,1,1),
+        receive_1b(11,2,3,1),
+        receive_1b(10,3,1,1)
+    }
+    output {
+    }
+
+}

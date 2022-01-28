@@ -1,0 +1,8 @@
+.domain NIB
+
+.type Node <: symbol
+.type InstanceId <: number
+
+.decl *link(x: Node,y:Node, i:InstanceId)
+
+.decl reachable(x: Node, y: Node, i:InstanceId)

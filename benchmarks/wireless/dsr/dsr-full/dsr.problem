@@ -1,0 +1,17 @@
+.domain routingProto
+
+.type Seq <: number
+.type Node <: symbol
+.type NodeList <: symbol
+.type InstanceId <: number
+
+.decl *recvRREQ(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+.decl *recvRREP(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+.decl *recvRERR(node: Node, i: InstanceId)
+.decl *route(destination: Node, route: NodeList, i: InstanceId)
+.decl *this(node: Node, i: InstanceId)
+
+.decl sendRREQ(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+.decl sendRREP(origin: Node, destination: Node, rrecord: NodeList, reqid: Seq, i: InstanceId)
+.decl newRoute(destination: Node, route: NodeList, i: InstanceId)
+.decl delRoute(destination: Node, route: NodeList, i: InstanceId)

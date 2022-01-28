@@ -1,0 +1,14 @@
+.type Object <: symbol
+.type Node <: symbol
+.type InstanceId <: number
+
+.decl produce(x: Node, obj: Object, i:InstanceId)
+.decl consume(x: Node, y: Node, i:InstanceId)
+.decl store(x: Node, obj: Object, i:InstanceId)
+
+.input produce
+.input consume
+
+store(y,obj,i) :- produce(x, obj,i), consume(x,y,i).
+
+.output store
