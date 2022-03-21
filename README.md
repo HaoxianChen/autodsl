@@ -7,16 +7,17 @@ Install souffle 2.0.1 and sbt following these instructions.
 2. [sbt](https://www.scala-sbt.org/release/docs/Setup.html).
 
 ## Run all benchmarks in paper
-(todo)
+Benchmarks are listed in [benchmarks](benchmarks). 
+Files in each benchmakrs are explained [here](benchmarks/README.md).
 
-## Run FOIL
+Synthesize a program:
+```
+sbt run learn <path to benchmark directory> 
+```
 
-1. Prepare the problem directory. 
-See [this](benchmarks/README.md) for instructions, and
-[benchmarks](benchmarks) for complete examples.
-2. Start sbt by command ``sbt``. 
-3. In the sbt console, 
-```run foil <problem directory> ```.
-For example, to synthesize the reachability problem,
-```run foil benchmarks/reachability ```.
+Synthesize with active learning:
 
+1. Prepare an oracle Datalog program in the benchmark directory, named <benchmark-name>-sol.dl,
+  which answers the query questions.
+  See an [example](benchmarks/nib/reachable/reachable-sol.dl).
+2. Run command: ``sbt run active <path to benchmark directory> ``

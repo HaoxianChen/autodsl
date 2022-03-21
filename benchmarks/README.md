@@ -1,6 +1,6 @@
 # Problem specification
 
-[Full example directory](reachable).
+[Full example directory](./nib/reachable).
 
 ## 1. Declare types (optional)
 This is an optional step.
@@ -68,4 +68,4 @@ a b 2
 c d 2
 ```
 
-See [benchmarks/locality](locality) for a complete example.
+See [a complete example](./nod/locality).
