@@ -156,6 +156,7 @@ case class SynthesisAllPrograms(problem: Problem,
     val programs = _combineRules(List(),ruleList, idb).map(
       rs=>Program(rs.toSet)
     )
+    assert(programs.nonEmpty)
     // programs.toList.sortBy(_.rules.size)(Ordering[Int])
     programs.toList.sortWith(_ < _)
   }

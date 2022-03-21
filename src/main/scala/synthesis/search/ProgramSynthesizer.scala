@@ -434,7 +434,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
       val allRules = programs.flatMap(_.rules)
       require(allRules.map(_.head.relation).size==1)
       val sorted = ruleHelper.combineRules(allRules, idb)
-      sorted.take(5).flatMap(p=>simplerAlternatives(p)).toSet
+      sorted.take(5).flatMap(p=>(simplerAlternatives(p) + p)).toSet
     }
   }
 
