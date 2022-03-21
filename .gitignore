@@ -4,3 +4,6 @@ target/
 project/
 tmp/
 *.log
+.*
+results/
+results-2/
