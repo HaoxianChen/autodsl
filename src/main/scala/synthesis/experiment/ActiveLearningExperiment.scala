@@ -1,7 +1,7 @@
 package synthesis.experiment
 
 import com.typesafe.scalalogging.Logger
-import synthesis.activelearning.{ActiveLearning, ExampleInstance, ExampleTranslator}
+import synthesis.activelearning.{ActiveLearning, ExampleGenerator, ExampleInstance, ExampleTranslator}
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
 import synthesis.experiment.ExperimentRecord.fromFile
 import synthesis.util.Misc
@@ -9,7 +9,7 @@ import synthesis.{Examples, Problem, Program, Relation}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
-import scala.util.{Random}
+import scala.util.Random
 
 class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, outDir: String = "results/active-learning",
                                /** timeout in seconds */
@@ -52,7 +52,8 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     }
   }
 
-  def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
+  // def runRandomDrops(repeats: Int, nDrops: List[Int]) :Unit = {
+  def runRandomDrops(repeats: Int) :Unit = {
     val randomDropProblems: List[Path] = Experiment.randomDropExperiments.map(s => Paths.get(benchmarkDir, s))
 
     var allFinish = true
@@ -69,6 +70,10 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
         val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
         val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
+
+        /** Use all original example to build example pool. */
+        val exampleGenerator = new ExampleGenerator(initProblem.inputRels, staticConfigRelations,
+          initProblem.edb, initProblem.idb)
 
         def nextProblemAndExamples(prevProblem: Problem, prevExamples: Set[ExampleInstance],
                                    nDrop: Int, runId: Int): (Problem, Set[ExampleInstance]) = {
@@ -97,11 +102,17 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
           }
         }
 
-        for (i <- 0 to repeats) {
+        for (i <- 0 until repeats) {
           var problem = initProblem
           var examples = initExamples
 
-          for (nDrop <- nDrops) {
+          val minExampleSize: Int = problem.outputRels.size
+          val step: Int = (initExamples.size - minExampleSize) / 5
+          val allExampleSizes = (initExamples.size-1 to minExampleSize by -step).toList
+          logger.info(s"Init example size ${initExamples.size}, Output relations: ${problem.outputRels.size} " +
+            s",all example sizes: $allExampleSizes.")
+          for (nExamples <- allExampleSizes) {
+            val nDrop = initExamples.size - nExamples
             val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, i)
             assert(enext.subsetOf(examples))
             assert(enext.size < examples.size)
@@ -117,7 +128,8 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
               logger.info(s"Run ${initProblem.name}, drop ${nDrop} example, run ${i}.")
 
               val logDir = Paths.get(logRootDir.toString, problem.name)
-              runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString)
+              runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString,
+                _exampleGenerator = Some(exampleGenerator))
             }
             else {
               logger.info(s"${initProblem.name} drop ${nDrop} run ${i} has results already. Skip.")
@@ -265,20 +277,25 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     val n_remains = examples.size - nDrop
     assert(n_remains > 0, s"${examples.size}")
 
+    /** Use all original example to build example pool. */
+    val exampleGenerator = new ExampleGenerator(problem.inputRels, staticConfigRelations,
+      problem.edb, problem.idb)
+
     val incompleteExamples = sampleExamples(examples, n_remains)
     logger.info(s"${incompleteExamples.size} examples left.")
     val (newEdb, newIdb) = ExampleInstance.toEdbIdb(incompleteExamples)
     val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
-    runActiveLearning(newProblem, staticConfigRelations, nDrop, _logDir)
+    runActiveLearning(newProblem, staticConfigRelations, nDrop, _logDir, _exampleGenerator = Some(exampleGenerator))
   }
 
-  def runActiveLearning(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String): (Option[Program], Int, Double) = {
+  def runActiveLearning(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String,
+                       _exampleGenerator: Option[ExampleGenerator]=None): (Option[Program], Int, Double) = {
     Misc.makeDir(Paths.get(_logDir))
 
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples, timeout=timeout,
-      logDir=logSubDir.toString)
+      logDir=logSubDir.toString, _exampleGenerator=_exampleGenerator)
 
     val progressCache = progressLogFile(problem)
     Misc.makeDir(progressCache.getParent)
