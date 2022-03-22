@@ -128,7 +128,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
               logger.info(s"Run ${initProblem.name}, drop ${nDrop} example, run ${i}.")
 
               val logDir = Paths.get(logRootDir.toString, problem.name)
-              runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString,
+              runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString, sig,
                 _exampleGenerator = Some(exampleGenerator))
             }
             else {
@@ -285,10 +285,12 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
     logger.info(s"${incompleteExamples.size} examples left.")
     val (newEdb, newIdb) = ExampleInstance.toEdbIdb(incompleteExamples)
     val newProblem: Problem = problem.copy(edb=newEdb, idb=newIdb)
-    runActiveLearning(newProblem, staticConfigRelations, nDrop, _logDir, _exampleGenerator = Some(exampleGenerator))
+    runActiveLearning(newProblem, staticConfigRelations, nDrop, _logDir, getProblemSignature(problem),
+      _exampleGenerator = Some(exampleGenerator))
   }
 
   def runActiveLearning(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String,
+                        sig: Int,
                        _exampleGenerator: Option[ExampleGenerator]=None): (Option[Program], Int, Double) = {
     Misc.makeDir(Paths.get(_logDir))
 
@@ -316,7 +318,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
         "numRuns" -> nRuns,
         "numQuereis" -> nQueries.sum,
         "time"->duration,
-        "sig"->getProblemSignature(problem),
+        "sig"->sig,
         "correctness"->correctness,
         "logDir"->logSubDir,
         "isTimeOut"->isTimeOut,
