@@ -97,10 +97,9 @@ object Main extends App {
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
       // outDir = s"results/random-drop")
       outDir = s"results-2/random-drop")
-    // val nDrops = List(1,3,5,7,9)
-    val nDrops = List(1,2,3,4,5)
-    experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
-    // experiment.run(Experiment.randomDropExperiments, repeats = repeats, numDropExamples=nDrops)
+    // val nDrops = List(1,2,3,4,5)
+    experiment.runRandomDrops(repeats = repeats)
+    // experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
   }
   else if (args(0) == "maketable") {
     require(args.size == 3)

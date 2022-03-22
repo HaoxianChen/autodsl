@@ -85,14 +85,17 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
                      maxQueries: Int = 10,
                      /** timeout in seconds */
                      timeout: Int = 60*60,
-                     logDir: String = s"/tmp/netspec") {
+                     logDir: String = s"/tmp/netspec",
+                     _exampleGenerator: Option[ExampleGenerator] = None) {
   private val logger = Logger("Active-learning")
   private val logRootDir: Path = Paths.get(logDir)
   Misc.makeDir(logRootDir)
 
   private val exampleTranslator = new ExampleTranslator(p0.inputRels, p0.outputRels)
 
-  private val exampleGenerator = new ExampleGenerator(p0.inputRels, staticConfigRelations, p0.edb, p0.idb)
+  private val exampleGenerator = if (_exampleGenerator.isDefined) _exampleGenerator.get
+    else new ExampleGenerator(p0.inputRels, staticConfigRelations, p0.edb, p0.idb)
+
   private val edbPool: ExamplePool = exampleGenerator.generateRandomInputs(numNewExamples)
   logger.info(s"Example pool size: ${edbPool.instances.size}.")
 
