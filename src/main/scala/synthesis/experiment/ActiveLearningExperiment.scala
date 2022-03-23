@@ -102,16 +102,16 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
           }
         }
 
-        for (i <- 0 until repeats) {
+        val minExampleSize: Int = initProblem.outputRels.size
+        val step: Int = (initExamples.size - minExampleSize) / 5
+        val allExampleSizes = (initExamples.size-1 to minExampleSize by -step).toList
+        for (nExamples <- allExampleSizes) {
+          for (i <- 0 until repeats) {
           var problem = initProblem
           var examples = initExamples
 
-          val minExampleSize: Int = problem.outputRels.size
-          val step: Int = (initExamples.size - minExampleSize) / 5
-          val allExampleSizes = (initExamples.size-1 to minExampleSize by -step).toList
           logger.info(s"Init example size ${initExamples.size}, Output relations: ${problem.outputRels.size} " +
             s",all example sizes: $allExampleSizes.")
-          for (nExamples <- allExampleSizes) {
             val nDrop = initExamples.size - nExamples
             val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, i)
             assert(enext.subsetOf(examples))
