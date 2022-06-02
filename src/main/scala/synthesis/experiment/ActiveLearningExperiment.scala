@@ -107,11 +107,11 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
         val allExampleSizes = (initExamples.size-1 to minExampleSize by -step).toList
         for (nExamples <- allExampleSizes) {
           for (i <- 0 until repeats) {
-          var problem = initProblem
-          var examples = initExamples
+            var problem = initProblem
+            var examples = initExamples
 
-          logger.info(s"Init example size ${initExamples.size}, Output relations: ${problem.outputRels.size} " +
-            s",all example sizes: $allExampleSizes.")
+            logger.info(s"Init example size ${initExamples.size}, Output relations: ${problem.outputRels.size} " +
+              s",all example sizes: $allExampleSizes.")
             val nDrop = initExamples.size - nExamples
             val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, i)
             assert(enext.subsetOf(examples))
@@ -442,12 +442,11 @@ object ActiveLearningExperiment {
     val allProblems = problemDirs.map(f=>Paths.get(benchmarkDir,f))
     for (problemFile <- allProblems) {
       val problem = Misc.readProblem(problemFile.toString)
-      // val resultDir = Paths.get(resultRootDir, problem.name)
       // val allFiles: List[String] = Misc.getListOfFiles(resultDir.toString)
       // val logFiles: List[String] = allFiles.filter(_.contains("result"))
       // val records: List[Map[String,String]] = logFiles.map(f => Paths.get(resultDir.toString,f).toString).
       //   map(fromFile)
-      allRecords ++=  ExperimentRecord.allRecords(problemFile.toString, problem)
+      allRecords ++=  ExperimentRecord.allRecords(resultRootDir, problem)
     }
 
     def _strToInt(_s: String): Int = _s match {
