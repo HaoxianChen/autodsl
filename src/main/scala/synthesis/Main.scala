@@ -101,16 +101,24 @@ object Main extends App {
     experiment.runRandomDrops(repeats = repeats)
     // experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
   }
-  else if (args(0) == "maketable") {
+  else if (args(0) == "maketable2") {
     require(args.size == 3)
     val _benchmarkDir = args(1)
     val _resultDir = args(2)
     ActiveLearningExperiment.makeAllTables(_benchmarkDir,_resultDir)
+    // SynthesisExperiment.generateTable(_benchmarkDir,_resultDir)
+  }
+  else if (args(0) == "maketable1") {
+    require(args.size == 3)
+    val _benchmarkDir = args(1)
+    val _resultDir = args(2)
+    SynthesisExperiment.generateTable(_benchmarkDir,_resultDir)
   }
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
-    val maxExamples: Int = args(2).toInt
+    // val maxExamples: Int = args(2).toInt
+    val maxExamples: Int = 400
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
     val (program, numRuns, nQueries, durations, correctness, isTimeOut, hasError, finalProblem) = learner.go()
     if (correctness) println(s"Correct solution") else println(s"Incorrect solution.")
