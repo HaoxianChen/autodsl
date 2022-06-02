@@ -29,7 +29,6 @@ Examples {
         packet_in(1,3,101,"h1","h2",806)
     }
     output {
-        packet_out(1,101,1)
     }
 
     // 3. An 806 packet from port 1, at switch 2
