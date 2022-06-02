@@ -184,7 +184,7 @@ class FaconExperiment(benchmarkDir: String, outDir: String)
     "aws/subnet",
     "aws/sshTunnel",
     "nod/protection",
-    // "nod/locality",
+    "nod/locality",
     // SDN
     // "forwarding/learning-switch",
     "forwarding/learning-switch-no-flood",
@@ -205,51 +205,6 @@ class AllSynthesisExperiments(benchmarkDir: String, outDir: String, repeats: Int
   val facon = new FaconExperiment(benchmarkDir, outDir = Paths.get(outDir, "facon").toString)
   val allProblems = netspec.allProblems
 
-  val recursion = Set(
-    "nib/reachable",
-    "nib/path",
-    "nib/path-cost",
-    "aws/sshTunnel",
-    "routing/shortest-path",
-    "routing/least-congestion"
-  ).map(s => Paths.get(netspec.getBenchmarkDir, s))
-  val aggregation = Set(
-    // consensus
-    "consensus/2pc-no-timer",
-    "consensus/paxos/paxos-quorum",
-    "consensus/paxos/paxos-value",
-    // routing
-    "routing/shortest-path",
-    "routing/least-congestion",
-    "routing/ospf-synnet",
-    "routing/bgp",
-    "routing/tree",
-    "routing/min-admin",
-    "routing/rip",
-  ).map(s => Paths.get(netspec.getBenchmarkDir, s))
-  val udf = Set(
-    "nib/path",
-    "nib/path-cost",
-    // consensus
-    "consensus/paxos/paxos-quorum",
-    // routing
-    "routing/shortest-path",
-    "routing/least-congestion",
-    "routing/ospf-synnet",
-    "routing/bgp",
-    "routing/tree",
-    "routing/min-admin",
-    "routing/rip",
-    // Wireless
-    "wireless/aodv/aodv-route",
-    "wireless/aodv/aodv-route-source",
-    "wireless/aodv/aodv-rrep",
-    "wireless/aodv/aodv-rreq",
-    "wireless/aodv/aodv-seq",
-    "wireless/dsdv",
-    "wireless/dsr"
-  ).map(s => Paths.get(netspec.getBenchmarkDir, s))
-
   val renaming = Map(
     "consensusbarrier" -> "consensus",
     "routingProto" -> "wireless",
@@ -258,51 +213,112 @@ class AllSynthesisExperiments(benchmarkDir: String, outDir: String, repeats: Int
   def run(): Unit = {
     netspec.run(update = false, repeats=repeats)
     facon.run(update = false, repeats=repeats)
-    generateTable()
   }
 
-  def generateTable(): Unit = {
-    val statLineNum: Int = 5
-    val stats = allProblems.map { problemDir =>
-      val problem: Problem = Misc.readProblem(problemDir.toString)
+  // def generateTable(): Unit = {
+  //   val statLineNum: Int = 5
+  //   val stats = allProblems.map { problemDir =>
+  //     val problem: Problem = Misc.readProblem(problemDir.toString)
 
-      // Read netspec's log file
-      val (netspecStat, correctness): (List[String], String) = {
-        val logfile: String = netspec.getOutFile(problem).toString
-        val logLines: List[String] = Source.fromFile(logfile).getLines().toList
-        val statLine = logLines(statLineNum)
-        val _correctness: String = {
-          logLines.filter(_.startsWith(s"correctness")).head.split(s":").last
-        }
-        (statLine.split("\t").toList, _correctness)
-      }
-      assert(netspecStat.length==15)
-      val names: List[String] = netspecStat.take(2)
-      val features: List[String] = netspecStat.slice(5,14)
-      val netSpecTime: String = if (netspecStat.last.toInt >0) netspecStat.last else 1.toString
+  //     // Read netspec's log file
+  //     val (netspecStat, correctness): (List[String], String) = {
+  //       val logfile: String = netspec.getOutFile(problem).toString
+  //       val logLines: List[String] = Source.fromFile(logfile).getLines().toList
+  //       val statLine = logLines(statLineNum)
+  //       val _correctness: String = {
+  //         logLines.filter(_.startsWith(s"correctness")).head.split(s":").last
+  //       }
+  //       (statLine.split("\t").toList, _correctness)
+  //     }
+  //     assert(netspecStat.length==15)
+  //     val names: List[String] = netspecStat.take(2)
+  //     val features: List[String] = netspecStat.slice(5,14)
+  //     val netSpecTime: String = if (netspecStat.last.toInt >0) netspecStat.last else 1.toString
 
-      val recur: String =  if (recursion.contains(problemDir)) "\\cmark" else " "
-      val agg: String =  if (aggregation.contains(problemDir)) "\\cmark" else " "
-      val _udf: String =  if (udf.contains(problemDir)) "\\cmark" else " "
+  //     // val recur: String =  if (recursion.contains(problemDir)) "\\cmark" else " "
+  //     // val agg: String =  if (aggregation.contains(problemDir)) "\\cmark" else " "
+  //     // val _udf: String =  if (udf.contains(problemDir)) "\\cmark" else " "
+  //     val recur: String =  ???
+  //     val agg: String =  ???
+  //     val _udf: String =  ???
 
-      val faconTime: String = {
-        if (facon.isResultExist(problem)) {
-          val logfile: String = facon.getOutFile(problem).toString
-          val stat: String = Source.fromFile(logfile).getLines().toList(statLineNum)
-          val time = stat.split("\t").last
-          if (time.toInt>0) time else 1.toString
-        }
-        else "-"
-      }
-      val times: List[String] = List(netSpecTime, faconTime, s"", s"") // place holders for the other two tools
-      val allStats: List[String] = (names ++ List(recur,agg,_udf) ++ features ++ times)  :+ correctness
-      assert(allStats.length==netspecStat.length+4)
-      allStats.mkString("\t")
-    }
-    val fileStr = stats.mkString("\n") + "\n"
-    // val outFile: Path = Paths.get("results", s"synthesis_all.log")
-    val outFile: Path = Paths.get(outDir, s"synthesis_all.log")
-    Misc.writeFile(fileStr, outFile)
-  }
+  //     val faconTime: String = {
+  //       if (facon.isResultExist(problem)) {
+  //         val logfile: String = facon.getOutFile(problem).toString
+  //         val stat: String = Source.fromFile(logfile).getLines().toList(statLineNum)
+  //         val time = stat.split("\t").last
+  //         if (time.toInt>0) time else 1.toString
+  //       }
+  //       else "-"
+  //     }
+  //     val times: List[String] = List(netSpecTime, faconTime, s"", s"") // place holders for the other two tools
+  //     val allStats: List[String] = (names ++ List(recur,agg,_udf) ++ features ++ times)  :+ correctness
+  //     assert(allStats.length==netspecStat.length+4)
+  //     allStats.mkString("\t")
+  //   }
+  //   val fileStr = stats.mkString("\n") + "\n"
+  //   // val outFile: Path = Paths.get("results", s"synthesis_all.log")
+  //   val outFile: Path = Paths.get(outDir, s"synthesis_all.log")
+  //   Misc.writeFile(fileStr, outFile)
+  // }
 }
 
+
+object SynthesisExperiment {
+  def makeTable(benchmarkDir: String, problemDirs: List[String], resultRootDir: String, outFileName: String): Unit = {
+    // var allRecords: List[List[String]] = List()
+    var allRecords: List[Map[String,String]] = List()
+    val allProblems = problemDirs.map(f=>Paths.get(benchmarkDir,f))
+    for (problemFile <- allProblems) {
+      val problem = Misc.readProblem(problemFile.toString)
+      val resultDir = Paths.get(resultRootDir, problem.domain)
+      allRecords ++=  ExperimentRecord.allRecords(resultDir.toString, problem)
+    }
+
+    def _strToInt(_s: String): Int = _s match {
+      case "true" => 1
+      case "false" => 0
+      case _ => {
+        assert(false)
+        -1
+      }
+    }
+    /*
+    "domain" -> problem.domain
+    "exp_name" -> "synthesis",
+    "relations" -> nTotal,
+    "inRel" -> nInputRels,
+    "outRel" -> nOutputRels,
+    "examples" -> problem.getNumExampleInstances,
+    "inTuples" -> nInputTuples,
+    "outTuples" -> nOutputTuples,
+    "totalTuples" -> nTotalTuples,
+    "time"->duration,
+    "sig"->getProblemSignature(problem),
+    "correctness"->isCorrect,
+    "rules" -> ruleCounts,
+    "literals" -> literalCounts,
+    "fields" -> fieldCounts
+    */
+
+    val statLines = allRecords.map { rc =>
+      val correctness = _strToInt(rc("correctness") )
+      List(rc("domain"), rc("problem"),
+        rc("examples"), rc("totalTuples"),
+        rc("time"), correctness,
+        rc("rules")
+      )
+    }.toList
+    val rawHeader = List("domain", "spec",
+      "examples", "tuples",
+      "time", "validated", "rules")
+    val rawFile = Paths.get(resultRootDir, s"${outFileName}_raw.csv")
+    Misc.writeFile((rawHeader +: statLines).map(_.mkString("\t")).mkString("\n"), rawFile)
+  }
+
+  def generateTable(benchmarkDir: String, resultRootDir: String): Unit = {
+    makeTable(benchmarkDir, Experiment.allProblemDirStr, Paths.get(resultRootDir, "synthesis").toString , "netspec")
+    makeTable(benchmarkDir, Experiment.allProblemDirStr, Paths.get(resultRootDir, "facon").toString , "facon")
+  }
+
+}

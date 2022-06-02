@@ -82,36 +82,35 @@ object Experiment {
     "wireless/dsdv",
     // "wireless/dsr"
     "wireless/dsr/dsr-rreq",
-    "wireless/dsr/dsr-rreq",
+    "wireless/dsr/dsr-rrep",
     "wireless/dsr/dsr-rerr",
   )
 
   val regressionTests :List[String] = List(
-    // // Network analysis
-    // "nib/reachable",
-    // "nib/path",
-    // "nib/path-cost",
-    // "aws/publicIP",
-    // "aws/subnet",
-    // "aws/sshTunnel",
-    // "nod/protection",
-    // "nod/locality",
-    // // SDN
-    // "forwarding/learning-switch",
-    // "forwarding/l2-pairs",
-    // "firewall/stateless-firewall",
-    // "firewall/stateful-firewall",
-    // "firewall/l3-firewall",
-    // "firewall/l3-stateful-firewall",
-    // // consensus
-    // "consensus/2pc-no-timer",
-    // "consensus/paxos/paxos-acceptor",
-    // "consensus/paxos/paxos-proposer",
-    // "consensus/paxos/paxos-quorum",
-    // // "consensus/paxos/paxos-value",
+    // Network analysis
+    "nib/reachable",
+    "nib/path",
+    "nib/path-cost",
+    "aws/publicIP",
+    "aws/subnet",
+    "aws/sshTunnel",
+    "nod/protection",
+    "nod/locality",
+    // SDN
+    "forwarding/learning-switch",
+    "forwarding/l2-pairs",
+    "firewall/stateless-firewall",
+    "firewall/stateful-firewall",
+    "firewall/l3-firewall",
+    "firewall/l3-stateful-firewall",
+    // consensus
+    "consensus/2pc-no-timer",
+    "consensus/paxos/paxos-acceptor",
+    "consensus/paxos/paxos-proposer",
+    "consensus/paxos/paxos-quorum",
     "consensus/paxos/paxos-maxballot",
-    // "consensus/paxos/paxos-decide",
-    // // routing
+    "consensus/paxos/paxos-decide",
+    // routing
     "routing/shortest-path",
     "routing/least-congestion",
     "routing/ospf-synnet",
@@ -119,18 +118,20 @@ object Experiment {
     "routing/tree",
     "routing/min-admin",
     "routing/rip",
-    // // Sensor network
-    // "sensor/evidence",
-    // "sensor/store",
-    // "sensor/temperature-report",
-    // // Wireless
+    // Sensor network
+    "sensor/evidence",
+    "sensor/store",
+    "sensor/temperature-report",
+    // Wireless
     // "wireless/aodv/aodv-route",
     // "wireless/aodv/aodv-route-source",
     // "wireless/aodv/aodv-rrep",
     // "wireless/aodv/aodv-rreq",
     // "wireless/aodv/aodv-seq",
-    // "wireless/dsdv",
-    // "wireless/dsr"
+    "wireless/dsdv",
+    "wireless/dsr/dsr-rreq",
+    "wireless/dsr/dsr-rreq",
+    "wireless/dsr/dsr-rerr",
   )
 
   val activelearningProblems :List[String] = List(
@@ -138,17 +139,23 @@ object Experiment {
     "forwarding/l2-pairs",
     "firewall/stateful-firewall",
     "firewall/l3-stateful-firewall",
+    "consensus/2pc-no-timer",
     // Consensus
     "consensus/paxos/paxos-proposer",
+    // routing
+    "routing/ospf-synnet",
+    "routing/bgp",
+    "routing/tree",
+    "routing/min-admin",
+    // "routing/rip",
     // Wireless
-    "wireless/aodv/aodv-route",
+    // "wireless/aodv/aodv-route",
     // "wireless/aodv/aodv-route-source",
-    "wireless/aodv/aodv-rrep",
-    "wireless/aodv/aodv-rreq",
+    // "wireless/aodv/aodv-rrep",
+    // "wireless/aodv/aodv-rreq",
     // "wireless/aodv/aodv-seq",
     "wireless/dsdv",
     // "wireless/dsr",
-    "consensus/2pc-no-timer",
   )
 
   val activeLearningWithOracle: List[String] = List(
@@ -158,6 +165,7 @@ object Experiment {
     "consensus/paxos/paxos-proposer",
     // routing
     "routing/min-admin",
+    "consensus/2pc-no-timer",
     // Wireless
     "wireless/aodv/aodv-route",
     // "wireless/aodv/aodv-route-source",
@@ -166,7 +174,6 @@ object Experiment {
     // "wireless/aodv/aodv-seq",
     "wireless/dsdv",
     // "wireless/dsr",
-    "consensus/2pc-no-timer",
     "routing/rip",
   )
 
@@ -177,12 +184,58 @@ object Experiment {
   )
 
   val debloatingExperiments: List[String] = List(
-    "forwarding/random-traces/pox-l2-pairs",
     "firewall/random-traces/floodlight-firewall",
     "firewall/random-traces/floodlight-stateful-firewall",
     "firewall/random-traces/pox-l3-firewall",
-    "firewall/random-traces/pox-l3-stateful-firewall"
+    "firewall/random-traces/pox-l3-stateful-firewall",
+    "forwarding/random-traces/pox-l2-pairs",
   )
+
+  val recursion = Set(
+    "nib/reachable",
+    "nib/path",
+    "nib/path-cost",
+    "aws/sshTunnel",
+    "routing/shortest-path",
+    "routing/least-congestion"
+  )
+  val aggregation = Set(
+    // consensus
+    "consensus/2pc-no-timer",
+    "consensus/paxos/paxos-quorum",
+    "consensus/paxos/paxos-value",
+    // routing
+    "routing/shortest-path",
+    "routing/least-congestion",
+    "routing/ospf-synnet",
+    "routing/bgp",
+    "routing/tree",
+    "routing/min-admin",
+    "routing/rip",
+  )
+  val udf = Set(
+    "nib/path",
+    "nib/path-cost",
+    // consensus
+    "consensus/paxos/paxos-quorum",
+    // routing
+    "routing/shortest-path",
+    "routing/least-congestion",
+    "routing/ospf-synnet",
+    "routing/bgp",
+    "routing/tree",
+    "routing/min-admin",
+    "routing/rip",
+    // Wireless
+    "wireless/aodv/aodv-route",
+    "wireless/aodv/aodv-route-source",
+    "wireless/aodv/aodv-rrep",
+    "wireless/aodv/aodv-rreq",
+    "wireless/aodv/aodv-seq",
+    "wireless/dsdv",
+    "wireless/dsr"
+  )
+
 
   def checkSolution(problemDir: String, solution: Program): Boolean = {
     val problem = Misc.readProblem(problemDir)
