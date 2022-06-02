@@ -89,6 +89,11 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
     else 0
   }
 
+  // def containsConstants: Boolean = {
+  //   def _containsConstants(literal: Literal) = literal.fields.exists(_.isInstanceOf[Constant])
+  //   _containsConstants(head) || body.exists(_containsConstants)
+  // }
+
   override def toString: String = {
     val mr = this.maskUngroundVars()
     if (mr.body.nonEmpty) {
@@ -246,6 +251,29 @@ case class Rule(head: Literal, body: Set[Literal], negations: Set[Literal]=Set()
 
   def isValid(): Boolean = isHeadBounded()
 }
+
+// object Rule {
+//   def renameConstantSymbols(rule: Rule): Rule = {
+//     def addDoubleQuotes(p: Parameter): Parameter = p match {
+//       case v:Variable => v
+//       case c:Constant => {
+//         if (c.name.forall(_.isDigit)) {c}
+//         else {Constant("\""+c.name+"\"",c._type)}
+//       }
+//     }
+//     def addDoubleQuotesToLiterals(literal: Literal): Literal = {
+//       val newFields = literal.fields.map(addDoubleQuotes)
+//       literal match {
+//         case sl: SimpleLiteral => sl.copy(fields = newFields)
+//         case al: AggregateLiteral => al.copy(fields = newFields)
+//         case fl: FunctorLiteral => fl.copy(fields = newFields)
+//       }
+//     }
+//     val newHead = addDoubleQuotesToLiterals(rule.head)
+//     val newBody = rule.body.map(addDoubleQuotesToLiterals)
+//     Rule(newHead, newBody)
+//   }
+// }
 
 case class Program(rules: Set[Rule]) extends Ordered[Program] {
   override def toString: String = rules.mkString("\n")

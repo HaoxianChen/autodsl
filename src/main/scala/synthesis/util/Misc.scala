@@ -61,6 +61,7 @@ object Misc {
     val p1 = if(oracleSpec.isDefined) {
       val _os = renameTypes(problem,oracleSpec.get)
       problem.addOracleSpec(_os)
+      // problem.addOracleSpec(oracleSpec.get)
     } else problem
 
     // Read Input Output examples
