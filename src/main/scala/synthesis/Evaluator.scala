@@ -86,8 +86,8 @@ case class Evaluator(problem: Problem) {
 
   def runSouffle(problemDir: Path, programPath: Path): Boolean = {
     val cmd = s"souffle ${programPath.toString} -F ${problemDir.toString} -D ${problemDir.toString}"
-    // val timeOut = 100 // timout after 100 milliseconds
-    val timeOut = 500 // timout after 500 milliseconds
+    // val timeOut = 500 // timout after 500 milliseconds
+    val timeOut = 5000 // timout after 5000 milliseconds
     val (exitcode, stdout, stderr, isTimeOut) = Misc.runWithTimeOut(cmd, timeOut)
     if (isTimeOut) {
       logger.warn(s"$cmd time out after $timeOut ms.")
