@@ -151,14 +151,13 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         nQueries :+= _newExamples.size
         durations :+= _duration
 
+        val (_valid, _optNextExample) = programValidator.differentiateFromReference(_p, problem.outputRels)
+        isValidated = _valid
+
         /** Distinguish from oracle and add new example if retry is enabled */
-        if (reTry) {
-          val (_valid, _optNextExample) = programValidator.differentiateFromReference(_p, problem.outputRels)
-          isValidated = _valid
-          if (_optNextExample.isDefined) {
-            newExamples += _optNextExample.get
-            problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
-          }
+        if (reTry && _optNextExample.isDefined) {
+          newExamples += _optNextExample.get
+          problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
         }
 
       }
