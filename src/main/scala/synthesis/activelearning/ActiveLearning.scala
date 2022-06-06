@@ -2,6 +2,7 @@ package synthesis.activelearning
 
 import com.typesafe.scalalogging.Logger
 import synthesis._
+import synthesis.experiment.ProgramValidator
 import synthesis.rulebuilder.InputAggregator
 import synthesis.search.{Synthesis, SynthesisConfigSpace}
 import synthesis.util.Misc
@@ -92,6 +93,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   Misc.makeDir(logRootDir)
 
   private val exampleTranslator = new ExampleTranslator(p0.inputRels, p0.outputRels)
+  private val programValidator = ProgramValidator(p0,staticConfigRelations)
 
   private val exampleGenerator = if (_exampleGenerator.isDefined) _exampleGenerator.get
     else new ExampleGenerator(p0.inputRels, staticConfigRelations, p0.edb, p0.idb)
@@ -147,7 +149,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         durations :+= _duration
 
         /** Distinguish from oracle */
-        val (_valid, _optNextExample) = differentiateFromOracle(_p, problem.outputRels)
+        val (_valid, _optNextExample) = programValidator.differentiateFromReference(_p, problem.outputRels)
         isValidated = _valid
         if (_optNextExample.isDefined) {
           newExamples += _optNextExample.get
@@ -335,41 +337,6 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     else {
       validCandidates
     }
-  }
-
-  def differentiateFromOracle(solution: Program, outRels: Set[Relation]= p0.outputRels):
-      (Boolean, Option[ExampleInstance]) = {
-    val newProblem = p0.copy(edb = edbPool.toExampleMap, idb=Examples())
-    val evaluator = EvaluatorWrapper(newProblem)
-    val idb = evaluator.eval(solution, outRels)
-    val refIdb = evaluator.eval(oracle, outRels)
-
-    var optExample: Option[ExampleInstance] = None
-    /** Find the next differentiating examples */
-    if (idb!=refIdb) {
-      logger.debug(s"Static relations: $staticConfigRelations.")
-      val idbById: Map[Int,Set[Tuple]] = idb.groupBy(_.fields.last.name.toInt)
-      val refById: Map[Int,Set[Tuple]] = refIdb.groupBy(_.fields.last.name.toInt)
-      val edbById: Map[Int,Set[Tuple]] = newProblem.edb.toTuples().groupBy(_.fields.last.name.toInt)
-      for ((i,out) <- idb.diff(refIdb).groupBy(_.fields.last.name.toInt) ) {
-        if (optExample.isEmpty) {
-          val ref = refById.getOrElse(i, Set())
-          val in = edbById(i)
-          optExample = Some(ExampleInstance(in,ref, i))
-          logger.debug(s"Differentiating example: $in, $ref, $out.")
-        }
-      }
-      for ((i,ref) <- refIdb.diff(idb).groupBy(_.fields.last.name.toInt) ) {
-        if (optExample.isEmpty) {
-          val out = idbById.getOrElse(i, Set())
-          val in = edbById(i)
-          optExample = Some(ExampleInstance(in,ref, i))
-          logger.debug(s"Differentiating example: $in, $ref, $out.")
-        }
-      }
-    }
-    val validated: Boolean = idb==refIdb
-    (validated, optExample)
   }
 
   def differentiate(candidates: List[Program], outRel: Relation): Option[TupleInstance] = {

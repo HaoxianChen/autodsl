@@ -1,6 +1,7 @@
 package synthesis.search
 
 import synthesis.activelearning.ActiveLearning
+import synthesis.experiment.ProgramValidator
 import synthesis.rulebuilder.{AggCount, AggMax, InputAggregator}
 import synthesis.{Problem, Program, Relation, Rule, Tuple}
 
@@ -52,11 +53,11 @@ object Synthesis {
 }
 
 case class SolutionChecker(problem: Problem, staticConfigs: Set[Relation]) {
-  private val activeLearner = new ActiveLearning(problem, staticConfigs, numNewExamples = 400)
+  private val programValidator = ProgramValidator(problem, staticConfigs)
   def check(allPrograms: Map[Relation, List[Program]]): Boolean = {
     var correct: Boolean = true
     for ((rel,ps) <- allPrograms) {
-      val (validated, _) = activeLearner.differentiateFromOracle(ps.head, outRels=Set(rel))
+      val (validated, _) = programValidator.differentiateFromReference(ps.head, outRels=Set(rel))
       if (!validated) {
         println(s"Incorrect solution $rel.")
         correct = false
@@ -65,7 +66,7 @@ case class SolutionChecker(problem: Problem, staticConfigs: Set[Relation]) {
     correct
   }
   def check(program: Program): Boolean = {
-    val (validated, _) = activeLearner.differentiateFromOracle(program)
+    val (validated, _) = programValidator.differentiateFromReference(program)
     validated
   }
 }

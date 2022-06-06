@@ -240,8 +240,8 @@ object Experiment {
   def checkSolution(problemDir: String, solution: Program): Boolean = {
     val problem = Misc.readProblem(problemDir)
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemDir)
-    val learner = new ActiveLearning(problem, staticConfigRelations, numNewExamples = 400)
-    val (validated, newExample) = learner.differentiateFromOracle(solution)
+    val programValidator = ProgramValidator(problem, staticConfigRelations)
+    val (validated, _) = programValidator.differentiateFromReference(solution)
     validated
   }
 
