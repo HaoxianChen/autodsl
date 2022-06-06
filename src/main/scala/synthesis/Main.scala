@@ -108,6 +108,15 @@ object Main extends App {
     ActiveLearningExperiment.makeAllTables(_benchmarkDir,_resultDir)
     // SynthesisExperiment.generateTable(_benchmarkDir,_resultDir)
   }
+  else if (args(0) == "tune-sample-size") {
+    require(args.size == 3)
+    val repeats = args(1).toInt
+    val _benchmarkDir = args(2)
+    val experiment = new ActiveLearningExperiment(_benchmarkDir,
+      outDir = s"results/tune-sample-size")
+    experiment.tuneSampleParameter(Experiment.activeLearningWithOracle, repeats=repeats,
+      numSamples = List(10))
+  }
   else if (args(0) == "maketable1") {
     require(args.size == 3)
     val _benchmarkDir = args(1)
@@ -117,8 +126,7 @@ object Main extends App {
   else if (args(0) == "active") {
     val problem = Misc.readProblem(args(1))
     val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(args(1))
-    // val maxExamples: Int = args(2).toInt
-    val maxExamples: Int = 400
+    val maxExamples: Int = args(2).toInt
     val learner = new ActiveLearning(problem, staticConfigRelations, maxExamples)
     val (program, numRuns, nQueries, durations, correctness, isTimeOut, hasError, finalProblem) = learner.go()
     if (correctness) println(s"Correct solution") else println(s"Incorrect solution.")

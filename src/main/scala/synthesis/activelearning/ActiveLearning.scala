@@ -118,7 +118,8 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
   def interactiveLearningWithOracle(initProblem: Problem,
                                     lastIters: Int = 0,
                                     lastQueries: List[Int] = List(),
-                                    lastDurations: List[Int] = List()):
+                                    lastDurations: List[Int] = List(),
+                                    reTry: Boolean = false):
   (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean, Problem)= {
     require(lastQueries.forall(_ <= maxQueries*initProblem.outputRels.size),
       s"Query number too big. Check the cache file. ${lastQueries}.")
@@ -126,7 +127,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     val maxIters = 10
     var problem = initProblem
     var hasTimeOut = false
-    var hasError = false
+    var hasError = true
     var solution: Option[Program] = None
     var newExamples: Set[ExampleInstance] = Set()
 
@@ -134,13 +135,15 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     var nQueries: List[Int] = lastQueries
     var durations: List[Int] = lastDurations
 
-    while (!isValidated && iters < maxIters && !hasError) {
+    // while (!isValidated && iters < maxIters && !hasError) {
+    while (iters < maxIters && hasError) {
       assert(nQueries.size==iters)
       assert(durations.size==iters)
 
       val (_p, _newExamples, _duration, _timeout, _error) = interactiveLearningAllRels(problem)
       hasTimeOut = _timeout
       hasError = _error
+
       if (!_error) {
         problem = _newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
         solution = Some(_p)
@@ -148,15 +151,19 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         nQueries :+= _newExamples.size
         durations :+= _duration
 
-        /** Distinguish from oracle */
-        val (_valid, _optNextExample) = programValidator.differentiateFromReference(_p, problem.outputRels)
-        isValidated = _valid
-        if (_optNextExample.isDefined) {
-          newExamples += _optNextExample.get
-          problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
+        /** Distinguish from oracle and add new example if retry is enabled */
+        if (reTry) {
+          val (_valid, _optNextExample) = programValidator.differentiateFromReference(_p, problem.outputRels)
+          isValidated = _valid
+          if (_optNextExample.isDefined) {
+            newExamples += _optNextExample.get
+            problem = exampleTranslator.updateProblem(problem, _optNextExample.get)
+          }
         }
-        iters += 1
+
       }
+
+      iters += 1
     }
     val latestProblem = newExamples.foldLeft(initProblem)(exampleTranslator.updateProblem)
     (solution, iters, nQueries, durations, isValidated, hasTimeOut, hasError, latestProblem)

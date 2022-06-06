@@ -139,23 +139,16 @@ object Experiment {
     "forwarding/l2-pairs",
     "firewall/stateful-firewall",
     "firewall/l3-stateful-firewall",
-    "consensus/2pc-no-timer",
     // Consensus
+    "consensus/2pc-no-timer",
     "consensus/paxos/paxos-proposer",
     // routing
     "routing/ospf-synnet",
     "routing/bgp",
     "routing/tree",
     "routing/min-admin",
-    // "routing/rip",
     // Wireless
-    // "wireless/aodv/aodv-route",
-    // "wireless/aodv/aodv-route-source",
-    // "wireless/aodv/aodv-rrep",
-    // "wireless/aodv/aodv-rreq",
-    // "wireless/aodv/aodv-seq",
     "wireless/dsdv",
-    // "wireless/dsr",
   )
 
   val activeLearningWithOracle: List[String] = List(

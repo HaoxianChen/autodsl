@@ -62,6 +62,12 @@ object ExperimentRecord {
     validRecords.size
   }
 
+  def recordsBySamples(outDir: String, problem: Problem, sig: Int, nSamples: Int): List[Map[String,String]] = {
+    val validRecords = allRecords(outDir,problem).filter(_("sig").toInt == sig).
+      filter(_.getOrElse("maxExamples","-1").toInt == nSamples)
+    validRecords
+  }
+
   def allRecords(outDir: String, problem: Problem): List[Map[String,String]] = {
     val problemDir = Paths.get(outDir, problem.name)
     val allFiles: List[String] = Misc.getListOfFiles(problemDir.toString)
