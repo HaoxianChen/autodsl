@@ -83,7 +83,7 @@ case class EvaluatorWrapper (problem: Problem)  {
 }
 
 class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 20,
-                     maxQueries: Int = 10,
+                     // maxQueries: Int = 10,
                      /** timeout in seconds */
                      timeout: Int = 60*60,
                      logDir: String = s"/tmp/netspec",
@@ -121,8 +121,8 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
                                     lastDurations: List[Int] = List(),
                                     reTry: Boolean = false):
   (Option[Program], Int, List[Int], List[Int], Boolean, Boolean, Boolean, Problem)= {
-    require(lastQueries.forall(_ <= maxQueries*initProblem.outputRels.size),
-      s"Query number too big. Check the cache file. ${lastQueries}.")
+    // require(lastQueries.forall(_ <= maxQueries*initProblem.outputRels.size),
+    //   s"Query number too big. Check the cache file. ${lastQueries}.")
     var isValidated = false
     val maxIters = 10
     var problem = initProblem
@@ -137,8 +137,8 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
 
     // while (!isValidated && iters < maxIters && !hasError) {
     while (iters < maxIters && hasError) {
-      assert(nQueries.size==iters)
-      assert(durations.size==iters)
+      // assert(nQueries.size==iters)
+      // assert(durations.size==iters)
 
       val (_p, _newExamples, _duration, _timeout, _error) = interactiveLearningAllRels(problem)
       hasTimeOut = _timeout
@@ -237,10 +237,11 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
         else logger.debug(s"new example: ${nextExample.get}")
       }
     }
-    while (candidates.size > 1 && nextExample.isDefined && newExamples.size < maxQueries &&
+    while (candidates.size > 1 && nextExample.isDefined &&
+        // newExamples.size < maxQueries &&
         remainingTime > 10 && !hasError)
 
-    if (newExamples.size >= maxQueries) logger.warn(s"Stopped at max queries ${maxQueries}.")
+    // if (newExamples.size >= maxQueries) logger.warn(s"Stopped at max queries ${maxQueries}.")
     if (isTimeOut) logger.warn(s"Timeout after $timeout seconds.")
     val totalDuration = timeout - remainingTime
 
