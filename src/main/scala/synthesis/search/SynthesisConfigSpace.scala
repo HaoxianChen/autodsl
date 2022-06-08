@@ -14,6 +14,8 @@ case class SynthesisConfigSpace(allConfigs: List[SynthesisConfigs]) {
     get_config()
   }
 
+  def hasNewConfigs: Boolean = current_config_id < allConfigs.size - 1
+
   def isEmpty: Boolean = allConfigs.isEmpty
 }
 object SynthesisConfigSpace {

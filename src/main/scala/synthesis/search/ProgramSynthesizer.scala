@@ -84,15 +84,14 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     var config = configSpace.get_config()
     var ans: List[Program] = List()
 
-    do {
-      ans = _learnNPrograms(idb)
+    ans = _learnNPrograms(idb)
 
-      if (ans.isEmpty) {
-        config = configSpace.next_config()
-        logger.info(s"Increase config space ${config}")
-        programBuilder = ProgramBuilder(problem, config)
-      }
-    } while (ans.isEmpty)
+    while(ans.isEmpty && configSpace.hasNewConfigs) {
+      config = configSpace.next_config()
+      logger.info(s"Increase config space ${config}")
+      programBuilder = ProgramBuilder(problem, config)
+      ans = _learnNPrograms(idb)
+    }
     ans
   }
 
@@ -251,7 +250,13 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     // validPrograms.toList.map(_.program).sortWith(_<_)
 
     // val allValidPrograms = simplerAlternatives(validPrograms.map(_.program), idb)
-    val allValidPrograms = simplerAlternatives(validPrograms.map(p => Program(p.program.rules++validRules)), idb)
+    val allValidPrograms = if (validPrograms.nonEmpty) {
+      simplerAlternatives(validPrograms.map(p => Program(p.program.rules++validRules)), idb)
+    }
+    else {
+      Set()
+    }
+
     logger.info(s"Found ${allValidPrograms.size} programs after ${iters} iterations.")
     val programsSorted = allValidPrograms.toList.sortWith(_<_)
     programsSorted
@@ -429,6 +434,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
   }
 
   def simplerAlternatives(programs: Set[Program], idb: Set[Tuple]): Set[Program] = {
+    require(programs.nonEmpty)
     if (programs.exists(isAggProgram)) {
       programs ++ programs.flatMap(simplerAlternatives)
     }
