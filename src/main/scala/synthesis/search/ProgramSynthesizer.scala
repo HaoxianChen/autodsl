@@ -132,15 +132,17 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     ) {
       val baseProgram: ScoredProgram = next.get
       assert(!expandedPrograms.contains(baseProgram.program))
+      expandedPrograms += baseProgram.program
+      programPool -= baseProgram
 
       val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, remainingIdb, validRules).diff(evaluatedPrograms)
       val (refinedPrograms, isBaseProgramExhausted) = if (allRefinedPrograms.size > maxBranching) {
         (Misc.sampleSet(allRefinedPrograms, maxBranching), false)
       } else (allRefinedPrograms, true)
-      if (isBaseProgramExhausted) {
-        expandedPrograms += baseProgram.program
-        programPool -= baseProgram
-      }
+      // if (isBaseProgramExhausted) {
+      //   expandedPrograms += baseProgram.program
+      //   programPool -= baseProgram
+      // }
 
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
         diff(expandedPrograms).
