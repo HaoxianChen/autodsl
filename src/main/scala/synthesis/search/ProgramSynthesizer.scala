@@ -131,17 +131,15 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     ) {
       val baseProgram: ScoredProgram = next.get
       assert(!expandedPrograms.contains(baseProgram.program))
-      expandedPrograms += baseProgram.program
-      programPool -= baseProgram
 
       val allRefinedPrograms: Set[Program] = refineProgram(baseProgram, remainingIdb, validRules).diff(evaluatedPrograms)
       val (refinedPrograms, isBaseProgramExhausted) = if (allRefinedPrograms.size > maxBranching) {
         (Misc.sampleSet(allRefinedPrograms, maxBranching), false)
       } else (allRefinedPrograms, true)
-      // if (isBaseProgramExhausted) {
-      //   expandedPrograms += baseProgram.program
-      //   programPool -= baseProgram
-      // }
+      if (isBaseProgramExhausted) {
+        expandedPrograms += baseProgram.program
+        programPool -= baseProgram
+      }
 
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
         diff(expandedPrograms).
@@ -170,6 +168,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
           .filter(needsRefinement)
         expandedPrograms = Set()
         evaluatedPrograms = Set()
+
+        /** Reset reference IDB as the set of tuples not covered yet. */
         remainingIdb = updateIdb(validRules, idb)
         logger.info(s"Update remaining idb ${extraIters} iterations, and reset program pool")
         extraIters = 0
@@ -251,7 +251,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
     // val allValidPrograms = simplerAlternatives(validPrograms.map(_.program), idb)
     val allValidPrograms = if (validPrograms.nonEmpty) {
-      simplerAlternatives(validPrograms.map(p => Program(p.program.rules++validRules)), idb)
+      simplerAlternatives(validPrograms, validRules, idb)
+      // simplerAlternatives(validPrograms.map(p => Program(p.program.rules++validRules)), idb)
     }
     else {
       Set()
@@ -325,7 +326,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     val refinedPrograms: Set[Program] = refineARule(program, idb, validRules)
 
     // if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program) && !isRecursive(program)) {
-    if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {
+    val ret = if (isComplete(program) && scoredProgram.recall <= 1-1e-4 && !isAggProgram(program)) {
       if (hasAggregator || scoredProgram.precision >= 1.0) {
         logger.info(s"Add a rule. ${program.rules.size} rules.")
         val addedRule = addARule(program, validRules, idb)
@@ -344,6 +345,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     else {
       refinedPrograms
     }
+    /** Make sure the base program does not appear in the set of refined programs */
+    ret.diff(Set(scoredProgram.program))
   }
 
   def isRecursive(program: Program): Boolean = program.rules.exists(_.isRecursive())
@@ -433,18 +436,43 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     program.rules.filter(r => relationWithAlternatives.contains(r.head.relation))
   }
 
-  def simplerAlternatives(programs: Set[Program], idb: Set[Tuple]): Set[Program] = {
+  // def simplerAlternatives(programs: Set[Program], idb: Set[Tuple]): Set[Program] = {
+  def simplerAlternatives(programs: Set[ScoredProgram], validRules: Set[Rule], idb: Set[Tuple]): Set[Program] = {
     require(programs.nonEmpty)
-    if (programs.exists(isAggProgram)) {
-      programs ++ programs.flatMap(simplerAlternatives)
+
+    def addValidRules(scoredProgram: ScoredProgram): Program = {
+      if (idb.subsetOf(scoredProgram.idb)) {
+        scoredProgram.program
+      }
+      else {
+        Program(scoredProgram.program.rules ++ validRules)
+      }
+    }
+
+    val fullPrograms: Set[Program] = programs.map(addValidRules)
+
+    if (programs.exists(sp => isAggProgram(sp.program))) {
+      fullPrograms ++ fullPrograms.flatMap(simplerAlternatives)
     }
     else {
-      val allRules = programs.flatMap(_.rules)
+      val allRules = fullPrograms.flatMap(_.rules)
       require(allRules.map(_.head.relation).size==1)
       val sorted = ruleHelper.combineRules(allRules, idb)
       sorted.take(25).flatMap(p=>(simplerAlternatives(p) + p)).toSet
     }
   }
+  // def simplerAlternatives(programs: Set[Program], idb: Set[Tuple]): Set[Program] = {
+  //   require(programs.nonEmpty)
+  //   if (programs.exists(isAggProgram)) {
+  //     programs ++ programs.flatMap(simplerAlternatives)
+  //   }
+  //   else {
+  //     val allRules = programs.flatMap(_.rules)
+  //     require(allRules.map(_.head.relation).size==1)
+  //     val sorted = ruleHelper.combineRules(allRules, idb)
+  //     sorted.take(25).flatMap(p=>(simplerAlternatives(p) + p)).toSet
+  //   }
+  // }
 
   def simplerAlternatives(program: Program): Set[Program] = {
     val rulesWithAlternatives = getRulesWithAlternatives(program)
