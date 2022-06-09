@@ -78,10 +78,12 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
           if (!correctness) {
             val records = ExperimentRecord.recordsBySamples(outDir,problem,getProblemSignature(problem),nSamples=nSamples)
-            var nSuccessRuns: Int = records.count(_.getOrElse("correctness","false")=="true")
+            var nSuccessRuns: Int = records.count(_("correctness")=="true")
+            var nFailedRuns: Int = records.count(_("correctness")=="false")
+            assert(nSuccessRuns + nFailedRuns == records.size)
             val rc = records.size
 
-            if (rc < repeats) {
+            if (rc < repeats && nFailedRuns <= 0) {
               areAllResultsReady = false
               logger.info(s"Run ${problem.name} with ${nSamples} random samples for ${repeats-rc} times.")
 
@@ -89,17 +91,22 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
               /** how many examples can be sustain? */
 
-              for (i <- 1 to repeats-rc) {
+              // for (i <- 1 to repeats-rc) {
+              var i = 0
+              while (i < repeats - rc && nFailedRuns <= 0) {
                 logger.info(s"iteration $i")
                 val (_,_,_,_correctness) = runActiveLearning(problem, staticConfigRelations, nDrop = 0, logDir, getProblemSignature(problem),
                   _exampleGenerator = None, _maxExamples = nSamples)
 
-                if (_correctness) nSuccessRuns += 1
+                if (_correctness) nSuccessRuns += 1 else nFailedRuns += 1
+                i += 1
               }
             }
-            else {
+            else if (rc == repeats) {
               logger.info(s"${problem.name} with ${nSamples} random examples have $rc results already. Skip.")
             }
+
+            if (nFailedRuns > 0) logger.info(s"${problem.name} with ${nSamples} random examples has ${nFailedRuns} failed runs already. Skip.")
 
             correctness = nSuccessRuns == repeats
 
