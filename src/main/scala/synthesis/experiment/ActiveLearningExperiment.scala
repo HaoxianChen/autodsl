@@ -102,7 +102,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
                 i += 1
               }
             }
-            else if (rc == repeats) {
+            else if (rc >= repeats) {
               logger.info(s"${problem.name} with ${nSamples} random examples have $rc results already. Skip.")
             }
 
