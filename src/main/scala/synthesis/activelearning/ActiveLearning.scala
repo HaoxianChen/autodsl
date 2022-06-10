@@ -357,17 +357,33 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     }
     assert(edbPool.instances.size == numNewExamples)
 
-    val evalResults: Set[(TupleInstance, List[TupleInstance])] = evalCandidatePrograms(edbPool, candidates, outRel)
-    val edbEntropy: Set[(TupleInstance, Double)] = evalResults.map {
-      case (t1, ts) => (t1, entropy(ts))
-    }
-    val bestEdb = edbEntropy.maxBy(_._2)
+    // val evalResults: Set[(TupleInstance, List[TupleInstance])] = evalCandidatePrograms(edbPool, candidates, outRel)
 
-    if (bestEdb._2 > 0) {
-      logger.debug(s"New edb: $bestEdb")
-      Some(bestEdb._1)
+    val samplesPerRun = 20000
+
+    for (edbUnit <- edbPool.instances.grouped(samplesPerRun)) {
+      val evalResults: Set[(TupleInstance, List[TupleInstance])] = evalCandidatePrograms(ExamplePool(edbUnit), candidates, outRel)
+      val edbEntropy: Set[(TupleInstance, Double)] = evalResults.map {
+        case (t1, ts) => (t1, entropy(ts))
+      }
+      val bestEdb = edbEntropy.maxBy(_._2)
+      if (bestEdb._2 > 0) {
+        logger.debug(s"New edb: $bestEdb")
+        return Some(bestEdb._1)
+      }
     }
-    else None
+
+    // val edbEntropy: Set[(TupleInstance, Double)] = evalResults.map {
+    //   case (t1, ts) => (t1, entropy(ts))
+    // }
+    // val bestEdb = edbEntropy.maxBy(_._2)
+
+    // if (bestEdb._2 > 0) {
+    //   logger.debug(s"New edb: $bestEdb")
+    //   Some(bestEdb._1)
+    // }
+    // else None
+    None
   }
 
   def evalCandidatePrograms(edbPool: ExamplePool, candidates: List[Program], outRel:Relation): Set[(TupleInstance, List[TupleInstance])] = {
