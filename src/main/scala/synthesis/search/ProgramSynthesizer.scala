@@ -251,7 +251,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
     // val allValidPrograms = simplerAlternatives(validPrograms.map(_.program), idb)
     val allValidPrograms = if (validPrograms.nonEmpty) {
-      simplerAlternatives(validPrograms, validRules, idb)
+      val _programsToSimplify = validPrograms.toList.sorted.take(10).toSet
+      simplerAlternatives(_programsToSimplify, validRules, idb)
       // simplerAlternatives(validPrograms.map(p => Program(p.program.rules++validRules)), idb)
     }
     else {
@@ -438,6 +439,7 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
   // def simplerAlternatives(programs: Set[Program], idb: Set[Tuple]): Set[Program] = {
   def simplerAlternatives(programs: Set[ScoredProgram], validRules: Set[Rule], idb: Set[Tuple]): Set[Program] = {
+    logger.debug(s"${programs.size} programs to simplify.")
     require(programs.nonEmpty)
 
     def addValidRules(scoredProgram: ScoredProgram): Program = {
