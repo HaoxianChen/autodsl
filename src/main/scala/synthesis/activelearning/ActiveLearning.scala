@@ -177,14 +177,24 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     var hasError: Boolean = false
     var newExamples: Set[ExampleInstance] = Set()
     var duration: Int = 0
+    var remainingTime: Int = timeout
+
+    /** Each relation has at least have some minutes to solve */
+    val minDuration: Int = 5 * 60
 
     for (rel <- p0.outputRels) {
-      if (!hasError) {
-        val (sol, _newExamples, _duration, _to, _err) = interactiveLearning(rel, problem)
+      if (!hasError && remainingTime > 0) {
+        val (sol, _newExamples, _duration, _to, _err) = interactiveLearning(rel, problem, remainingTime)
         if (_to) isTimeOut = true
         if (_err) hasError = true
         solutions += sol
         duration += _duration
+
+        remainingTime = {
+          val _rt =  remainingTime - _duration
+          if (_rt > minDuration) _rt else minDuration
+        }
+
         problem = _newExamples.foldLeft(problem)(exampleTranslator.updateProblem)
         newExamples ++= _newExamples
       }
@@ -197,6 +207,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
 
 
   def interactiveLearning(outRel: Relation, initProblem: Problem,
+                         _remainingTime: Int,
                          ):
                          (Program, Set[ExampleInstance], Int, Boolean, Boolean) = {
     require(initProblem.outputRels.contains(outRel))
@@ -209,7 +220,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     var nextExample: Option[ExampleInstance] = None
     var newExamples: Set[ExampleInstance] = Set()
 
-    var remainingTime: Int = timeout
+    var remainingTime: Int = _remainingTime
     var isTimeOut: Boolean = false
     var hasError: Boolean = false
     logger.info(s"Timeout in $remainingTime seconds.")
