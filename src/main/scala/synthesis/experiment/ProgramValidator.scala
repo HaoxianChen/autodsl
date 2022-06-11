@@ -4,7 +4,7 @@ import synthesis.activelearning.{EvaluatorWrapper, ExampleGenerator, ExampleInst
 import synthesis.{Examples, Problem, Program, Relation, Tuple}
 import com.typesafe.scalalogging.Logger
 
-case class ProgramValidator(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 400) {
+case class ProgramValidator(p0: Problem, staticConfigRelations: Set[Relation], numNewExamples: Int = 10000) {
   private val logger = Logger("Program-validator")
 
   private val reference = p0.oracleSpec.get
