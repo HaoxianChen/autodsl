@@ -117,7 +117,7 @@ object Main extends App {
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
       outDir = s"results/tune-sample-size")
     experiment.tuneSampleParameter(Experiment.activelearningProblems, repeats=repeats,
-      numSamples = List(1,10,100,1000,10000,100000))
+      numSamples = List(1,10,100,1000,10000,100000,1000000))
   }
   else if (args(0) == "maketable1") {
     require(args.size == 3)
