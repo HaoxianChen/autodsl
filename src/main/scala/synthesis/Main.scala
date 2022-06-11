@@ -36,11 +36,13 @@ object Main extends App {
     var literalCounts: Int = 0
     var fieldCounts: Int = 0
     for ((rel,ps)<-programs) {
-      val p = ps.head
-      literalCounts += p.literalCounts
-      fieldCounts += p.fieldCounts
-      println(s"$rel: ${ps.size} programs, smallest one contains ${p.literalCounts} literals")
-      println(p)
+      if (ps.nonEmpty) {
+        val p = ps.head
+        literalCounts += p.literalCounts
+        fieldCounts += p.fieldCounts
+        println(s"$rel: ${ps.size} programs, smallest one contains ${p.literalCounts} literals")
+        println(p)
+      }
     }
     println(s"${literalCounts} literals, ${fieldCounts} fields.")
   }
