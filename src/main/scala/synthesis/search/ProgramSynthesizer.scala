@@ -142,9 +142,9 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
       }
 
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
-        diff(expandedPrograms).
         // map(p => Program(p.rules++validRules)).
         map(p => Program(p.rules++validRules++newValidRules)).
+        diff(expandedPrograms).
         map(p => evalProgram(p, validRules, remainingIdb))
       val toRefine = candidatePrograms.filter(needsRefinement)
 
