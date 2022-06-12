@@ -267,7 +267,6 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
     logger.info(s"Found ${allValidPrograms.size} programs after ${iters} iterations.")
     val programsSorted = allValidPrograms.toList.sortWith(_<_)
-    assert(programsSorted.nonEmpty)
     programsSorted
   }
 

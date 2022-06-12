@@ -349,6 +349,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
       // Keep at most 100 new candidates
       val newCandidates = synthesizer.go()(outRel).take(maxNewCandidates)
       configSpace = synthesizer.getConfigSpace
+      assert(newCandidates.nonEmpty)
       require(newCandidates.forall(p=>isProgramValid(p, problem)))
       validCandidates ++ newCandidates
     }
