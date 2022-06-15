@@ -79,8 +79,9 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
           if (!correctness) {
             val records = ExperimentRecord.recordsBySamples(outDir,problem,getProblemSignature(problem),nSamples=nSamples)
             var nSuccessRuns: Int = records.count(_("correctness")=="true")
-            var nFailedRuns: Int = records.count(_("correctness")=="false")
-            assert(nSuccessRuns + nFailedRuns == records.size)
+            // var nFailedRuns: Int = records.count(_("correctness")=="false")
+            var nFailedRuns: Int = records.count(r=>r("correctness")=="false"&&r("isTimeOut")=="true")
+            // assert(nSuccessRuns + nFailedRuns == records.size)
             val rc = records.size
 
             if (rc < repeats && nFailedRuns <= 0) {
@@ -95,10 +96,11 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
               var i = 0
               while (i < repeats - rc && nFailedRuns <= 0) {
                 logger.info(s"iteration $i")
-                val (_,_,_,_correctness) = runActiveLearning(problem, staticConfigRelations, nDrop = 0, logDir, getProblemSignature(problem),
+                val (_,_,_,_isTimeOut,_correctness) = runActiveLearning(problem, staticConfigRelations, nDrop = 0, logDir, getProblemSignature(problem),
                   _exampleGenerator = None, _maxExamples = nSamples)
 
-                if (_correctness) nSuccessRuns += 1 else nFailedRuns += 1
+                if (_correctness) nSuccessRuns += 1
+                else if (!_isTimeOut) nFailedRuns += 1
                 i += 1
               }
             }
@@ -278,7 +280,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
   }
 
   def randomDrop(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String):
-      (Option[Program], Int, Double, Boolean) = {
+      (Option[Program], Int, Double, Boolean, Boolean) = {
     logger.info(s"Randomly drop ${nDrop} examples.")
     val examples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(problem.edb, problem.idb)
     val n_remains = examples.size - nDrop
@@ -296,10 +298,11 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       _exampleGenerator = Some(exampleGenerator))
   }
 
+  /** returns (program, nQueries.sum, duration, isTimeOut, correctness) */
   def runActiveLearning(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String,
                         sig: Int,
                        _exampleGenerator: Option[ExampleGenerator]=None,
-                        _maxExamples: Int = maxExamples): (Option[Program], Int, Double, Boolean) = {
+                        _maxExamples: Int = maxExamples): (Option[Program], Int, Double, Boolean, Boolean) = {
     Misc.makeDir(Paths.get(_logDir))
 
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
@@ -345,7 +348,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
       /** Dump the progress */
       logProgress(progressCache, finalProblem, nRuns, nQueries, _allDurations, correctness)
     }
-    (program, nQueries.sum, duration, correctness)
+    (program, nQueries.sum, duration, isTimeOut, correctness)
   }
 
 
