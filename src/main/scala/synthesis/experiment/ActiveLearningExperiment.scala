@@ -80,7 +80,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
             val records = ExperimentRecord.recordsBySamples(outDir,problem,getProblemSignature(problem),nSamples=nSamples)
             var nSuccessRuns: Int = records.count(_("correctness")=="true")
             // var nFailedRuns: Int = records.count(_("correctness")=="false")
-            var nFailedRuns: Int = records.count(r=>r("correctness")=="false"&&r("isTimeOut")=="true")
+            var nFailedRuns: Int = records.count(r=>r("correctness")=="false"&&r("isTimeOut")=="false")
             // assert(nSuccessRuns + nFailedRuns == records.size)
             val rc = records.size
 
