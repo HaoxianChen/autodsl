@@ -41,7 +41,8 @@ Examples {
     // No local note take the spine route. No violation.
     input {
         // router, s,d
-        route(3,5,3)
+        route(3,5,3),
+        route(1,2,3)
     }
     output {
     }
