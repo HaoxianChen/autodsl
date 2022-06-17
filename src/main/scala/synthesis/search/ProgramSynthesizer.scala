@@ -143,8 +143,9 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
       val candidatePrograms: Set[ScoredProgram] = refinedPrograms.
         // map(p => Program(p.rules++validRules)).
-        map(p => Program(p.rules++validRules++newValidRules)).
+        // map(p => Program(p.rules++validRules++newValidRules)).
         diff(expandedPrograms).
+        // map(p => evalProgram(p, validRules++newValidRules, remainingIdb))
         map(p => evalProgram(p, validRules, remainingIdb))
       val toRefine = candidatePrograms.filter(needsRefinement)
 
@@ -508,7 +509,9 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     val perfectPrecision = scoredPrograms.filterNot(p=>isAggProgram(p.program))
       .filter(_.completeness >= 1.0)
       .filter(_.precision >= 1.0)
-    perfectPrecision.flatMap(_.program.rules)
+    // perfectPrecision.flatMap(_.program.rules)
+    /** Keep only non-recursive rules. */
+    perfectPrecision.flatMap(_.program.rules).filterNot(_.isRecursive())
   }
 }
 
