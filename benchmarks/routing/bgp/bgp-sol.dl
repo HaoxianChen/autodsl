@@ -18,7 +18,8 @@ Route(node,network,path,cost,i) :-
   Neighbor(node, nextHop, cost1,i),
   ConnectedRoute(nextHop, network, path2, cost2,i),
   cost = cost1 + cost2,
-  path = cat(node, path2).
+  path = cat(node, path2),
+  !contains(as(node,symbol),as(path2,symbol)).
 
 minCost(node, network, mc,i) :- Route(node, network, _, _,i), 
   mc = min c: Route(node, network, _, c,i).
