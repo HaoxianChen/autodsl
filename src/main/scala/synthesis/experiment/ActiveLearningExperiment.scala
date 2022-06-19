@@ -70,14 +70,14 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
         val logDir = Paths.get(logRootDir.toString, problem.name).toString
 
-        var correctness: Boolean = false
+        var isStop: Boolean = false
         var hasTimeOut: Boolean = false
 
         for (nSamples <- numSamples) {
 
           /** If consistently succeed with smaller sample number */
 
-          if (!correctness) {
+          if (!isStop) {
             val records = ExperimentRecord.recordsBySamples(outDir,problem,getProblemSignature(problem),nSamples=nSamples)
             var nSuccessRuns: Int = records.count(_("correctness")=="true")
             // var nFailedRuns: Int = records.count(_("correctness")=="false")
@@ -115,7 +115,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
 
             if (nFailedRuns > 0) logger.info(s"${problem.name} with ${nSamples} random examples has ${nFailedRuns} failed runs already. Skip.")
 
-            correctness = nSuccessRuns == repeats
+            isStop = (nSuccessRuns == repeats) || (nFailedRuns <= 0 && hasTimeOut)
 
           }
         }
