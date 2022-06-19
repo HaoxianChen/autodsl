@@ -86,7 +86,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 400, out
             // assert(nSuccessRuns + nFailedRuns == records.size)
             val rc = records.size
 
-            if (rc < repeats && nFailedRuns <= 0 && !hasTimeOut) {
+            if (rc < repeats && nFailedRuns <= 0) {
               areAllResultsReady = false
               logger.info(s"Run ${problem.name} with ${nSamples} random samples for ${repeats-rc} times.")
 
