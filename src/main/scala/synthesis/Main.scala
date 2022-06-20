@@ -79,6 +79,7 @@ object Main extends App {
     val repeats = args(1).toInt
     val _benchmarkDir = args(2)
     val experiment = new ActiveLearningExperiment(_benchmarkDir,
+      maxExamples = 100000,
       // outDir = s"results/active-learning")
       outDir = s"results-2/active-learning")
     experiment.run(Experiment.activelearningProblems, repeats)
