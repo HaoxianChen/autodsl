@@ -135,20 +135,30 @@ object Experiment {
   )
 
   val activelearningProblems :List[String] = List(
+    // NIB
+    "aws/subnet",
+    "aws/sshTunnel",
+    "nod/protection",
+    "nod/locality",
     // SDN
+    "forwarding/learning-switch",
     "forwarding/l2-pairs",
     "firewall/stateful-firewall",
     "firewall/l3-stateful-firewall",
-    // Consensus
-    "consensus/2pc-no-timer",
-    "consensus/paxos/paxos-proposer",
-    // routing
-    "routing/ospf-synnet",
-    "routing/bgp",
-    "routing/tree",
-    "routing/min-admin",
+    // sensor
+    "sensor/temperature-report",
     // Wireless
     "wireless/dsdv",
+    // Consensus
+    "consensus/2pc-no-timer",
+    "consensus/paxos/paxos-acceptor",
+    "consensus/paxos/paxos-proposer",
+    // routing
+    "routing/tree",
+    "routing/ospf-synnet",
+    "routing/bgp",
+    "routing/min-admin",
+    "routing/rip",
   )
 
   val activeLearningWithOracle: List[String] = List(
