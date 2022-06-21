@@ -175,7 +175,8 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 10000, o
         }
 
         val minExampleSize: Int = initProblem.outputRels.size
-        val step: Int = (initExamples.size - minExampleSize) / 5
+        val range = initExamples.size - minExampleSize
+        val step: Int = if (range > 5) range / 5 else 1
         val allExampleSizes = (initExamples.size-1 to minExampleSize by -step).toList
         for (nExamples <- allExampleSizes) {
           for (i <- 0 until repeats) {
