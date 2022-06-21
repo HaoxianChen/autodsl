@@ -11,7 +11,7 @@ import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
 import scala.util.Random
 
-class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 10000, outDir: String = "results/active-learning",
+class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, outDir: String = "results/active-learning",
                                /** timeout in seconds */
                                timeout: Int= 60 * 60,
                                _logRootDir: String = "/tmp/netspec/")
