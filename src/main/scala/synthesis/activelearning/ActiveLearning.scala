@@ -87,13 +87,15 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
                      /** timeout in seconds */
                      timeout: Int = 60*60,
                      logDir: String = s"/tmp/netspec",
-                     _exampleGenerator: Option[ExampleGenerator] = None) {
+                     _exampleGenerator: Option[ExampleGenerator] = None,
+                     _programValidator: Option[ProgramValidator] = None) {
   private val logger = Logger(s"Active-learning ($numNewExamples)")
   private val logRootDir: Path = Paths.get(logDir)
   Misc.makeDir(logRootDir)
 
   private val exampleTranslator = new ExampleTranslator(p0.inputRels, p0.outputRels)
-  private val programValidator = ProgramValidator(p0,staticConfigRelations)
+  private val programValidator = if (_programValidator.isDefined) _programValidator.get
+    else ProgramValidator(p0,staticConfigRelations)
 
   private val exampleGenerator = if (_exampleGenerator.isDefined) _exampleGenerator.get
     else new ExampleGenerator(p0.inputRels, staticConfigRelations, p0.edb, p0.idb)

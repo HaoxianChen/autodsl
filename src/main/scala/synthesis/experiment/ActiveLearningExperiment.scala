@@ -143,6 +143,8 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
         val staticConfigRelations: Set[Relation] = Misc.readStaticRelations(problemFile.toString)
         val initExamples: Set[ExampleInstance] = ExampleInstance.fromEdbIdb(initProblem.edb, initProblem.idb)
 
+        val programValidator = ProgramValidator(initProblem, staticConfigRelations)
+
         /** Use all original example to build example pool. */
         val exampleGenerator = new ExampleGenerator(initProblem.inputRels, staticConfigRelations,
           initProblem.edb, initProblem.idb)
@@ -212,7 +214,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
 
               val logDir = Paths.get(logRootDir.toString, problem.name)
               runActiveLearning(problem, staticConfigRelations, nDrop = nDrop, logDir.toString, sig,
-                _exampleGenerator = Some(exampleGenerator))
+                _exampleGenerator = Some(exampleGenerator), _programValidator = Some(programValidator))
             }
             else {
               logger.info(s"${initProblem.name} drop ${nDrop} run ${i} has results already. Skip.")
@@ -320,13 +322,14 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
   def runActiveLearning(problem: Problem, staticConfigRelations: Set[Relation], nDrop: Int, _logDir: String,
                         sig: Int,
                        _exampleGenerator: Option[ExampleGenerator]=None,
+                        _programValidator: Option[ProgramValidator]=None,
                         _maxExamples: Int = maxExamples): (Option[Program], Int, Double, Boolean, Boolean) = {
     Misc.makeDir(Paths.get(_logDir))
 
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
     val learner = new ActiveLearning(problem, staticConfigRelations, _maxExamples, timeout=timeout,
-      logDir=logSubDir.toString, _exampleGenerator=_exampleGenerator)
+      logDir=logSubDir.toString, _exampleGenerator=_exampleGenerator, _programValidator=_programValidator)
 
     val progressCache = progressLogFile(problem)
     Misc.makeDir(progressCache.getParent)
