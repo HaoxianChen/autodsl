@@ -147,12 +147,22 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
         val exampleGenerator = new ExampleGenerator(initProblem.inputRels, staticConfigRelations,
           initProblem.edb, initProblem.idb)
 
-        def nextProblemAndExamples(prevProblem: Problem, prevExamples: Set[ExampleInstance],
-                                   nDrop: Int, runId: Int): (Problem, Set[ExampleInstance]) = {
+        def nextProblemAndExamples(prevProblem: Problem, initExamples: Set[ExampleInstance],
+                                   nDrop: Int, step: Int, runId: Int): (Problem, Set[ExampleInstance]) = {
           val exampleDir = Paths.get(problemOutDir.toString, s"drop_${nDrop}_examples_run${runId}")
           if (Files.notExists(exampleDir)) {
             /** Sample from previous examples */
             Misc.makeDir(exampleDir)
+
+            val prevExampleDir = Paths.get(problemOutDir.toString, s"drop_${nDrop-step}_examples_run${runId}")
+            val prevExamples = if (Files.exists(prevExampleDir)) {
+              val p0 = initProblem.copy(edb = Examples(), idb = Examples())
+              val next_problem = Misc.readExamples(p0, prevExampleDir.toString)
+              logger.debug(s"read previous examples from $prevExampleDir")
+              ExampleInstance.fromEdbIdb(next_problem.edb, next_problem.idb)
+            }
+            else initExamples
+
             val nextExampleSize = initExamples.size - nDrop
             assert(nextExampleSize < prevExamples.size)
             assert(nextExampleSize > 0)
@@ -168,7 +178,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
             val next_problem = Misc.readExamples(p0, exampleDir.toString)
             val next_examples = ExampleInstance.fromEdbIdb(next_problem.edb, next_problem.idb)
             assert(next_examples.size == initExamples.size - nDrop)
-            assert(next_examples.subsetOf(prevExamples))
+            assert(next_examples.subsetOf(initExamples))
             logger.info(s"Load examples from ${exampleDir}")
             (next_problem, next_examples)
           }
@@ -186,7 +196,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
             logger.info(s"Init example size ${initExamples.size}, Output relations: ${problem.outputRels.size} " +
               s",all example sizes: $allExampleSizes.")
             val nDrop = initExamples.size - nExamples
-            val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, i)
+            val (pnext, enext) = nextProblemAndExamples(problem, examples, nDrop, step, i)
             assert(enext.subsetOf(examples))
             assert(enext.size < examples.size)
             assert(enext.size == initExamples.size - nDrop)
