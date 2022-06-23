@@ -5,9 +5,6 @@ import com.typesafe.scalalogging.Logger
 import synthesis.util.Misc
 import Evaluator.tmpdir
 
-import java.io.File
-import scala.reflect.io.Directory
-
 case class Evaluator(problem: Problem) {
   private var cache: Map[Program, Examples] = Map()
   private val logger = Logger(s"Evaluator")
@@ -206,13 +203,4 @@ case class Evaluator(problem: Problem) {
 
 object Evaluator {
   val tmpdir = Paths.get("/tmp/souffle/")
-  private val logger = Logger("Evaluator Object")
-
-  def clearEvaluatorTmpFiles(): Unit = {
-    logger.info(s"Clear tmp directory: $tmpdir")
-    val directory = new Directory(new File(tmpdir.toString))
-    directory.deleteRecursively()
-    logger.info(s"Done.")
-  }
-
 }

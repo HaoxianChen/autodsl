@@ -118,6 +118,10 @@ object Main extends App {
       maxExamples = 100000,
       outDir = s"results/random-drop")
     experiment2.runRandomDrops(repeats = repeats)
+
+    val experiment3 = new ActiveLearningExperiment(_benchmarkDir,
+      outDir="results/debloat")
+    experiment3.run(Experiment.debloatingExperiments,repeats = repeats)
   }
   else if (args(0) == "maketable2") {
     require(args.size == 3)

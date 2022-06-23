@@ -20,6 +20,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
 
   logger.info(s"max examples: $maxExamples.")
 
+  Misc.deleteDir(_logRootDir)
   private val logRootDir = Paths.get(_logRootDir)
   Misc.makeDir(logRootDir)
   Misc.makeDir(Paths.get(outDir))
@@ -328,7 +329,7 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
     Misc.makeDir(Paths.get(_logDir))
 
     /** clear evaluator cache */
-    if (clearEvaluatorCache) Evaluator.clearEvaluatorTmpFiles()
+    if (clearEvaluatorCache) Misc.deleteDir(Evaluator.tmpdir.toString)
 
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))

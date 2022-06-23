@@ -1,6 +1,6 @@
 package synthesis.util
 
-import synthesis.activelearning.ExampleInstance
+import com.typesafe.scalalogging.Logger
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Path, Paths}
@@ -11,11 +11,14 @@ import synthesis.{NumberType, Parser, Problem, Relation, SymbolType}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.io.Source
+import scala.reflect.io.Directory
 import scala.sys.process.{ProcessLogger, _}
 import scala.util.Random
 
 
 object Misc {
+  private val logger = Logger("Misc")
+
   def getListOfFiles(dir: String): List[String] = {
     val d = new File(dir)
     if (d.exists && d.isDirectory) {
@@ -144,6 +147,15 @@ object Misc {
       if (!dir.toFile.mkdir()) {
         throw new RuntimeException(s"Failed to create directory ${dir.toString}.")
       }
+    }
+  }
+
+  def deleteDir(dir: String): Unit = {
+    if (Files.exists(Paths.get(dir))) {
+      logger.info(s"Deleting directory $dir ...")
+      val directory = new Directory(new File(dir))
+      directory.deleteRecursively()
+      logger.info(s"Done.")
     }
   }
 
