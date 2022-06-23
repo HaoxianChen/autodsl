@@ -104,6 +104,21 @@ object Main extends App {
     experiment.runRandomDrops(repeats = repeats)
     // experiment.runRandomDrops(repeats = repeats, nDrops=nDrops)
   }
+  else if (args(0) == "all") {
+    require(args.size == 3)
+    val repeats = args(1).toInt
+    val _benchmarkDir = args(2)
+
+    val experiment1 = new ActiveLearningExperiment(_benchmarkDir,
+      maxExamples = 100000,
+      outDir = s"results/active-learning")
+    experiment1.run(Experiment.activelearningProblems, repeats)
+
+    val experiment2 = new ActiveLearningExperiment(_benchmarkDir,
+      maxExamples = 100000,
+      outDir = s"results/random-drop")
+    experiment2.runRandomDrops(repeats = repeats)
+  }
   else if (args(0) == "maketable2") {
     require(args.size == 3)
     val _benchmarkDir = args(1)

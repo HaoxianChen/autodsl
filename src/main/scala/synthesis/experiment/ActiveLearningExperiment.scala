@@ -5,7 +5,7 @@ import synthesis.activelearning.{ActiveLearning, ExampleGenerator, ExampleInstan
 import synthesis.experiment.ActiveLearningExperiment.sampleFromSet
 import synthesis.experiment.ExperimentRecord.{fromFile, recordsBySamples}
 import synthesis.util.Misc
-import synthesis.{Examples, Problem, Program, Relation}
+import synthesis.{Evaluator, Examples, Problem, Program, Relation}
 
 import java.nio.file.{Files, Path, Paths}
 import scala.io.Source
@@ -323,8 +323,12 @@ class ActiveLearningExperiment(benchmarkDir: String, maxExamples: Int = 100000, 
                         sig: Int,
                        _exampleGenerator: Option[ExampleGenerator]=None,
                         _programValidator: Option[ProgramValidator]=None,
-                        _maxExamples: Int = maxExamples): (Option[Program], Int, Double, Boolean, Boolean) = {
+                        _maxExamples: Int = maxExamples,
+                        clearEvaluatorCache: Boolean = true): (Option[Program], Int, Double, Boolean, Boolean) = {
     Misc.makeDir(Paths.get(_logDir))
+
+    /** clear evaluator cache */
+    if (clearEvaluatorCache) Evaluator.clearEvaluatorTmpFiles()
 
     // val logSubDir: Path = Paths.get(logRootDir.toString, problem.name, Misc.getTimeStamp(sep = "-"))
     val logSubDir: Path = Paths.get(_logDir, Misc.getTimeStamp(sep = "-"))
