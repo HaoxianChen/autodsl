@@ -279,6 +279,7 @@ case class Program(rules: Set[Rule]) extends Ordered[Program] {
   override def toString: String = rules.mkString("\n")
   val literalCounts: Int = rules.toList.map(_.body.size).sum
   val fieldCounts: Int = rules.toList.flatMap(_.body.toList.map(_.fields.size)).sum
+  val constantCounts: Int = rules.toList.map(_.getConstantList.size).sum
   val incompleteRules: Set[Rule] = rules.filterNot(_.isHeadBounded())
   val isComplete: Boolean = incompleteRules.isEmpty
   def getAllRelations: Set[Relation] = rules.flatMap(_.getAllRelations())
@@ -290,6 +291,8 @@ case class Program(rules: Set[Rule]) extends Ordered[Program] {
     else if (this.rules.size > that.rules.size) 1
     else if (this.literalCounts < that.literalCounts) -1
     else if (this.literalCounts > that.literalCounts) 1
+    else if (this.constantCounts < that.constantCounts) -1
+    else if (this.constantCounts > that.constantCounts) 1
     else 0
   }
 }

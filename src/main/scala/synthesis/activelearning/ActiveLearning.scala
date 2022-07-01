@@ -259,7 +259,7 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     val totalDuration = timeout - remainingTime
 
     if (candidates.nonEmpty && !hasError) {
-      val bestProgram = candidates.maxBy(scoreProgram)
+      val bestProgram = candidates.min
       logger.info(s"Solution: $bestProgram")
       (bestProgram, newExamples, totalDuration, isTimeOut, hasError)
     }
@@ -439,11 +439,6 @@ class ActiveLearning(p0: Problem, staticConfigRelations: Set[Relation], numNewEx
     else {
       None
     }
-  }
-
-  def scoreProgram(program: Program): Int = {
-    /** todo: use better metric. */
-    -program.rules.size
   }
 
 }
