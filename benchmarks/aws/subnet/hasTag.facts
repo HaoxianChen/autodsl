@@ -1,6 +1,7 @@
-1	"bastion"	0
-1	"bastion"	1
-1	"bastion"	2
-1	"null"	4
-1	"bastion"	5
-2	"bastion"	6
+1	bastion	0
+1	bastion	1
+1	bastion	2
+1	null	4
+1	bastion	5
+2	bastion	6
+3	bastion2	6

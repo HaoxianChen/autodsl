@@ -55,7 +55,9 @@ Examples {
     // 4b. Other instances
     input {
         hasSubnet(1,"web"),
-        hasTag(2,"bastion")
+        hasSubnet(2,"web2"),
+        hasTag(2,"bastion"),
+        hasTag(3,"bastion2")
     }
     output {
     }
