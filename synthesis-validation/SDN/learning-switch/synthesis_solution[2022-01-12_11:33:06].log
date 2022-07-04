@@ -1,0 +1,3 @@
+flowMod(switch0,mac1,mac0,port0,instanceid0) :- map(switch0,mac0,port0,instanceid0),packet(switch0,_,mac1,mac0,instanceid0).
+new_map(switch0,mac0,port0,instanceid0) :- packet(switch0,port0,mac0,_,instanceid0).
+flood(switch0,mac0,mac1,instanceid0) :- packet(switch0,_,mac0,mac1,instanceid0),!map(switch0,mac1,_,instanceid0).

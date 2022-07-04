@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/acceptor/2022-06-21_08-44-40,
+ "numQuereis" : 14,
+ "problem" : "acceptor",
+ "maxExamples" : 100000,
+ "sig" : -1586939077,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 192.305615289,
+ "timeout" : 3600,
+ "correctness" : false,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

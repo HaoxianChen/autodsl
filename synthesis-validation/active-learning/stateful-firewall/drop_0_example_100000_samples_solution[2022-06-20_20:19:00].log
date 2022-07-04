@@ -1,0 +1,5 @@
+flowMod(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),trusted(switch0,host0,instanceid0),port1(port1,instanceid0),host0 != host1,switch1(switch0,instanceid0),port2(port0,instanceid0).
+new_trusted(switch0,host1,instanceid0) :- packet(switch0,port0,_,host1,instanceid0),port1(port0,instanceid0),switch1(switch0,instanceid0).
+forward(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),switch1(switch0,instanceid0),port1(port0,instanceid0),host0 != host1,port2(port1,instanceid0).
+flowMod(switch0,host1,host0,port1,instanceid0) :- switch1(switch0,instanceid0),packet(switch0,port0,host1,host0,instanceid0),port1(port0,instanceid0),host0 != host1,port2(port1,instanceid0).
+forward(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),trusted(switch0,host0,instanceid0),port1(port1,instanceid0),host0 != host1,switch1(switch0,instanceid0),port2(port0,instanceid0).

@@ -1,0 +1,18 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+SDN	stateless-firewall				3	2	3	8	25	3	9	3	12	4
+
+correctness:1
+stateless-firewall
+5 Relations (3, 2)
+12 examples (9, 3).
+3 example instances.
+forward(Switch,Host,Host,Port,InstanceId): 9 programs, smallest one contains 3 literals.
+forward(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),port2(port1,instanceid0),port1(port0,instanceid0).
+flowMod(Switch,Host,Host,Port,InstanceId): 15 programs, smallest one contains 5 literals.
+flowMod(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),port1(port0,instanceid0),port2(port1,instanceid0).
+flowMod(switch0,host1,host0,port0,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),port1(port0,instanceid0).
+sig:2018462038

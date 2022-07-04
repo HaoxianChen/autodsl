@@ -1,0 +1,1 @@
+reachable(instance0,e0,instanceid0) :- hasEni(instance0,e0,instanceid0),reachPublicTcpUdp(_,_,e0,port0,address0,_,instanceid0),isSshPort(port0,instanceid0),isPublicIP(address0,instanceid0).

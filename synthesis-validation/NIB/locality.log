@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	locality				3	1	1	5	12	5	20	1	21	2
+
+correctness:1
+locality
+4 Relations (3, 1)
+21 examples (20, 1).
+5 example instances.
+violation(Address,Address,InstanceId): 13 programs, smallest one contains 5 literals.
+violation(address2,address3,instanceid0) :- !router0 != router1,local(address2,instanceid0),local(address3,instanceid0),spine(router1,instanceid0),route(router0,address2,address3,instanceid0).
+sig:-782343036

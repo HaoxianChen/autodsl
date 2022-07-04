@@ -1,0 +1,2 @@
+send_2a(ballot0,value0,instanceid0) :- maxPreBallot(ballot0,_,ballot1,value0,instanceid0),hasQuorum(ballot0,instanceid0),!null_ballot(ballot1,instanceid0).
+send_2a(ballot0,value1,instanceid0) :- hasQuorum(ballot0,instanceid0),maxPreBallot(ballot0,_,ballot1,_,instanceid0),propose(ballot0,value1,instanceid0),null_ballot(ballot1,instanceid0).

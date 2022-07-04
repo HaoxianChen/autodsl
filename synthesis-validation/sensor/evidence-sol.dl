@@ -1,0 +1,7 @@
+.decl tempLog(x0:number,x1:number,x2:number)
+.decl pressLog(x0:number,x1:number,x2:number)
+.decl evidence(x0:number,x1:number,x2:number)
+.input tempLog
+.input pressLog
+evidence(temp0,press0,instanceid0) :- pressLog(time0,press0,instanceid0),tempLog(time0,temp0,instanceid0).
+.output evidence

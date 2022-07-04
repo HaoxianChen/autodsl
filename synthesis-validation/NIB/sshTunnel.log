@@ -1,0 +1,16 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	sshTunnel				1	1	2	4	12	1	7	18	25	2
+
+correctness:1
+sshTunnel
+2 Relations (1, 1)
+25 examples (7, 18).
+1 example instances.
+canSshTunnel(Node,Node,InstanceId): 14 programs, smallest one contains 4 literals.
+canSshTunnel(node2,node1,instanceid0) :- canSsh(node2,node1,instanceid0).
+canSshTunnel(node2,node1,instanceid0) :- canSsh(node0,node1,instanceid0),canSsh(node2,_,instanceid0),canSshTunnel(node2,node0,instanceid0).
+sig:-2000472940

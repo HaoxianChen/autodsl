@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+routingProto	dsr-rrep				2	1	1	2	7	2	4	1	5	2
+
+correctness:1
+dsr-rrep
+3 Relations (2, 1)
+5 examples (4, 1).
+2 example instances.
+newRoute(Node,NodeList,InstanceId): 9 programs, smallest one contains 2 literals.
+newRoute(node1,nodelist0,instanceid0) :- recvRREP(node0,node1,nodelist0,_,instanceid0),this(node0,instanceid0).
+sig:2034807482

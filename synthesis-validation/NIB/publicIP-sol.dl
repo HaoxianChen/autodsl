@@ -1,0 +1,11 @@
+.decl hasEni(x0:number,x1:number,x2:number)
+.decl isPublicIP(x0:number,x1:number)
+.decl isSshPort(x0:number,x1:number)
+.decl reachPublicTcpUdp(x0:number,x1:number,x2:number,x3:number,x4:number,x5:number,x6:number)
+.decl reachable(x0:number,x1:number,x2:number)
+.input hasEni
+.input isPublicIP
+.input isSshPort
+.input reachPublicTcpUdp
+reachable(instance0,e0,instanceid0) :- isSshPort(port0,instanceid0),reachPublicTcpUdp(_,_,e0,port0,address0,_,instanceid0),isPublicIP(address0,instanceid0),hasEni(instance0,e0,instanceid0).
+.output reachable

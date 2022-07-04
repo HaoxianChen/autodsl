@@ -1,0 +1,4 @@
+flow_mod_l3(switch0,ip1,ip0,port1,instanceid0) :- ip0 != ip1,switch1(switch0,instanceid0),port2(port1,instanceid0),port1(port0,instanceid0),packet_in_l3(switch0,port0,_,ip1,ip0,instanceid0).
+flow_mod_l3(switch0,ip0,ip1,port1,instanceid0) :- ip0 != ip1,port1(port1,instanceid0),trusted_hosts(ip0,instanceid0),packet_in_l3(switch0,port0,_,ip0,ip1,instanceid0),switch1(switch0,instanceid0),port2(port0,instanceid0).
+drop_l3(switch0,ip0,ip1,instanceid0) :- packet_in_l3(switch0,port0,_,ip0,ip1,instanceid0),port2(port0,instanceid0),switch1(switch0,instanceid0),!trusted_hosts(ip0,instanceid0).
+new_trusted_hosts(ip0,instanceid0) :- ip0 != ip1,switch1(switch0,instanceid0),!trusted_hosts(ip0,instanceid0),port1(port0,instanceid0),packet_in_l3(switch0,port0,_,ip1,ip0,instanceid0).

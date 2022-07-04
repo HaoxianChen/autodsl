@@ -1,0 +1,1 @@
+evidence(temp0,press0,instanceid0) :- tempLog(time0,temp0,instanceid0),pressLog(time0,press0,instanceid0).

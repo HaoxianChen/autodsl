@@ -1,0 +1,21 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+SDN	stateful-firewall				5	3	5	25	68	15	72	6	78	10
+
+correctness:0
+stateful-firewall
+8 Relations (5, 3)
+78 examples (72, 6).
+15 example instances.
+forward(Switch,Host,Host,Port,InstanceId): 12 programs, smallest one contains 12 literals.
+forward(switch0,host0,host1,port1,instanceid0) :- host1 != host0,trusted(switch0,host0,instanceid0),packet(_,port0,host0,host1,instanceid0),port1(port1,instanceid0),switch1(switch0,instanceid0),port2(port0,instanceid0).
+forward(switch0,host1,host0,port1,instanceid0) :- switch1(switch0,instanceid0),port1(port0,instanceid0),host0 != host1,port2(port1,instanceid0),!trusted(switch0,host0,instanceid0),packet(switch0,port0,host1,host0,instanceid0).
+new_trusted(Switch,Host,InstanceId): 10 programs, smallest one contains 3 literals.
+new_trusted(switch0,host1,instanceid0) :- packet(switch0,port0,_,host1,instanceid0),port1(port0,instanceid0),switch1(switch0,instanceid0).
+flowMod(Switch,Host,Host,Port,InstanceId): 13 programs, smallest one contains 10 literals.
+flowMod(switch0,host0,host1,port1,instanceid0) :- host1 != host0,packet(switch0,port0,host0,host1,instanceid0),trusted(switch0,host0,instanceid0),port2(port0,instanceid0),port1(port1,instanceid0).
+flowMod(switch0,host0,host1,port1,instanceid0) :- host1 != host0,packet(switch0,port0,host0,host1,instanceid0),switch1(switch0,instanceid0),port1(port0,instanceid0),port2(port1,instanceid0).
+sig:-1082096146

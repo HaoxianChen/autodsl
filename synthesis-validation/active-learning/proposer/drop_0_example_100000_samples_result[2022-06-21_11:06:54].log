@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/proposer/2022-06-21_10-56-51,
+ "numQuereis" : 26,
+ "problem" : "proposer",
+ "maxExamples" : 100000,
+ "sig" : 1331829329,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 601.756450724,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

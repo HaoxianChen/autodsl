@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/learning-switch/2022-06-20_19-31-18,
+ "numQuereis" : 6,
+ "problem" : "learning-switch",
+ "maxExamples" : 100000,
+ "sig" : -1538976002,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 57.697928729,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

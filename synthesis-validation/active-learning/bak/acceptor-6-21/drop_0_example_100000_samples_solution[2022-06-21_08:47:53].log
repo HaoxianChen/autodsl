@@ -1,0 +1,5 @@
+send_2b(ballot0,node0,value1,instanceid0) :- aState(node0,ballot0,_,_,instanceid0),receive_2a(ballot0,value1,instanceid0).
+new_aState(node0,ballot1,ballot0,value1,instanceid0) :- receive_2a(ballot0,value1,instanceid0),!ballot1 > ballot0,aState(node0,ballot1,_,value0,instanceid0),!receive_1a(ballot0,instanceid0),!value0 > value1.
+new_aState(node0,ballot0,ballot1,value0,instanceid0) :- aState(node0,ballot0,_,value1,instanceid0),receive_2a(ballot1,value0,instanceid0),!ballot0 > ballot1,receive_1a(ballot0,instanceid0),!value1 > value0.
+send_1b(ballot0,node0,ballot1,value0,instanceid0) :- receive_1a(ballot0,instanceid0),aState(node0,ballot1,_,value0,instanceid0),ballot0 > ballot1.
+new_aState(node0,ballot2,ballot1,value0,instanceid0) :- aState(node0,ballot0,ballot1,value0,instanceid0),receive_1a(ballot2,instanceid0),ballot2 > ballot0.

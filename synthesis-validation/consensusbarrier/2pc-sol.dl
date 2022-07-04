@@ -1,0 +1,16 @@
+.decl Peers(x0:symbol,x1:symbol,x2:number)
+.decl no_vote(x0:symbol,x1:symbol,x2:number)
+.decl prepare(x0:symbol,x1:number)
+.decl coordinator(x0:symbol,x1:number)
+.decl yes_vote(x0:symbol,x1:symbol,x2:number)
+.decl commit(x0:symbol,x1:number)
+.decl abort(x0:symbol,x1:number)
+.input prepare
+.input yes_vote
+.input Peers
+.input no_vote
+.input coordinator
+commit(node0,instanceid0) :- Peers_cnt12(node3,instanceid0,count0),prepare(node0,instanceid0),Peers(node0,node3,instanceid0),!no_vote(_,_,instanceid0),yes_vote_cnt02(node0,instanceid0,count0).
+abort(node1,instanceid0) :- Peers(node0,node1,instanceid0),no_vote(node1,node0,instanceid0),prepare(node1,instanceid0).
+.output commit
+.output abort

@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/firewall-l3/2022-06-21_20-31-33,
+ "numQuereis" : 8,
+ "problem" : "firewall-l3",
+ "maxExamples" : 100000,
+ "sig" : -1425657979,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 136.240960873,
+ "timeout" : 3600,
+ "correctness" : false,
+ "exp_name" : "drop_13_example_100000_samples",
+ "numDrop" : 13}

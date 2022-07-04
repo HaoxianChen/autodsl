@@ -1,0 +1,2 @@
+canSshTunnel(node0,node1,instanceid0) :- canSsh(node0,node1,instanceid0).
+canSshTunnel(node0,node2,instanceid0) :- canSshTunnel(node0,node1,instanceid0),canSsh(node1,node2,instanceid0).

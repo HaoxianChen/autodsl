@@ -1,0 +1,19 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+SDN	learning-switch				2	3	3	5	23	4	7	8	15	7
+
+correctness:1
+learning-switch
+5 Relations (2, 3)
+15 examples (7, 8).
+4 example instances.
+flowMod(Switch,Mac,Mac,Port,InstanceId): 11 programs, smallest one contains 2 literals.
+flowMod(switch0,mac0,mac1,port1,instanceid0) :- packet(switch0,_,mac0,mac1,instanceid0),map(switch0,mac1,port1,instanceid0).
+new_map(Switch,Mac,Port,InstanceId): 7 programs, smallest one contains 1 literals.
+new_map(switch0,mac0,port0,instanceid0) :- packet(switch0,port0,mac0,_,instanceid0).
+flood(Switch,Mac,Mac,InstanceId): 15 programs, smallest one contains 2 literals.
+flood(switch0,mac0,mac1,instanceid0) :- packet(switch0,_,mac0,mac1,instanceid0),!map(switch0,mac1,_,instanceid0).
+sig:-1538976002

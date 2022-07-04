@@ -1,0 +1,13 @@
+.decl null_ballot(x0:number,x1:number)
+.decl receive_1b(x0:number,x1:symbol,x2:number,x3:number,x4:number)
+.decl maxBallot(x0:number,x1:number,x2:number)
+.decl maxAccBallot(x0:number,x1:symbol,x2:number,x3:number,x4:number)
+.decl _maxAccBallot(x0:number,x1:symbol,x2:number,x3:number,x4:number)
+.input null_ballot
+.input receive_1b
+maxBallot(ballot0,instanceid0,min_ballot) :- _maxAccBallot(ballot0,_,_,_,instanceid0),min_ballot = max c : _maxAccBallot(ballot0,_,c,_,instanceid0).
+maxAccBallot(ballot0,node0,ballot1,value0,instanceid0) :- _maxAccBallot(ballot0,node0,ballot1,value0,instanceid0),maxBallot(ballot0,instanceid0,ballot1).
+_maxAccBallot(ballot0,node0,ballot1,value0,instanceid0) :- receive_1b(ballot0,node0,ballot1,value0,instanceid0),!null_ballot(ballot0,instanceid0).
+.output maxBallot
+.output maxAccBallot
+.output _maxAccBallot

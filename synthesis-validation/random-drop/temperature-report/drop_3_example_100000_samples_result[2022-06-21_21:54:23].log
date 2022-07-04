@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/temperature-report/2022-06-21_21-44-03,
+ "numQuereis" : 31,
+ "problem" : "temperature-report",
+ "maxExamples" : 100000,
+ "sig" : -979096403,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 619.00127379,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_3_example_100000_samples",
+ "numDrop" : 3}

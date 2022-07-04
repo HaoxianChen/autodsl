@@ -1,0 +1,2 @@
+tempReport(node3,reading0,instanceid0) :- authorize(node0,signal0,instanceid0),nextHop(_,_,node3,_,instanceid0),themometer(node0,reading0,instanceid0),temp(signal0,instanceid0).
+lightLog(node0,reading0,instanceid0) :- authorize(node0,_,instanceid0),light(_,instanceid0),photometer(node0,reading0,instanceid0).

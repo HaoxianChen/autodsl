@@ -1,0 +1,7 @@
+.decl sent2b(x0:number,x1:number,x2:number)
+.decl hasQuorum2b(x0:number,x1:number)
+.decl decide(x0:number,x1:number,x2:number)
+.input sent2b
+.input hasQuorum2b
+decide(ballot0,value0,instanceid0) :- sent2b(ballot0,value0,instanceid0),hasQuorum2b(ballot0,instanceid0).
+.output decide

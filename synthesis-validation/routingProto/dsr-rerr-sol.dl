@@ -1,0 +1,9 @@
+.decl recvRERR(x0:symbol,x1:number)
+.decl route(x0:symbol,x1:symbol,x2:number)
+.decl this(x0:symbol,x1:number)
+.decl delRoute(x0:symbol,x1:symbol,x2:number)
+.input recvRERR
+.input route
+.input this
+delRoute(node0,nodelist0,instanceid0) :- route(node0,nodelist0,instanceid0),recvRERR(node1,instanceid0),contains(node1,nodelist0).
+.output delRoute

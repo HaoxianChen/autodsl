@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/tree/2022-06-23_00-49-57,
+ "numQuereis" : 1,
+ "problem" : "tree",
+ "maxExamples" : 100000,
+ "sig" : 1165918867,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 4684.960154517,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

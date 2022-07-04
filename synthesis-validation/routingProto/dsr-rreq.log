@@ -1,0 +1,17 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+routingProto	dsr-rreq				2	2	2	6	19	2	4	2	6	3
+
+correctness:1
+dsr-rreq
+4 Relations (2, 2)
+6 examples (4, 2).
+2 example instances.
+sendRREP(Node,Node,NodeList,Seq,InstanceId): 10 programs, smallest one contains 2 literals.
+sendRREP(node0,node1,nodelist0,seq0,instanceid0) :- recvRREQ(node0,node1,nodelist0,seq0,instanceid0),this(node1,instanceid0).
+sendRREQ(Node,Node,NodeList,Seq,InstanceId): 8 programs, smallest one contains 4 literals.
+sendRREQ(node0,node1,nodelist1,seq0,instanceid0) :- recvRREQ(node0,node1,nodelist0,seq0,instanceid0),this(node2,instanceid0),nodelist1=cat(nodelist0, node2), !contains(node2, nodelist0),node2 != node1.
+sig:-1183049769

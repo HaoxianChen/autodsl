@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/l2-pairs/2022-06-20_19-40-16,
+ "numQuereis" : 8,
+ "problem" : "l2-pairs",
+ "maxExamples" : 100000,
+ "sig" : 1704855927,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 109.986227402,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

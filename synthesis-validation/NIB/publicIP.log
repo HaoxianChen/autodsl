@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	publicIP				4	1	1	4	14	1	15	2	17	1
+
+correctness:1
+publicIP
+5 Relations (4, 1)
+17 examples (15, 2).
+1 example instances.
+reachable(Instance,E,InstanceId): 15 programs, smallest one contains 4 literals.
+reachable(instance0,e0,instanceid0) :- isSshPort(port0,instanceid0),reachPublicTcpUdp(_,_,e0,port0,address0,_,instanceid0),isPublicIP(address0,instanceid0),hasEni(instance0,e0,instanceid0).
+sig:-328013072

@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/sshTunnel/2022-06-20_18-44-47,
+ "numQuereis" : 2,
+ "problem" : "sshTunnel",
+ "maxExamples" : 100000,
+ "sig" : -2000472940,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 294.368732453,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

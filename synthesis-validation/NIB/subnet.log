@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	subnet				4	1	1	5	12	7	26	1	27	1
+
+correctness:1
+subnet
+5 Relations (4, 1)
+27 examples (26, 1).
+7 example instances.
+q(Instance,InstanceId): 14 programs, smallest one contains 5 literals.
+q(instance0,instanceid0) :- tag(tag1,instanceid0),hasSubnet(instance0,subnet0,instanceid0),!instance0 != instance1,subnet(subnet0,instanceid0),hasTag(instance1,tag1,instanceid0).
+sig:-1115249850

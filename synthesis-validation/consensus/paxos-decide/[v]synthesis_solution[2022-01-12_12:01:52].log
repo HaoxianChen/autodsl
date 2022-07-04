@@ -1,0 +1,1 @@
+decide(ballot0,value0,instanceid0) :- sent2b(ballot0,value0,instanceid0),hasQuorum2b(ballot0,instanceid0).

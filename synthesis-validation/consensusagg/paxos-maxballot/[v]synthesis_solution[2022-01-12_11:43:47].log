@@ -1,0 +1,3 @@
+_maxAccBallot(ballot0,node0,ballot1,value0,instanceid0) :- receive_1b(ballot0,node0,ballot1,value0,instanceid0),!null_ballot(ballot0,instanceid0).
+maxBallot(ballot0,instanceid0,min_ballot) :- _maxAccBallot(ballot0,_,_,_,instanceid0),min_ballot = max c : _maxAccBallot(ballot0,_,c,_,instanceid0).
+maxAccBallot(ballot0,node0,ballot1,value0,instanceid0) :- _maxAccBallot(ballot0,node0,ballot1,value0,instanceid0),maxBallot(ballot0,instanceid0,ballot1).

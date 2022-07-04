@@ -1,0 +1,2 @@
+sendRREP(node0,node1,nodelist0,seq0,instanceid0) :- recvRREQ(node0,node1,nodelist0,seq0,instanceid0),this(node1,instanceid0).
+sendRREQ(node0,node1,nodelist1,seq0,instanceid0) :- recvRREQ(node0,node1,nodelist0,seq0,instanceid0),this(node2,instanceid0),nodelist1=cat(nodelist0, node2), !contains(node2, nodelist0),node2 != node1.

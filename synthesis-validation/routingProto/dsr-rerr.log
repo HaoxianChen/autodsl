@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+routingProto	dsr-rerr				3	1	1	3	7	1	5	1	6	1
+
+correctness:1
+dsr-rerr
+4 Relations (3, 1)
+6 examples (5, 1).
+1 example instances.
+delRoute(Node,NodeList,InstanceId): 10 programs, smallest one contains 3 literals.
+delRoute(node0,nodelist0,instanceid0) :- route(node0,nodelist0,instanceid0),recvRERR(node1,instanceid0),contains(node1,nodelist0).
+sig:43378397

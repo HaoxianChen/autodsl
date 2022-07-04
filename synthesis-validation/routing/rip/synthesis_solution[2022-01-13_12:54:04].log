@@ -1,0 +1,4 @@
+_new_route(node4,node1,node2,cost0,instanceid0) :- route(node0,node1,node2,cost0,instanceid0),link(node0,_,_,instanceid0),this(node4,instanceid0).
+_new_route(node3,node1,node0,cost2,instanceid0) :- route(node0,node1,_,cost0,instanceid0),this(node3,instanceid0),link(_,node0,cost1,instanceid0),cost2=cost1+cost0.
+minCost(node1,instanceid0,min_cost) :- _new_route(_,node1,_,_,instanceid0),min_cost = min c : _new_route(_,node1,_,c,instanceid0).
+new_route(node0,node1,node2,cost0,instanceid0) :- _new_route(node0,node1,node2,cost0,instanceid0),minCost(node1,instanceid0,cost0).

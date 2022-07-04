@@ -1,0 +1,4 @@
+newRoute(node0,distance0,node1,seq1,instanceid0) :- infinity(distance0,instanceid0),route(node0,_,node1,seq0,instanceid0),brokenLink(node1,instanceid0),seq1=seq0+1.
+newRoute(node1,distance1,node0,seq0,instanceid0) :- recvUpdate(node0,node1,distance0,seq0,instanceid0),distance1=distance0+1,!route(node1,_,_,_,instanceid0).
+newRoute(node1,distance3,node0,seq2,instanceid0) :- route(node1,_,_,seq1,instanceid0),distance3=distance0+1,seq2=max(seq0,seq1),seq0 > seq1,infinity(_,instanceid0),recvUpdate(node0,node1,distance0,seq0,instanceid0).
+newRoute(node1,distance2,node0,seq2,instanceid0) :- !seq1 > seq0,seq2=max(seq0,seq1),distance2=distance1+1,recvUpdate(node0,node1,distance1,seq0,instanceid0),route(node1,distance0,_,seq1,instanceid0),distance0 > distance1.

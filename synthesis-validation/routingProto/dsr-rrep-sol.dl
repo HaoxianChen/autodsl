@@ -1,0 +1,7 @@
+.decl recvRREP(x0:symbol,x1:symbol,x2:symbol,x3:number,x4:number)
+.decl this(x0:symbol,x1:number)
+.decl newRoute(x0:symbol,x1:symbol,x2:number)
+.input recvRREP
+.input this
+newRoute(node1,nodelist0,instanceid0) :- recvRREP(node0,node1,nodelist0,_,instanceid0),this(node0,instanceid0).
+.output newRoute

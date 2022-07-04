@@ -1,0 +1,16 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	path				1	1	2	6	18	1	5	10	15	6
+
+correctness:1
+path
+2 Relations (1, 1)
+15 examples (5, 10).
+1 example instances.
+Path(Node,Node,NodeList,InstanceId): 26 programs, smallest one contains 6 literals.
+Path(node0,node1,nodelist0,instanceid0) :- Link(node0,node1,instanceid0),nodelist0=cat(node0,node1),node1 != node0.
+Path(node0,node2,nodelist1,instanceid0) :- Link(node0,node1,instanceid0),Path(node1,node2,nodelist0,instanceid0),nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0).
+sig:-1703838835

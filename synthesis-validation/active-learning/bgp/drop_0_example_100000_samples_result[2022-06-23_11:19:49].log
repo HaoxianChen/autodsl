@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/bgp/2022-06-23_10-17-57,
+ "numQuereis" : 6,
+ "problem" : "bgp",
+ "maxExamples" : 100000,
+ "sig" : 1386915307,
+ "numRuns" : 1,
+ "isTimeOut" : true,
+ "time" : 3711.628760393,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

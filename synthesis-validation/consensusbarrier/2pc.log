@@ -1,0 +1,17 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+consensusbarrier	2pc				5	2	2	8	22	8	126	3	129	69
+
+correctness:0
+2pc
+7 Relations (5, 2)
+129 examples (126, 3).
+8 example instances.
+commit(Node,InstanceId): 16 programs, smallest one contains 5 literals.
+commit(node0,instanceid0) :- Peers_cnt12(node3,instanceid0,count0),prepare(node0,instanceid0),Peers(node0,node3,instanceid0),!no_vote(_,_,instanceid0),yes_vote_cnt02(node0,instanceid0,count0).
+abort(Node,InstanceId): 57 programs, smallest one contains 3 literals.
+abort(node1,instanceid0) :- Peers(node0,node1,instanceid0),no_vote(node1,node0,instanceid0),prepare(node1,instanceid0).
+sig:-1715157839

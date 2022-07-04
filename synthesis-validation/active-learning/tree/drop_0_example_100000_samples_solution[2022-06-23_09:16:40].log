@@ -1,0 +1,4 @@
+_nextHop(node0,node1,nodelist0,node1,cost0,instanceid0) :- Link(node0,node1,cost0,instanceid0),nodelist0=cat(node0,node1),node0 != node1.
+minCost(node0,node1,instanceid0,min_cost) :- _nextHop(node0,node1,_,_,_,instanceid0),min_cost = min c : _nextHop(node0,node1,_,_,c,instanceid0).
+nextHop(node0,node1,nodelist0,node2,cost0,instanceid0) :- _nextHop(node0,node1,nodelist0,node2,cost0,instanceid0),minCost(node0,node1,instanceid0,cost0).
+_nextHop(node0,node2,nodelist1,node1,cost2,instanceid0) :- Link(node0,node1,cost1,instanceid0),node1 != node2,cost2=cost1+cost0,nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0),_nextHop(node1,node2,nodelist0,_,cost0,instanceid0).

@@ -1,0 +1,4 @@
+bestPath(node0,node1,nodelist0,bw0,instanceid0) :- _bestPath(node0,node1,nodelist0,bw0,instanceid0),maxBw(node0,node1,instanceid0,bw0).
+maxBw(node0,node1,instanceid0,min_bw) :- _bestPath(node0,node1,_,_,instanceid0),min_bw = max c : _bestPath(node0,node1,_,c,instanceid0).
+_bestPath(node0,node1,nodelist0,bw0,instanceid0) :- Link(node0,node1,bw0,instanceid0),nodelist0=cat(node0,node1),node0 != node1.
+_bestPath(node0,node2,nodelist1,bw2,instanceid0) :- Link(node0,node1,bw0,instanceid0),_bestPath(node1,node2,nodelist0,bw1,instanceid0),bw2=min(bw1,bw0),nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0).

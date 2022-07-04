@@ -1,0 +1,4 @@
+_bestPath(node0,node1,nodelist0,cost0,instanceid0) :- Link(node0,node1,cost0,instanceid0),nodelist0=cat(node0,node1).
+_bestPath(node0,node2,nodelist1,cost2,instanceid0) :- Link(node0,node1,cost0,instanceid0),_bestPath(node1,node2,nodelist0,cost1,instanceid0),cost2=cost1+cost0,nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0).
+minCost(node0,node1,instanceid0,min_cost) :- _bestPath(node0,node1,_,_,instanceid0),min_cost = min c : _bestPath(node0,node1,_,c,instanceid0).
+bestPath(node0,node1,nodelist0,cost0,instanceid0) :- _bestPath(node0,node1,nodelist0,cost0,instanceid0),minCost(node0,node1,instanceid0,cost0).

@@ -1,0 +1,18 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+routing	shortest-path				1	1	4	10	42	1	4	6	10	13
+
+correctness:1
+shortest-path
+2 Relations (1, 1)
+10 examples (4, 6).
+1 example instances.
+bestPath(Node,Node,NodeList,Cost,InstanceId): 11 programs, smallest one contains 10 literals.
+_bestPath(node0,node1,nodelist0,cost0,instanceid0) :- Link(node0,node1,cost0,instanceid0),nodelist0=cat(node0,node1).
+_bestPath(node0,node2,nodelist1,cost2,instanceid0) :- Link(node0,node1,cost0,instanceid0),_bestPath(node1,node2,nodelist0,cost1,instanceid0),cost2=cost1+cost0,nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0).
+minCost(node0,node1,instanceid0,min_cost) :- _bestPath(node0,node1,_,_,instanceid0),min_cost = min c : _bestPath(node0,node1,_,c,instanceid0).
+bestPath(node0,node1,nodelist0,cost0,instanceid0) :- _bestPath(node0,node1,nodelist0,cost0,instanceid0),minCost(node0,node1,instanceid0,cost0).
+sig:1919808545

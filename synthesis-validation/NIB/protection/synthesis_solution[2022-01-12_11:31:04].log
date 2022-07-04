@@ -1,0 +1,2 @@
+violation(address1,address2,instanceid0) :- route(_,address0,address1,instanceid0),VMaddr(address1,instanceid0),VMaddr(address0,instanceid0),route(_,address1,address2,instanceid0).
+violation(address3,address4,instanceid0) :- FMaddr(address0,instanceid0),violation(_,_,instanceid0),route(_,address3,address0,instanceid0),address4=max(address0,address3).

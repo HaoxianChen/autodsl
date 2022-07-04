@@ -1,0 +1,6 @@
+.decl Link(x0:symbol,x1:symbol,x2:number)
+.decl Path(x0:symbol,x1:symbol,x2:symbol,x3:number)
+.input Link
+Path(node0,node1,nodelist0,instanceid0) :- Link(node0,node1,instanceid0),nodelist0=cat(node0,node1),node1 != node0.
+Path(node0,node2,nodelist1,instanceid0) :- Link(node0,node1,instanceid0),Path(node1,node2,nodelist0,instanceid0),nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0).
+.output Path

@@ -1,0 +1,17 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+routingProto	dsdv				4	1	3	13	41	6	19	4	23	20
+
+correctness:0
+dsdv
+5 Relations (4, 1)
+23 examples (19, 4).
+6 example instances.
+newRoute(Node,Distance,Node,Seq,InstanceId): 44 programs, smallest one contains 13 literals.
+newRoute(node0,distance2,node2,seq0,instanceid0) :- route(node0,distance0,_,seq0,instanceid0),recvUpdate(node2,node0,distance1,seq0,instanceid0),distance2=distance1+1,distance0 > distance1.
+newRoute(node3,distance2,node2,seq1,instanceid0) :- !distance0 > distance1,recvUpdate(node2,node3,distance1,seq1,instanceid0),distance2=distance1+1,route(_,distance0,_,seq0,instanceid0),seq0 != seq1.
+newRoute(node1,distance0,node0,seq1,instanceid0) :- brokenLink(node0,instanceid0),infinity(distance0,instanceid0),route(node1,_,node0,seq0,instanceid0),seq1=seq0+1.
+sig:-434149014
