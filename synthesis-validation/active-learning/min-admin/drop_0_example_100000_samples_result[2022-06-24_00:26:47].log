@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/min-admin/2022-06-24_00-05-43,
+ "numQuereis" : 5,
+ "problem" : "min-admin",
+ "maxExamples" : 100000,
+ "sig" : -2024434843,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 1263.404127754,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

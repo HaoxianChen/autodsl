@@ -1,0 +1,18 @@
+.decl temp(x0:number,x1:number)
+.decl light(x0:number,x1:number)
+.decl nextHop(x0:symbol,x1:symbol,x2:symbol,x3:number,x4:number)
+.decl photometer(x0:symbol,x1:number,x2:number)
+.decl themometer(x0:symbol,x1:number,x2:number)
+.decl authorize(x0:symbol,x1:number,x2:number)
+.decl tempReport(x0:symbol,x1:number,x2:number)
+.decl lightLog(x0:symbol,x1:number,x2:number)
+.input authorize
+.input nextHop
+.input light
+.input photometer
+.input temp
+.input themometer
+tempReport(node2,reading0,instanceid0) :- nextHop(node0,_,node2,_,instanceid0),temp(signal0,instanceid0),authorize(node0,signal0,instanceid0),themometer(node0,reading0,instanceid0).
+lightLog(node0,reading0,instanceid0) :- photometer(node0,reading0,instanceid0),authorize(node0,signal0,instanceid0),light(signal0,instanceid0).
+.output tempReport
+.output lightLog

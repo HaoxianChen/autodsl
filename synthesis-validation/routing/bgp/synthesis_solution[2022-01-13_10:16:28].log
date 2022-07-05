@@ -1,0 +1,3 @@
+_BestRoute(node0,network0,nodelist1,cost2,instanceid0) :- Neighbor(node0,node1,cost0,instanceid0),ConnectedRoute(node1,network0,nodelist0,cost1,instanceid0),cost2=cost0+cost1,nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0).
+minCost(node0,network0,instanceid0,min_cost) :- _BestRoute(node0,network0,_,_,instanceid0),min_cost = min c : _BestRoute(node0,network0,_,c,instanceid0).
+BestRoute(node0,network0,nodelist0,cost0,instanceid0) :- _BestRoute(node0,network0,nodelist0,cost0,instanceid0),minCost(node0,network0,instanceid0,cost0).

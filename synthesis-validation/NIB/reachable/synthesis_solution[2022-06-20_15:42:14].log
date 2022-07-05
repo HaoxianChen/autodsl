@@ -1,0 +1,3 @@
+reachable(node0,node1,instanceid0) :- link(node0,node1,instanceid0).
+reachable(node2,node1,instanceid0) :- link(node0,node1,instanceid0),link(node2,node0,instanceid0).
+reachable(node0,node3,instanceid0) :- link(node0,node1,instanceid0),link(node1,node2,instanceid0),reachable(node2,node3,instanceid0),node1 != node2.

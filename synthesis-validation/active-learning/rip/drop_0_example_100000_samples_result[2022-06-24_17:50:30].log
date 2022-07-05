@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/rip/2022-06-24_16-44-37,
+ "numQuereis" : 4,
+ "problem" : "rip",
+ "maxExamples" : 100000,
+ "sig" : 2140151865,
+ "numRuns" : 1,
+ "isTimeOut" : true,
+ "time" : 3949.663721407,
+ "timeout" : 3600,
+ "correctness" : false,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

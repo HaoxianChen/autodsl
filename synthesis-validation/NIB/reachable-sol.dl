@@ -1,0 +1,6 @@
+.decl link(x0:symbol,x1:symbol,x2:number)
+.decl reachable(x0:symbol,x1:symbol,x2:number)
+.input link
+reachable(node0,node1,instanceid0) :- link(node0,node1,instanceid0).
+reachable(node0,node2,instanceid0) :- link(node0,node1,instanceid0),reachable(node1,node2,instanceid0).
+.output reachable

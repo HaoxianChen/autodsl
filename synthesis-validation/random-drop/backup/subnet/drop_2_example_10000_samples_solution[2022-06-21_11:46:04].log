@@ -1,0 +1,1 @@
+q(instance1,instanceid0) :- tag(tag0,instanceid0),subnet(subnet0,instanceid0),hasTag(instance1,_,instanceid0),hasSubnet(instance1,subnet0,instanceid0),hasTag(_,tag0,instanceid0).

@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/2pc/2022-06-25_03-15-34,
+ "numQuereis" : 32,
+ "problem" : "2pc",
+ "maxExamples" : 100000,
+ "sig" : -1715157839,
+ "numRuns" : 1,
+ "isTimeOut" : true,
+ "time" : 8344.570886677,
+ "timeout" : 3600,
+ "correctness" : false,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

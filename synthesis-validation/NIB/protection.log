@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	protection				3	1	1	3	8	2	17	2	19	1
+
+correctness:1
+protection
+4 Relations (3, 1)
+19 examples (17, 2).
+2 example instances.
+violation(Address,Address,InstanceId): 11 programs, smallest one contains 3 literals.
+violation(address0,address1,instanceid0) :- VMaddr(address0,instanceid0),route(_,address0,address1,instanceid0),FMaddr(address1,instanceid0).
+sig:1958537597

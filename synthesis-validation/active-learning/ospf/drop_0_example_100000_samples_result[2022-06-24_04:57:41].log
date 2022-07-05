@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/ospf/2022-06-24_03-55-41,
+ "numQuereis" : 4,
+ "problem" : "ospf",
+ "maxExamples" : 100000,
+ "sig" : 252640836,
+ "numRuns" : 1,
+ "isTimeOut" : true,
+ "time" : 3717.978105092,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

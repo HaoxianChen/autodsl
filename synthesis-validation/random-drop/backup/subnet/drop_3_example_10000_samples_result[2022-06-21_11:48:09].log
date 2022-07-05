@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/subnet/2022-06-21_11-48-00,
+ "numQuereis" : 2,
+ "problem" : "subnet",
+ "maxExamples" : 10000,
+ "sig" : -603106861,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 8.700284998,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_3_example_10000_samples",
+ "numDrop" : 3}

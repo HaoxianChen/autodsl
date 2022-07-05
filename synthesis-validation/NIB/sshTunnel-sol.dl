@@ -1,0 +1,12 @@
+.type Node <: symbol
+.type InstanceId <: number
+
+.decl canSsh(x: Node,y:Node,i:InstanceId)
+.input canSsh
+
+.decl canSshTunnel(x: Node, y: Node,i:InstanceId)
+
+canSshTunnel(x,y,i) :- canSsh(x,y,i).
+canSshTunnel(x,y,i) :- canSshTunnel(x,z,i), canSshTunnel(z,y,i).
+
+.output canSshTunnel

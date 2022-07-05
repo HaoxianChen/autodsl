@@ -1,0 +1,2 @@
+violation(address1,address2,instanceid0) :- route(_,address0,address1,instanceid0),VMaddr(address1,instanceid0),VMaddr(address0,instanceid0),route(_,address1,address2,instanceid0).
+violation(address2,address3,instanceid0) :- !VMaddr(address3,instanceid0),address2=min(address0,address1),violation(address1,_,instanceid0),route(router0,_,address3,instanceid0),address3 != address1,route(router0,address0,address1,instanceid0).

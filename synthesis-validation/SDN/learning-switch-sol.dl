@@ -1,0 +1,13 @@
+.decl packet(x0:number,x1:number,x2:number,x3:number,x4:number)
+.decl map(x0:number,x1:number,x2:number,x3:number)
+.decl flowMod(x0:number,x1:number,x2:number,x3:number,x4:number)
+.decl new_map(x0:number,x1:number,x2:number,x3:number)
+.decl flood(x0:number,x1:number,x2:number,x3:number)
+.input packet
+.input map
+flowMod(switch0,mac0,mac1,port1,instanceid0) :- packet(switch0,_,mac0,mac1,instanceid0),map(switch0,mac1,port1,instanceid0).
+new_map(switch0,mac0,port0,instanceid0) :- packet(switch0,port0,mac0,_,instanceid0).
+flood(switch0,mac0,mac1,instanceid0) :- packet(switch0,_,mac0,mac1,instanceid0),!map(switch0,mac1,_,instanceid0).
+.output flowMod
+.output new_map
+.output flood

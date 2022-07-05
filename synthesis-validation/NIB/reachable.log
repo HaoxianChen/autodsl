@@ -1,0 +1,16 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+NIB	reachable				1	1	2	3	9	1	8	34	42	5
+
+correctness:1
+reachable
+2 Relations (1, 1)
+42 examples (8, 34).
+1 example instances.
+reachable(Node,Node,InstanceId): 24 programs, smallest one contains 3 literals.
+reachable(node0,node1,instanceid0) :- link(node0,node1,instanceid0).
+reachable(node0,node2,instanceid0) :- link(node0,node1,instanceid0),reachable(node1,node2,instanceid0).
+sig:-1892054851

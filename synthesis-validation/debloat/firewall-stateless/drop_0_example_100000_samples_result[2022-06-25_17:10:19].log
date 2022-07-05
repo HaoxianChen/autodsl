@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/firewall-stateless/2022-06-25_17-06-42,
+ "numQuereis" : 8,
+ "problem" : "firewall-stateless",
+ "maxExamples" : 100000,
+ "sig" : -407799582,
+ "numRuns" : 2,
+ "isTimeOut" : false,
+ "time" : 216.82790602,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

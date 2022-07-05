@@ -1,0 +1,1 @@
+violation(address0,address1,instanceid0) :- route(router0,address0,address1,instanceid0),spine(router0,instanceid0),local(address0,instanceid0),local(address1,instanceid0).

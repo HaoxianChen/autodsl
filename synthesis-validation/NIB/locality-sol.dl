@@ -1,0 +1,9 @@
+.decl local(x0:symbol,x1:number)
+.decl spine(x0:symbol,x1:number)
+.decl route(x0:symbol,x1:symbol,x2:symbol,x3:number)
+.decl violation(x0:symbol,x1:symbol,x2:number)
+.input local
+.input spine
+.input route
+violation(address2,address3,instanceid0) :- !router0 != router1,local(address2,instanceid0),local(address3,instanceid0),spine(router1,instanceid0),route(router0,address2,address3,instanceid0).
+.output violation

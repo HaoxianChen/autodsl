@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/locality/2022-06-21_18-39-43,
+ "numQuereis" : 10,
+ "problem" : "locality",
+ "maxExamples" : 100000,
+ "sig" : 443029781,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 168.033553346,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_2_example_100000_samples",
+ "numDrop" : 2}

@@ -1,0 +1,15 @@
+# domain name features(recur agg udf) 
+# relations(in out) rules literals variables 
+# rules literals variables 
+# examples(instances in out rows) 
+# time
+sensor	store				2	1	1	2	6	1	5	2	7	0
+
+correctness:1
+store
+3 Relations (2, 1)
+7 examples (5, 2).
+1 example instances.
+store(Node,Object,InstanceId): 1 programs, smallest one contains 2 literals.
+store(node1,object0,instanceid0) :- consume(node0,node1,instanceid0),produce(node0,object0,instanceid0).
+sig:-1837458958

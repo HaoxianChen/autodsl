@@ -1,0 +1,13 @@
+.decl route(x0:symbol,x1:number,x2:symbol,x3:number,x4:number)
+.decl recvUpdate(x0:symbol,x1:symbol,x2:number,x3:number,x4:number)
+.decl brokenLink(x0:symbol,x1:number)
+.decl infinity(x0:number,x1:number)
+.decl newRoute(x0:symbol,x1:number,x2:symbol,x3:number,x4:number)
+.input route
+.input recvUpdate
+.input brokenLink
+.input infinity
+newRoute(node0,distance2,node2,seq0,instanceid0) :- route(node0,distance0,_,seq0,instanceid0),recvUpdate(node2,node0,distance1,seq0,instanceid0),distance2=distance1+1,distance0 > distance1.
+newRoute(node3,distance2,node2,seq1,instanceid0) :- !distance0 > distance1,recvUpdate(node2,node3,distance1,seq1,instanceid0),distance2=distance1+1,route(_,distance0,_,seq0,instanceid0),seq0 != seq1.
+newRoute(node1,distance0,node0,seq1,instanceid0) :- brokenLink(node0,instanceid0),infinity(distance0,instanceid0),route(node1,_,node0,seq0,instanceid0),seq1=seq0+1.
+.output newRoute

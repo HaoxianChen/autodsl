@@ -1,0 +1,2 @@
+Path(node0,node1,nodelist0,cost0,instanceid0) :- Link(node0,node1,cost0,instanceid0),nodelist0=cat(node0,node1),node0 != node1.
+Path(node2,node1,nodelist1,cost2,instanceid0) :- nodelist1=cat(nodelist0, node1), !contains(node1, nodelist0),node0 != node1,Link(node0,node1,cost0,instanceid0),Path(node2,node0,nodelist0,cost1,instanceid0),cost2=cost0+cost1.

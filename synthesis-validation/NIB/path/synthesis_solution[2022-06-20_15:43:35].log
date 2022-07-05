@@ -1,0 +1,2 @@
+Path(node0,node1,nodelist0,instanceid0) :- Link(node0,node1,instanceid0),nodelist0=cat(node0,node1),node0 != node1.
+Path(node0,node2,nodelist1,instanceid0) :- Link(node3,node2,instanceid0),node3 != node2,Link(node0,node1,instanceid0),nodelist1=cat(node0, nodelist0), !contains(node0, nodelist0),Path(node1,node2,nodelist0,instanceid0).

@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/dsdv/2022-06-29_04-07-25,
+ "numQuereis" : 17,
+ "problem" : "dsdv",
+ "maxExamples" : 100000,
+ "sig" : -434149014,
+ "numRuns" : 1,
+ "isTimeOut" : true,
+ "time" : 3806.979630476,
+ "timeout" : 3600,
+ "correctness" : false,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

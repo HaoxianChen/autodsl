@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/fl-stateful-firewall/2022-07-01_13-27-31,
+ "numQuereis" : 25,
+ "problem" : "fl-stateful-firewall",
+ "maxExamples" : 100000,
+ "sig" : -31330684,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 492.946482127,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

@@ -1,0 +1,3 @@
+_MinAdminRoute(node0,network0,node1,cost0,instanceid0) :- AdminCost(protocol0,cost0,instanceid0),ProtocolRoute(node0,network0,node1,protocol0,instanceid0).
+minCost(node0,network0,instanceid0,min_cost) :- _MinAdminRoute(node0,network0,_,_,instanceid0),min_cost = min c : _MinAdminRoute(node0,network0,_,c,instanceid0).
+MinAdminRoute(node0,network0,node1,cost0,instanceid0) :- _MinAdminRoute(node0,network0,node1,cost0,instanceid0),minCost(node0,network0,instanceid0,cost0).

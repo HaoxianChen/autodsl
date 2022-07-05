@@ -1,0 +1,13 @@
+.decl port1(x0:number,x1:number)
+.decl port2(x0:number,x1:number)
+.decl packet(x0:symbol,x1:number,x2:symbol,x3:symbol,x4:number)
+.decl forward(x0:symbol,x1:symbol,x2:symbol,x3:number,x4:number)
+.decl flowMod(x0:symbol,x1:symbol,x2:symbol,x3:number,x4:number)
+.input port1
+.input port2
+.input packet
+forward(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),port2(port1,instanceid0),port1(port0,instanceid0).
+flowMod(switch0,host0,host1,port1,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),port1(port0,instanceid0),port2(port1,instanceid0).
+flowMod(switch0,host1,host0,port0,instanceid0) :- packet(switch0,port0,host0,host1,instanceid0),port1(port0,instanceid0).
+.output forward
+.output flowMod

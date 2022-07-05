@@ -1,0 +1,12 @@
+{"logDir" : /tmp/netspec/firewall-l3-stateful/2022-06-22_19-35-30,
+ "numQuereis" : 15,
+ "problem" : "firewall-l3-stateful",
+ "maxExamples" : 100000,
+ "sig" : 977212097,
+ "numRuns" : 1,
+ "isTimeOut" : false,
+ "time" : 202.066805056,
+ "timeout" : 3600,
+ "correctness" : true,
+ "exp_name" : "drop_0_example_100000_samples",
+ "numDrop" : 0}

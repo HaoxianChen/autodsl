@@ -1,0 +1,7 @@
+.decl produce(x0:symbol,x1:symbol,x2:number)
+.decl consume(x0:symbol,x1:symbol,x2:number)
+.decl store(x0:symbol,x1:symbol,x2:number)
+.input produce
+.input consume
+store(node1,object0,instanceid0) :- consume(node0,node1,instanceid0),produce(node0,object0,instanceid0).
+.output store

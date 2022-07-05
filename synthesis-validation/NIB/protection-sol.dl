@@ -1,0 +1,9 @@
+.decl VMaddr(x0:number,x1:number)
+.decl FMaddr(x0:number,x1:number)
+.decl route(x0:number,x1:number,x2:number,x3:number)
+.decl violation(x0:number,x1:number,x2:number)
+.input VMaddr
+.input FMaddr
+.input route
+violation(address0,address1,instanceid0) :- VMaddr(address0,instanceid0),route(_,address0,address1,instanceid0),FMaddr(address1,instanceid0).
+.output violation

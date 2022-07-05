@@ -1,0 +1,1 @@
+hasQuorum(ballot0,instanceid0) :- receive_1b_cnt04(ballot0,instanceid0,count0),receive_1b(ballot0,_,_,_,instanceid0),acceptors_cnt1(instanceid0,count1),count0 > count1 / 2.

@@ -1,0 +1,3 @@
+commit(node0,instanceid0) :- Peers_cnt02(node0,instanceid0,count0),yes_vote(_,_,instanceid0),prepare(node0,instanceid0),yes_vote_cnt02(node0,instanceid0,count0),coordinator(node0,instanceid0).
+abort(node1,instanceid0) :- yes_vote_cnt02(_,instanceid0,_),coordinator(node1,instanceid0),prepare(node1,instanceid0),no_vote(node1,_,instanceid0).
+abort(node0,instanceid0) :- prepare(node0,instanceid0),!Peers(node1,node1,instanceid0),Peers_cnt2(instanceid0,_),coordinator(node0,instanceid0),no_vote(node0,node1,instanceid0).

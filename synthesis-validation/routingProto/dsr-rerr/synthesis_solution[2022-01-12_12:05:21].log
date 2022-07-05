@@ -1,0 +1,1 @@
+delRoute(node1,nodelist0,instanceid0) :- this(_,instanceid0),route(node1,nodelist0,instanceid0),recvRERR(node2,instanceid0),contains(node2,nodelist0).
