@@ -1,0 +1,4 @@
+new_table(switch0,mac0,port0,instanceid0) :- packet_in(switch0,port0,_,mac0,_,_,instanceid0),!table(switch0,mac0,_,instanceid0).
+flood(switch0,buf0,instanceid0) :- packet_in(switch0,_,buf0,_,mac1,_,instanceid0),!table(switch0,mac1,_,instanceid0).
+flow_mod(switch0,mac0,mac1,port1,instanceid0) :- table(switch0,mac0,_,instanceid0),packet_in(switch0,port1,_,mac1,mac0,_,instanceid0).
+flow_mod(switch0,mac1,mac0,port0,instanceid0) :- table(switch0,mac0,port0,instanceid0),packet_in(switch0,_,_,mac1,mac0,_,instanceid0).

@@ -1,0 +1,5 @@
+flow_mod(1,host0,host1,1,instanceid0) :- packet_in(1,1,_,host0,host1,2048,instanceid0).
+packet_out(1,buf0,1,instanceid0) :- packet_in(1,2,buf0,_,_,2054,instanceid0).
+packet_out(1,buf0,2,instanceid0) :- packet_in(1,1,buf0,_,_,2054,instanceid0).
+packet_out(1,buf0,2,instanceid0) :- packet_in(1,1,buf0,_,_,2048,instanceid0).
+flow_mod(1,host0,host1,2,instanceid0) :- packet_in(1,1,_,host0,host1,2048,instanceid0).
