@@ -420,19 +420,18 @@ object ActiveLearningExperiment {
     rnd.shuffle(set.toList).take(n).toSet
   }
 
-  def makeTable(benchmarkDir: String, problemDirs: List[String], resultRootDir: String, outFileName: String): Unit = {
-    // var allRecords: List[List[String]] = List()
+  private def readRecordsFromDir(benchmarkDir: String, problemDirs: List[String], resultRootDir: String
+                        ) :List[Map[String,String]] = {
     var allRecords: List[Map[String,String]] = List()
     val allProblems = problemDirs.map(f=>Paths.get(benchmarkDir,f))
     for (problemFile <- allProblems) {
       val problem = Misc.readProblem(problemFile.toString)
-      // val allFiles: List[String] = Misc.getListOfFiles(resultDir.toString)
-      // val logFiles: List[String] = allFiles.filter(_.contains("result"))
-      // val records: List[Map[String,String]] = logFiles.map(f => Paths.get(resultDir.toString,f).toString).
-      //   map(fromFile)
       allRecords ++=  ExperimentRecord.allRecords(resultRootDir, problem)
     }
+    allRecords
+  }
 
+  private def aggAndWriteRecords(allRecords: List[Map[String,String]], resultRootDir: String, outFileName: String): Unit = {
     def _strToInt(_s: String): Int = _s match {
       case "true" => 1
       case "false" => 0
@@ -456,16 +455,22 @@ object ActiveLearningExperiment {
         val avgTime: Double = group.map(_("time")).map(_.toDouble).sum.toDouble / N
         val numRuns: List[Int] = group.map(_.getOrElse("numRuns","1")).map(_.toInt)
         val avgRuns: Double = numRuns.sum.toDouble / N
-        val correctRatio: Double = numRuns.count(_==1).toDouble / N
+        val correctRatio: Double = group.map(_("correctness")).count(_=="true").toDouble / N
         List(k._1, k._2, avgQueries, avgTime, correctRatio, avgRuns, N)
       }
     }.toList
     val aggHeader = rawHeader :+ "count"
-
     val rawFile = Paths.get(resultRootDir, s"${outFileName}_raw.csv")
     Misc.writeFile((rawHeader +: statLines).map(_.mkString("\t")).mkString("\n"), rawFile)
     val aggFile = Paths.get(resultRootDir, s"${outFileName}_agg.csv")
     Misc.writeFile((aggHeader +: aggLines).map(_.mkString("\t")).mkString("\n"), aggFile)
+
+  }
+
+
+  def makeTable(benchmarkDir: String, problemDirs: List[String], resultRootDir: String, outFileName: String): Unit = {
+    val allRecords = readRecordsFromDir(benchmarkDir,problemDirs,resultRootDir)
+    aggAndWriteRecords(allRecords,resultRootDir,outFileName)
   }
 
   def makeAllTables(benchmarkDir: String, resultRootDir: String): Unit = {
