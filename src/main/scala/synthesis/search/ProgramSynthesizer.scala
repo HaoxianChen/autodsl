@@ -449,8 +449,10 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
     logger.debug(s"${programs.size} programs to simplify, with ${validRules.size} additional rules.")
     require(programs.nonEmpty)
 
+    val hasAggProgram: Boolean = programs.exists(sp => isAggProgram(sp.program))
+
     def addValidRules(scoredProgram: ScoredProgram): Program = {
-      if (idb.subsetOf(scoredProgram.idb)) {
+      if (idb.subsetOf(scoredProgram.idb) && hasAggProgram) {
         scoredProgram.program
       }
       else {
@@ -460,7 +462,8 @@ class ProgramSynthesizer(problem: Problem, initConfigSpace: SynthesisConfigSpace
 
     val fullPrograms: Set[Program] = programs.map(addValidRules)
 
-    if (programs.exists(sp => isAggProgram(sp.program))) {
+    // if (programs.exists(sp => isAggProgram(sp.program))) {
+    if (hasAggProgram) {
       fullPrograms ++ fullPrograms.flatMap(simplerAlternatives)
     }
     else {
