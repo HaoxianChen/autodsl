@@ -56,5 +56,7 @@ For example, this [file](random-drop/firewall-l3/%5Bx%5Ddrop_11_example_100000_s
 stores an incorrect solution.
 And this [file](NIB/reachable/synthesis_solution[2022-06-20_15:41:57].log) stores a correct solution.
 
-Checkout synthesis results for the other experiments: [active learning](active-learning),
-    [randomly drop examples](random-drop), and [learning from execution traces](debloat).
+Checkout synthesis results for the other experiments: 
+- [active learning](active-learning)
+- [randomly drop examples](random-drop)
+- [learning from execution traces](debloat).
